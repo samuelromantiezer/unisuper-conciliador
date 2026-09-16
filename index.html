@@ -31,7 +31,7 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-t-4 border-unisuperRed space-y-6">
             <div class="text-center space-y-2">
                 <h1 class="text-xl font-bold uppercase text-unisuperDark tracking-wide">Conciliador Contábil</h1>
-                <p class="text-xs text-unisuperRed font-semibold tracking-wider">UNIÃO SUPERMERCADOS</p>
+                <p class="text-xs text-unisuperRed font-semibold tracking-wider">UNIÃO SUPERMERCADO</p>
                 <p class="text-xs text-slate-500 pt-2">Entre com suas credenciais para acessar o sistema.</p>
             </div>
 
@@ -65,22 +65,22 @@
 
                 <!-- Links de Navegação Lateral -->
                 <nav class="p-4 space-y-1.5">
-                    <button onclick="switchTab('cadastro')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium bg-unisuperBlue text-white shadow transition">
+                    <button onclick="switchTab('cadastro')" id="btn-tab-cadastro" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-folder-plus w-5"></i><span>Cadastro</span>
                     </button>
-                    <button onclick="switchTab('conciliacoes')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <button onclick="switchTab('conciliacoes')" id="btn-tab-conciliacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-scale-balanced w-5"></i><span>Conciliações</span>
                     </button>
-                    <button onclick="switchTab('folha')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <button onclick="switchTab('folha')" id="btn-tab-folha" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-users-rectangle w-5"></i><span>Folha de Pagamento</span>
                     </button>
-                    <button onclick="switchTab('importacoes')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <button onclick="switchTab('importacoes')" id="btn-tab-importacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-file-import w-5"></i><span>Importações</span>
                     </button>
-                    <button onclick="switchTab('exportacoes')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <button onclick="switchTab('exportacoes')" id="btn-tab-exportacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-file-export w-5"></i><span>Exportações</span>
                     </button>
-                    <button onclick="switchTab('relatorios')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <button onclick="switchTab('relatorios')" id="btn-tab-relatorios" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-chart-line w-5"></i><span>Relatórios</span>
                     </button>
                 </nav>
@@ -420,6 +420,13 @@
             document.getElementById('app-screen').classList.remove('hidden');
             atualizarStatusSupabase(true, "Conectado ao Supabase");
             carregarCadastros();
+
+            // Restaura a aba e sub-aba salva anteriormente
+            const abaSalva = localStorage.getItem('unisuper_aba_atual') || 'cadastro';
+            const subAbaSalva = localStorage.getItem('unisuper_subaba_atual') || 'caixa';
+            
+            switchTab(abaSalva, false);
+            switchSubTab(subAbaSalva, false);
         }
 
         async function fazerLogin() {
@@ -448,6 +455,8 @@
 
         async function fazerLogout() {
             if (supabaseClient) await supabaseClient.auth.signOut();
+            localStorage.removeItem('unisuper_aba_atual');
+            localStorage.removeItem('unisuper_subaba_atual');
             mostrarLogin();
         }
 
@@ -586,29 +595,50 @@
             'relatorios': 'Relatórios Gerenciais'
         };
 
-        function switchTab(tabId) {
+        function switchTab(tabId, salvar = true) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            document.getElementById('titulo-pagina').innerText = titulosAbas[tabId];
+            const abaAlvo = document.getElementById(`tab-${tabId}`);
+            if (abaAlvo) abaAlvo.classList.remove('hidden');
+            
+            if (titulosAbas[tabId]) {
+                document.getElementById('titulo-pagina').innerText = titulosAbas[tabId];
+            }
 
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-unisuperBlue', 'text-white', 'shadow');
                 btn.classList.add('text-slate-300');
             });
-            event.currentTarget.classList.remove('text-slate-300');
-            event.currentTarget.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
+            
+            const btnAlvo = document.getElementById(`btn-tab-${tabId}`);
+            if (btnAlvo) {
+                btnAlvo.classList.remove('text-slate-300');
+                btnAlvo.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
+            }
+
+            if (salvar) {
+                localStorage.setItem('unisuper_aba_atual', tabId);
+            }
         }
 
-        function switchSubTab(subTabId) {
+        function switchSubTab(subTabId, salvar = true) {
             document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`subtab-${subTabId}`).classList.remove('hidden');
+            const subAbaAlvo = document.getElementById(`subtab-${subTabId}`);
+            if (subAbaAlvo) subAbaAlvo.classList.remove('hidden');
 
             document.querySelectorAll('.subtab-btn').forEach(btn => {
                 btn.classList.remove('border-unisuperBlue', 'text-unisuperBlue');
                 btn.classList.add('border-transparent', 'text-slate-500');
             });
-            event.currentTarget.classList.remove('border-transparent', 'text-slate-500');
-            event.currentTarget.classList.add('border-unisuperBlue', 'text-unisuperBlue');
+            
+            const btnSubAlvo = document.getElementById(`subtab-btn-${subTabId}`);
+            if (btnSubAlvo) {
+                btnSubAlvo.classList.remove('border-transparent', 'text-slate-500');
+                btnSubAlvo.classList.add('border-unisuperBlue', 'text-unisuperBlue');
+            }
+
+            if (salvar) {
+                localStorage.setItem('unisuper_subaba_atual', subTabId);
+            }
         }
     </script>
 </body>
