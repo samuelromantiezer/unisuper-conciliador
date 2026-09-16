@@ -26,7 +26,7 @@
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
-    <!-- TELA DE LOGIN (Oculta se já estiver logado) -->
+    <!-- TELA DE LOGIN -->
     <div id="auth-screen" class="fixed inset-0 bg-unisuperDark z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-t-4 border-unisuperRed space-y-6">
             <div class="text-center space-y-2">
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    <!-- APLICAÇÃO PRINCIPAL (Oculta até fazer login) -->
+    <!-- APLICAÇÃO PRINCIPAL -->
     <div id="app-screen" class="hidden min-h-screen flex flex-col md:flex-row flex-grow">
         <!-- MENU LATERAL (SIDEBAR) -->
         <aside class="w-full md:w-64 bg-unisuperDark text-white flex flex-col justify-between shadow-xl border-r-4 border-unisuperRed shrink-0">
@@ -68,7 +68,7 @@
                     </button>
                 </div>
 
-                <!-- Links de Navegação Lateral -->
+                <!-- Links de Navegação Lateral na Ordem Solicitada -->
                 <nav class="p-4 space-y-1.5">
                     <button onclick="switchTab('cadastro')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium bg-unisuperBlue text-white shadow transition">
                         <i class="fa-solid fa-folder-plus w-5"></i><span>Cadastro</span>
@@ -372,10 +372,10 @@
         </main>
     </div>
 
-    <!-- SCRIPT DE AUTENTICAÇÃO E SUPABASE -->
+    <!-- SCRIPT DE CONFIGURAÇÃO E AUTENTICAÇÃO COM SUPABASE -->
     <script>
         const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_-sGUxUxy1z47hcZU5RVHEw_MucPocr6';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
 
         let supabaseClient = null;
 
@@ -383,25 +383,31 @@
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             verificarSessao();
         } catch (e) {
-            atualizarStatusSupabase(false, "Erro ao iniciar");
+            console.error("Erro ao inicializar Supabase:", e);
+            atualizarStatusSupabase(false, "Erro de inicialização");
         }
 
         async function verificarSessao() {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                mostrarApp();
-            } else {
-                mostrarLogin();
-            }
-
-            // Ouve mudanças de login/logout em tempo real
-            supabaseClient.auth.onAuthStateChange((_event, session) => {
+            if (!supabaseClient) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
                 if (session) {
                     mostrarApp();
                 } else {
                     mostrarLogin();
                 }
-            });
+
+                supabaseClient.auth.onAuthStateChange((_event, session) => {
+                    if (session) {
+                        mostrarApp();
+                    } else {
+                        mostrarLogin();
+                    }
+                });
+            } catch (err) {
+                console.error("Erro na sessão:", err);
+                mostrarLogin();
+            }
         }
 
         function mostrarLogin() {
@@ -422,35 +428,42 @@
             const errorDiv = document.getElementById('auth-error');
             errorDiv.classList.add('hidden');
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: senha,
-            });
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: senha,
+                });
 
-            if (error) {
-                errorDiv.innerText = "Erro ao entrar: " + error.message;
+                if (error) {
+                    errorDiv.innerText = "Erro ao entrar: " + error.message;
+                    errorDiv.classList.remove('hidden');
+                } else {
+                    mostrarApp();
+                }
+            } catch (err) {
+                errorDiv.innerText = "Erro de conexão com o Supabase.";
                 errorDiv.classList.remove('hidden');
-            } else {
-                mostrarApp();
             }
         }
 
         async function fazerLogout() {
-            await supabaseClient.auth.signOut();
+            if (supabaseClient) await supabaseClient.auth.signOut();
             mostrarLogin();
         }
 
         function atualizarStatusSupabase(conectado, mensagem) {
             const dot = document.getElementById('db-status-dot');
             const text = document.getElementById('db-status-text');
-            text.innerText = mensagem;
-            dot.className = conectado && !SUPABASE_URL.includes('SEU-PROJETO') 
-                ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" 
-                : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
+            if (text) text.innerText = mensagem;
+            if (dot) {
+                dot.className = conectado 
+                    ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" 
+                    : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
+            }
         }
 
         async function carregarCadastros() {
-            if(!supabaseClient || SUPABASE_URL.includes('SEU-PROJETO')) return;
+            if(!supabaseClient) return;
             try {
                 const { data, error } = await supabaseClient.from('cadastros_depara').select('*');
                 const lista = document.getElementById('lista-cadastros');
@@ -465,6 +478,8 @@
                             </tr>
                         `;
                     });
+                } else {
+                    lista.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhum mapeamento cadastrado.</td></tr>`;
                 }
             } catch(e) { console.error(e); }
         }
@@ -472,11 +487,6 @@
         async function salvarCadastro() {
             const erp = document.getElementById('cad-erp').value;
             const contabil = document.getElementById('cad-contabil').value;
-
-            if(SUPABASE_URL.includes('SEU-PROJETO')) {
-                alert('Por favor, insira suas chaves reais do Supabase no código!');
-                return;
-            }
 
             try {
                 const { error } = await supabaseClient
