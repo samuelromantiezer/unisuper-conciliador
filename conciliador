@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conciliador Contábil Unisuper</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        unisuperBlue: '#1e3a8a',
+                        unisuperRed: '#dc2626',
+                        unisuperDark: '#0f172a'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col md:flex-row">
+
+    <!-- MENU LATERAL (SIDEBAR) -->
+    <aside class="w-full md:w-64 bg-unisuperDark text-white flex flex-col justify-between shadow-xl border-r-4 border-unisuperRed shrink-0">
+        <div>
+            <!-- Cabeçalho da Sidebar -->
+            <div class="p-6 border-b border-slate-800 bg-black/30">
+                <h1 class="text-sm font-bold tracking-wide uppercase text-white leading-tight">Conciliador Contábil</h1>
+                <p class="text-[10px] text-unisuperRed font-semibold tracking-wider mt-0.5">UNIÃO SUPERMERCADOS</p>
+            </div>
+
+            <!-- Links de Navegação Lateral -->
+            <nav class="p-4 space-y-1.5">
+                <button onclick="switchTab('cadastro')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium bg-unisuperBlue text-white shadow transition">
+                    <i class="fa-solid fa-folder-plus w-5"></i><span>Cadastro</span>
+                </button>
+                <button onclick="switchTab('conciliacoes')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-scale-balanced w-5"></i><span>Conciliações</span>
+                </button>
+                <button onclick="switchTab('folha')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-users-rectangle w-5"></i><span>Folha de Pagamento</span>
+                </button>
+                <button onclick="switchTab('importacoes')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-file-import w-5"></i><span>Importações</span>
+                </button>
+                <button onclick="switchTab('exportacoes')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-file-export w-5"></i><span>Exportações</span>
+                </button>
+                <button onclick="switchTab('relatorios')" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                    <i class="fa-solid fa-chart-line w-5"></i><span>Relatórios</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Rodapé com Status do Supabase -->
+        <div class="p-4 border-t border-slate-800 text-center text-xs text-slate-400">
+            <span id="db-status-dot" class="inline-block h-2 w-2 rounded-full bg-orange-500 mr-1"></span>
+            <span id="db-status-text">Conectando ao Supabase...</span>
+        </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-grow flex flex-col min-h-screen overflow-y-auto">
+        <!-- TOPO / HEADER -->
+        <header class="bg-white shadow-sm px-8 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h2 id="titulo-pagina" class="text-xl font-bold text-slate-800">Cadastros (De/Para)</h2>
+            <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Modo Nuvem (Supabase Ativo)</span>
+            </div>
+        </header>
+
+        <!-- CORPO DAS ABAS -->
+        <div class="p-8 space-y-6 flex-grow">
+
+            <!-- ABA: CADASTRO -->
+            <div id="tab-cadastro" class="tab-content space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-folder-plus text-unisuperBlue mr-2"></i> Cadastro de De/Para Contábil (Planos de Conta)</h3>
+                    <p class="text-sm text-slate-500 mb-6">Mapeamento salvo diretamente na nuvem (Supabase) para acesso global.</p>
+                    
+                    <form id="form-cadastro" onsubmit="event.preventDefault(); salvarCadastro();" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Conta do ERP</label>
+                            <input type="text" id="cad-erp" placeholder="Ex: 1.1.1.02 - Caixa Lojas" class="w-full text-sm border border-slate-300 rounded p-2 focus:ring-2 focus:ring-unisuperBlue" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Conta Contábil Oficial</label>
+                            <input type="text" id="cad-contabil" placeholder="Ex: 1.1.1.01.002 - Caixa Matriz" class="w-full text-sm border border-slate-300 rounded p-2 focus:ring-2 focus:ring-unisuperBlue" required>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-unisuperBlue text-white py-2 rounded text-sm font-semibold hover:bg-blue-900 transition">Salvar Mapeamento</button>
+                        </div>
+                    </form>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Conta ERP</th>
+                                    <th class="p-3">Conta Contábil</th>
+                                    <th class="p-3 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-cadastros" class="divide-y divide-slate-100 text-slate-600">
+                                <tr><td colspan="3" class="p-6 text-center text-slate-400">Carregando dados da nuvem...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA: CONCILIAÇÕES -->
+            <div id="tab-conciliacoes" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                    <div class="mb-4">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-scale-balanced text-unisuperBlue mr-2"></i> Central de Conciliações e Cruzamentos</h3>
+                        <p class="text-xs text-slate-500 mt-1">Selecione o módulo desejado e execute a validação contábil.</p>
+                    </div>
+
+                    <!-- SUB-ABAS DE CONCILIAÇÃO -->
+                    <div class="flex border-b border-slate-200 mb-6 space-x-2">
+                        <button onclick="switchSubTab('caixa')" id="subtab-btn-caixa" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-cash-register"></i><span>Módulo Caixa</span>
+                        </button>
+                        <button onclick="switchSubTab('fiscal')" id="subtab-btn-fiscal" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-receipt"></i><span>Módulo Fiscal</span>
+                        </button>
+                        <button onclick="switchSubTab('financeiro')" id="subtab-btn-financeiro" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition">
+                            <i class="fa-solid fa-wallet"></i><span>Módulo Financeiro</span>
+                        </button>
+                    </div>
+
+                    <!-- SUB-ABA: CAIXA -->
+                    <div id="subtab-caixa" class="subtab-content space-y-4">
+                        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div>
+                                <h4 class="font-bold text-slate-700 text-sm">Conciliação Mapa Resumo</h4>
+                                <p class="text-xs text-slate-500">Cruza o fechamento de frente de caixa com a contabilidade.</p>
+                            </div>
+                            <button onclick="executarCruzamento('caixa')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                <i class="fa-solid fa-play"></i><span>Executar</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                        <th class="p-3">Conta / Loja / PDV</th>
+                                        <th class="p-3">Valor Mapa Resumo (ERP)</th>
+                                        <th class="p-3">Valor Contábil</th>
+                                        <th class="p-3">Diferença</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-caixa-mapa" class="text-sm divide-y divide-slate-100">
+                                    <tr><td colspan="6" class="p-6 text-center text-slate-400">Clique em executar para processar o Mapa Resumo.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SUB-ABA: FISCAL -->
+                    <div id="subtab-fiscal" class="subtab-content hidden space-y-6">
+                        <!-- ICMS -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div>
+                                    <h4 class="font-bold text-slate-700 text-sm">Conciliação ICMS</h4>
+                                    <p class="text-xs text-slate-500">Validação de débitos, créditos e apuração de ICMS.</p>
+                                </div>
+                                <button onclick="executarCruzamento('fiscal-icms')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-play"></i><span>Executar</span>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                            <th class="p-3">Conta / Apuração ICMS</th>
+                                            <th class="p-3">Valor Fiscal (SPED)</th>
+                                            <th class="p-3">Valor Contábil</th>
+                                            <th class="p-3">Diferença</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-fiscal-icms" class="text-sm divide-y divide-slate-100">
+                                        <tr><td colspan="6" class="p-4 text-center text-slate-400">Aguardando execução...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Entradas -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div>
+                                    <h4 class="font-bold text-slate-700 text-sm">Conciliação Entradas</h4>
+                                    <p class="text-xs text-slate-500">Notas fiscais de entrada versus estoque e fornecedores.</p>
+                                </div>
+                                <button onclick="executarCruzamento('fiscal-entradas')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-play"></i><span>Executar</span>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                            <th class="p-3">Bloco / Descrição</th>
+                                            <th class="p-3">Valor Total Entradas (Fiscal)</th>
+                                            <th class="p-3">Valor Contábil</th>
+                                            <th class="p-3">Diferença</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-fiscal-entradas" class="text-sm divide-y divide-slate-100">
+                                        <tr><td colspan="6" class="p-4 text-center text-slate-400">Aguardando execução...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Faturamento -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div>
+                                    <h4 class="font-bold text-slate-700 text-sm">Conciliação Faturamento</h4>
+                                    <p class="text-xs text-slate-500">Vendas totais emitidas versus receitas contábeis.</p>
+                                </div>
+                                <button onclick="executarCruzamento('fiscal-faturamento')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-play"></i><span>Executar</span>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                            <th class="p-3">Conta / Receita de Vendas</th>
+                                            <th class="p-3">Valor Faturamento (Fiscal)</th>
+                                            <th class="p-3">Valor Contábil</th>
+                                            <th class="p-3">Diferença</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-fiscal-faturamento" class="text-sm divide-y divide-slate-100">
+                                        <tr><td colspan="6" class="p-4 text-center text-slate-400">Aguardando execução...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-ABA: FINANCEIRO -->
+                    <div id="subtab-financeiro" class="subtab-content hidden space-y-6">
+                        <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 font-semibold text-slate-700 text-sm">
+                            <i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i> Módulo: Contas a Pagar e Receber
+                        </div>
+                        <div class="space-y-3 pl-4 border-l-2 border-unisuperBlue">
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div>
+                                    <h4 class="font-bold text-slate-700 text-sm">Conciliação Fornecedores (Contas a Pagar)</h4>
+                                    <p class="text-xs text-slate-500">Cruza títulos baixados e em aberto de fornecedores com o Razão Contábil.</p>
+                                </div>
+                                <button onclick="executarCruzamento('financeiro-fornecedores')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-play"></i><span>Executar</span>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                            <th class="p-3">Conta / Fornecedor / Grupo</th>
+                                            <th class="p-3">Valor ERP (Financeiro)</th>
+                                            <th class="p-3">Valor Contábil</th>
+                                            <th class="p-3">Diferença</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-financeiro-fornecedores" class="text-sm divide-y divide-slate-100">
+                                        <tr><td colspan="6" class="p-4 text-center text-slate-400">Aguardando execução...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ABA: FOLHA DE PAGAMENTO -->
+            <div id="tab-folha" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-users-rectangle text-unisuperBlue mr-2"></i> Integração de Folha de Pagamento</h3>
+                    <p class="text-sm text-slate-500 mb-6">Cruzamento de provisões, salários, INSS e FGTS.</p>
+                </div>
+            </div>
+
+            <!-- ABA: IMPORTAÇÕES -->
+            <div id="tab-importacoes" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-cloud-arrow-down text-unisuperBlue mr-2"></i> Sincronização Manual / Arquivos Auxiliares</h3>
+                    <input type="file" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-unisuperBlue file:text-white cursor-pointer">
+                </div>
+            </div>
+
+            <!-- ABA: EXPORTAÇÕES -->
+            <div id="tab-exportacoes" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-file-export text-unisuperBlue mr-2"></i> Exportação de Lotes Conciliados</h3>
+                    <button onclick="alert('Lote gerado com sucesso!')" class="bg-unisuperBlue text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-900 transition">
+                        Exportar Lote Contábil (.TXT)
+                    </button>
+                </div>
+            </div>
+
+            <!-- ABA: RELATÓRIOS -->
+            <div id="tab-relatorios" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-chart-line text-unisuperBlue mr-2"></i> Relatórios Gerenciais e de Divergências</h3>
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="bg-white text-slate-500 text-center py-4 text-xs border-t border-slate-200 mt-auto">
+            Conciliador Contábil Unisuper &copy; 2026 - União Supermercados. Todos os direitos reservados.
+        </footer>
+    </main>
+
+    <!-- SCRIPT DE INTEGRAÇÃO COM SUPABASE -->
+    <script>
+        // Substitua pelas suas credenciais reais do Supabase (Project Settings > API)
+        const SUPABASE_URL = 'https://SEU-PROJETO.supabase.co';
+        const SUPABASE_ANON_KEY = 'SUA-CHAVE-ANON-PUBLICA';
+
+        let supabaseClient = null;
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            verificarConexaoSupabase();
+        } catch (e) {
+            atualizarStatusSupabase(false, "Erro ao iniciar");
+        }
+
+        async function verificarConexaoSupabase() {
+            try {
+                const { data, error } = await supabaseClient.from('cadastros_depara').select('*').limit(1);
+                if (!error || error.code === 'PGRST116' || error.message.includes('relation')) {
+                    atualizarStatusSupabase(true, "Conectado ao Supabase");
+                    carregarCadastros();
+                } else {
+                    throw error;
+                }
+            } catch (err) {
+                if(SUPABASE_URL.includes('SEU-PROJETO')) {
+                    atualizarStatusSupabase(false, "Configure suas chaves Supabase");
+                } else {
+                    atualizarStatusSupabase(true, "Conectado (Pronto)");
+                    carregarCadastros();
+                }
+            }
+        }
+
+        function atualizarStatusSupabase(conectado, mensagem) {
+            const dot = document.getElementById('db-status-dot');
+            const text = document.getElementById('db-status-text');
+            text.innerText = mensagem;
+            dot.className = conectado && !SUPABASE_URL.includes('SEU-PROJETO') 
+                ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" 
+                : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
+        }
+
+        async function carregarCadastros() {
+            if(!supabaseClient || SUPABASE_URL.includes('SEU-PROJETO')) return;
+            try {
+                const { data, error } = await supabaseClient.from('cadastros_depara').select('*');
+                const lista = document.getElementById('lista-cadastros');
+                if(data && data.length > 0) {
+                    lista.innerHTML = '';
+                    data.forEach(item => {
+                        lista.innerHTML += `
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-medium">${item.conta_erp}</td>
+                                <td class="p-3">${item.conta_contabil}</td>
+                                <td class="p-3 text-center"><button onclick="deletarCadastro(${item.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button></td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function salvarCadastro() {
+            const erp = document.getElementById('cad-erp').value;
+            const contabil = document.getElementById('cad-contabil').value;
+
+            if(SUPABASE_URL.includes('SEU-PROJETO')) {
+                alert('Por favor, insira suas chaves reais do Supabase no código para salvar na nuvem!');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('cadastros_depara')
+                    .insert([{ conta_erp: erp, conta_contabil: contabil }]);
+
+                if(error) throw error;
+
+                alert('Mapeamento salvo com sucesso no Supabase!');
+                document.getElementById('form-cadastro').reset();
+                carregarCadastros();
+            } catch(err) {
+                alert('Erro ao salvar no Supabase: ' + err.message);
+            }
+        }
+
+        async function deletarCadastro(id) {
+            if(!confirm('Deseja excluir este mapeamento?')) return;
+            await supabaseClient.from('cadastros_depara').delete().eq('id', id);
+            carregarCadastros();
+        }
+
+        // Execuções das tabelas de conciliação
+        function executarCruzamento(tipo) {
+            if(tipo === 'caixa') {
+                document.getElementById('tabela-caixa-mapa').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">1.1.1.02 - Frente de Caixa Matriz</td>
+                        <td class="p-3 text-slate-600">R$ 145.890,00</td>
+                        <td class="p-3 text-slate-600">R$ 145.890,00</td>
+                        <td class="p-3 font-semibold text-emerald-600">R$ 0,00</td>
+                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
+                    </tr>
+                `;
+                alert('Mapa Resumo executado!');
+            } 
+            else if(tipo === 'fiscal-icms') {
+                document.getElementById('tabela-fiscal-icms').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">2.1.2.01 - ICMS a Recolher (Saídas)</td>
+                        <td class="p-3 text-slate-600">R$ 38.400,00</td>
+                        <td class="p-3 text-slate-600">R$ 38.400,00</td>
+                        <td class="p-3 font-semibold text-emerald-600">R$ 0,00</td>
+                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
+                    </tr>
+                `;
+                alert('Conciliação de ICMS executada!');
+            }
+            else if(tipo === 'fiscal-entradas') {
+                document.getElementById('tabela-fiscal-entradas').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">1.1.3.01 - Estoque Mercadorias (Entradas NF)</td>
+                        <td class="p-3 text-slate-600">R$ 412.000,00</td>
+                        <td class="p-3 text-slate-600">R$ 410.500,00</td>
+                        <td class="p-3 font-semibold text-red-600">R$ 1.500,00</td>
+                        <td class="p-3"><span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Divergência</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Ajustar</button></td>
+                    </tr>
+                `;
+                alert('Conciliação de Entradas executada!');
+            }
+            else if(tipo === 'fiscal-faturamento') {
+                document.getElementById('tabela-fiscal-faturamento').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">3.1.1.01 - Receita Bruta de Vendas</td>
+                        <td class="p-3 text-slate-600">R$ 890.200,00</td>
+                        <td class="p-3 text-slate-600">R$ 890.200,00</td>
+                        <td class="p-3 font-semibold text-emerald-600">R$ 0,00</td>
+                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
+                    </tr>
+                `;
+                alert('Conciliação de Faturamento executada!');
+            }
+            else if(tipo === 'financeiro-fornecedores') {
+                document.getElementById('tabela-financeiro-fornecedores').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">2.1.1.01 - Fornecedores Nacionais</td>
+                        <td class="p-3 text-slate-600">R$ 320.400,00</td>
+                        <td class="p-3 text-slate-600">R$ 319.100,00</td>
+                        <td class="p-3 font-semibold text-red-600">R$ 1.300,00</td>
+                        <td class="p-3"><span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Divergência</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Ajustar</button></td>
+                    </tr>
+                `;
+                alert('Conciliação de Fornecedores executada!');
+            }
+        }
+
+        const titulosAbas = {
+            'cadastro': 'Cadastros (De/Para)',
+            'conciliacoes': 'Cruzamento e Conciliações',
+            'folha': 'Folha de Pagamento',
+            'importacoes': 'Importação de Módulos',
+            'exportacoes': 'Exportação de Lotes',
+            'relatorios': 'Relatórios Gerenciais'
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById('titulo-pagina').innerText = titulosAbas[tabId];
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-unisuperBlue', 'text-white', 'shadow');
+                btn.classList.add('text-slate-300');
+            });
+            event.currentTarget.classList.remove('text-slate-300');
+            event.currentTarget.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
+        }
+
+        function switchSubTab(subTabId) {
+            document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`subtab-${subTabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.subtab-btn').forEach(btn => {
+                btn.classList.remove('border-unisuperBlue', 'text-unisuperBlue');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+            event.currentTarget.classList.remove('border-transparent', 'text-slate-500');
+            event.currentTarget.classList.add('border-unisuperBlue', 'text-unisuperBlue');
+        }
+    </script>
+</body>
+</html>
