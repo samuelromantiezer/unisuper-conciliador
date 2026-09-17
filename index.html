@@ -1,19 +1,18 @@
-// 1. Configuração ÚNICA do Supabase
-const supabaseUrl = 'https://ikhutmmeeemkzkakpmal.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4'; 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// 1. Configuração ÚNICA com nomes novos para evitar o erro de duplicação
+const urlBD = 'https://ikhutmmeeemkzkakpmal.supabase.co';
+const chaveBD = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4'; 
+const conexaoBD = window.supabase.createClient(urlBD, chaveBD);
 
 // 2. Controle de Sessão
 async function verificarAutenticacao() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await conexaoBD.auth.getSession();
     
-    // ATENÇÃO: Verifique se os IDs abaixo (tela-login e tela-app) são os mesmos que você usou no seu HTML
     const telaLogin = document.getElementById('tela-login');
     const telaApp = document.getElementById('tela-app');
 
     if (session) {
         if (telaLogin) telaLogin.style.display = 'none';
-        if (telaApp) telaApp.style.display = 'block'; // ou 'flex', dependendo do seu CSS
+        if (telaApp) telaApp.style.display = 'block'; 
         carregarDivergencias();
     } else {
         if (telaLogin) telaLogin.style.display = 'flex';
@@ -23,11 +22,10 @@ async function verificarAutenticacao() {
 
 // 3. Função do Botão de Entrar
 async function fazerLogin() {
-    // Pega os valores digitados (confirme se seus inputs têm id="email" e id="senha")
     const email = document.getElementById('email').value;
     const password = document.getElementById('senha').value;
     
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await conexaoBD.auth.signInWithPassword({
         email: email,
         password: password,
     });
@@ -41,20 +39,19 @@ async function fazerLogin() {
 
 // 4. Função de Sair
 async function fazerLogout() {
-    await supabase.auth.signOut();
+    await conexaoBD.auth.signOut();
     verificarAutenticacao();
 }
 
 // 5. Carregar a Tabela
 async function carregarDivergencias() {
-    // Confirme se o <tbody> da sua tabela tem o id="corpo-tabela"
     const tbody = document.getElementById('corpo-tabela');
-    if (!tbody) return; // Se não achar a tabela na tela, não faz nada
+    if (!tbody) return; 
 
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Buscando dados no Supabase...</td></tr>';
 
     try {
-        const { data, error } = await supabase
+        const { data, error } = await conexaoBD
             .from('relatorio_fornecedores')
             .select('*')
             .order('idloja', { ascending: true })
