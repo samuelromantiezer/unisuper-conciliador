@@ -295,11 +295,16 @@
 
                         <!-- SUB-ABA: FINANCEIRO -->
                         <div id="subtab-financeiro" class="subtab-content hidden space-y-6">
-                            <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 font-semibold text-slate-700 text-sm flex justify-between items-center">
-                                <span><i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i> Módulo: Contas a Pagar e Receber (Dados Reais do Servidor)</span>
-                                <button onclick="carregarDivergenciasFornecedores()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-emerald-700 transition">
-                                    <i class="fa-solid fa-sync mr-1"></i> Atualizar da Nuvem
-                                </button>
+                            <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 font-semibold text-slate-700 text-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                                <span><i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i> Módulo: Contas a Pagar e Receber (Fornecedores)</span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="dispararExtracaoServidor()" class="bg-unisuperBlue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-900 transition shadow">
+                                        <i class="fa-solid fa-bolt mr-1"></i> Executar Extração no Servidor
+                                    </button>
+                                    <button onclick="carregarDivergenciasFornecedores()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-emerald-700 transition shadow">
+                                        <i class="fa-solid fa-sync mr-1"></i> Puxar da Nuvem
+                                    </button>
+                                </div>
                             </div>
                             <div class="space-y-3">
                                 <div class="overflow-x-auto border border-slate-200 rounded-lg">
@@ -314,7 +319,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-financeiro-fornecedores" class="text-sm divide-y divide-slate-100">
-                                            <tr><td colspan="5" class="p-4 text-center text-slate-400">Clique em "Atualizar da Nuvem" para carregar os dados reais.</td></tr>
+                                            <tr><td colspan="5" class="p-4 text-center text-slate-400">Clique em "Puxar da Nuvem" ou execute a extração no servidor.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -515,7 +520,7 @@
             carregarCadastros();
         }
 
-        // CARREGA OS DADOS REAIS DO SCRIPT DE FORNECEDORES
+        // CARREGA OS DADOS DA NUVEM (SUPABASE)
         async function carregarDivergenciasFornecedores() {
             if (!supabaseClient) return;
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
@@ -531,7 +536,7 @@
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Nenhum registro encontrado. Execute o script no servidor para popular os dados.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Nenhum registro encontrado. Execute a extração no servidor.</td></tr>';
                     return;
                 }
 
@@ -556,6 +561,35 @@
             } catch (err) {
                 console.error("Erro ao carregar fornecedores:", err);
                 tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500">Erro ao carregar dados do Supabase.</td></tr>';
+            }
+        }
+
+        // DISPARA A EXTRAÇÃO DIRETO NO SERVIDOR LOCAL (API DO NODE.JS)
+        async function dispararExtracaoServidor() {
+            if (!confirm("Deseja rodar a extração no servidor do supermercado agora?")) return;
+
+            const tbody = document.getElementById('tabela-financeiro-fornecedores');
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor e processando query no VR... Aguarde.</td></tr>';
+
+            try {
+                // Altere para o IP/porta correto do servidor local onde o script do Node está rodando (ex: IP fixo ou VPN)
+                const resposta = await fetch('http://localhost:3000/executar-conciliacao', {
+                    method: 'POST'
+                });
+                
+                const resultado = await resposta.json();
+
+                if (resultado.sucesso) {
+                    alert(`Sucesso! ${resultado.total} contas atualizadas pelo servidor.`);
+                    carregarDivergenciasFornecedores(); // Atualiza a tabela na tela com os dados novos
+                } else {
+                    alert("Erro ao executar no servidor: " + resultado.erro);
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Não foi possível conectar ao servidor local do supermercado. Verifique se o script Node.js (servidor_conciliador.js) está rodando na porta 3000.");
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Falha de conexão com o servidor local.</td></tr>`;
             }
         }
 
