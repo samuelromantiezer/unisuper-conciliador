@@ -1,226 +1,99 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conciliador Contábil - União Supermercado</title>
+// 1. Configuração ÚNICA do Supabase
+const supabaseUrl = 'https://ikhutmmeeemkzkakpmal.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4'; 
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// 2. Controle de Sessão
+async function verificarAutenticacao() {
+    const { data: { session } } = await supabase.auth.getSession();
     
-    <!-- Biblioteca do Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    // ATENÇÃO: Verifique se os IDs abaixo (tela-login e tela-app) são os mesmos que você usou no seu HTML
+    const telaLogin = document.getElementById('tela-login');
+    const telaApp = document.getElementById('tela-app');
+
+    if (session) {
+        if (telaLogin) telaLogin.style.display = 'none';
+        if (telaApp) telaApp.style.display = 'block'; // ou 'flex', dependendo do seu CSS
+        carregarDivergencias();
+    } else {
+        if (telaLogin) telaLogin.style.display = 'flex';
+        if (telaApp) telaApp.style.display = 'none';
+    }
+}
+
+// 3. Função do Botão de Entrar
+async function fazerLogin() {
+    // Pega os valores digitados (confirme se seus inputs têm id="email" e id="senha")
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('senha').value;
     
-    <style>
-        /* Estilos Gerais */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #f0f2f5; }
-        
-        /* --- TELA DE LOGIN --- */
-        #tela-login { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
-        .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 320px; text-align: center; }
-        .login-box h2 { margin-top: 0; color: #2c3e50; }
-        .login-box p { color: #7f8c8d; margin-bottom: 25px; }
-        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 15px; }
-        .login-box button { width: 100%; padding: 12px; background-color: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 15px; transition: 0.2s; }
-        .login-box button:hover { background-color: #004494; }
-        
-        /* --- LAYOUT DO SISTEMA --- */
-        #tela-app { display: none; width: 100%; height: 100%; }
-        
-        /* Menu Lateral */
-        .sidebar { width: 260px; background-color: #2c3e50; color: white; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 25px 20px; text-align: center; border-bottom: 1px solid #34495e; }
-        .sidebar-header h2 { margin: 0; font-size: 20px; color: #ecf0f1; }
-        .sidebar-header small { display: block; font-size: 12px; color: #bdc3c7; margin-top: 5px; }
-        
-        .nav-links { flex-grow: 1; padding-top: 15px; }
-        .nav-links a { display: block; color: #bdc3c7; text-decoration: none; padding: 15px 25px; transition: 0.3s; font-size: 15px; }
-        .nav-links a:hover, .nav-links a.ativo { background-color: #34495e; color: white; border-left: 4px solid #3498db; }
-        
-        /* Botão Sair no Rodapé do Menu Lateral */
-        .logout-container { padding: 20px; border-top: 1px solid #34495e; }
-        .btn-sair { width: 100%; padding: 12px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-sair:hover { background-color: #c0392b; }
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+    });
+    
+    if (error) {
+        alert("Erro ao entrar: " + error.message);
+    } else {
+        verificarAutenticacao();
+    }
+}
 
-        /* Área de Conteúdo */
-        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; background-color: #f0f2f5; }
-        .header-titulo { margin-bottom: 30px; color: #2c3e50; }
-        
-        /* Tabela de Conciliação */
-        .card-tabela { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .btn-atualizar { padding: 10px 20px; background-color: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 20px; }
-        .btn-atualizar:hover { background-color: #219653; }
-        
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background-color: #f8f9fa; color: #2c3e50; font-weight: 600; }
-        tr:hover { background-color: #f9f9f9; }
-    </style>
-</head>
-<body>
+// 4. Função de Sair
+async function fazerLogout() {
+    await supabase.auth.signOut();
+    verificarAutenticacao();
+}
 
-    <!-- 1. TELA DE LOGIN -->
-    <div id="tela-login">
-        <div class="login-box">
-            <h2>Conciliador Contábil</h2>
-            <p>União Supermercado</p>
-            <input type="email" id="email" placeholder="E-mail de acesso">
-            <input type="password" id="senha" placeholder="Senha">
-            <button onclick="fazerLogin()">Entrar no Sistema</button>
-            <p id="msg-erro" style="color: #e74c3c; font-size: 14px; display: none; margin-top: 15px;"></p>
-        </div>
-    </div>
+// 5. Carregar a Tabela
+async function carregarDivergencias() {
+    // Confirme se o <tbody> da sua tabela tem o id="corpo-tabela"
+    const tbody = document.getElementById('corpo-tabela');
+    if (!tbody) return; // Se não achar a tabela na tela, não faz nada
 
-    <!-- 2. TELA PRINCIPAL DO SISTEMA -->
-    <div id="tela-app">
-        
-        <!-- Menu Lateral Embutido -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h2>União Supermercado</h2>
-                <small>Samuel Gomes Consultoria</small>
-            </div>
-            
-            <div class="nav-links">
-                <a href="#" class="ativo">Conciliação: Fornecedores</a>
-                <!-- Quando tiver o módulo de caixa ou fiscal, adicionamos aqui embaixo -->
-                <a href="#">Conciliação: Caixa (Em breve)</a>
-            </div>
-            
-            <div class="logout-container">
-                <button class="btn-sair" onclick="fazerLogout()">Sair da Conta</button>
-            </div>
-        </div>
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Buscando dados no Supabase...</td></tr>';
 
-        <!-- Conteúdo do Relatório -->
-        <div class="main-content">
-            <div class="header-titulo">
-                <h1>Divergências: Contas a Pagar x Contábil</h1>
-            </div>
-            
-            <div class="card-tabela">
-                <button class="btn-atualizar" onclick="carregarDivergencias()">🔄 Puxar Dados do Supabase</button>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Loja</th>
-                            <th>Conta / Fornecedor</th>
-                            <th>Valor ERP (Fin)</th>
-                            <th>Valor Contábil</th>
-                            <th>Diferença</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpo-tabela">
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: #7f8c8d;">
-                                Clique no botão acima para carregar as divergências geradas pelo servidor.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    try {
+        const { data, error } = await supabase
+            .from('relatorio_fornecedores')
+            .select('*')
+            .order('idloja', { ascending: true })
+            .order('conta_contabil', { ascending: true });
 
-    <!-- 3. REGRAS DE NEGÓCIO E CONEXÃO (JAVASCRIPT) -->
-    <script>
-        // 1. Configuração do Supabase (Mesmas credenciais usadas no Node)
-        const supabaseUrl = 'https://ikhutmmeeemkzkakpmal.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4'; 
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        if (error) throw error;
 
-        // 2. Controle de Sessão e Exibição de Telas
-        async function verificarAutenticacao() {
-            // O Supabase já utiliza o localStorage internamente para gerenciar a sessão
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                document.getElementById('tela-login').style.display = 'none';
-                document.getElementById('tela-app').style.display = 'flex';
-                carregarDivergencias(); // Já busca a tabela ao logar
-            } else {
-                document.getElementById('tela-login').style.display = 'flex';
-                document.getElementById('tela-app').style.display = 'none';
-            }
+        tbody.innerHTML = ''; 
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhuma divergência encontrada.</td></tr>';
+            return;
         }
 
-        async function fazerLogin() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('senha').value;
-            const msgErro = document.getElementById('msg-erro');
+        data.forEach(item => {
+            const tr = document.createElement('tr');
             
-            msgErro.style.display = 'none'; // limpa erros antigos
-
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
+            const formataReal = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             
-            if (error) {
-                msgErro.innerText = "Erro: " + error.message;
-                msgErro.style.display = 'block';
-            } else {
-                verificarAutenticacao();
-            }
-        }
+            const valorERP = formataReal(item.saldo_financeiro);
+            const valorContabil = formataReal(item.saldo_contabil);
+            const diferenca = formataReal(item.comparativo);
+            const corDiferenca = item.comparativo !== 0 ? '#e74c3c' : '#27ae60';
 
-        async function fazerLogout() {
-            await supabase.auth.signOut();
-            verificarAutenticacao();
-        }
+            tr.innerHTML = `
+                <td>${item.loja}</td>
+                <td><strong>${item.conta_mascara}</strong><br><small>${item.nome_conta}</small></td>
+                <td>${valorERP}</td>
+                <td>${valorContabil}</td>
+                <td style="color: ${corDiferenca}; font-weight: bold;">${diferenca}</td>
+            `;
+            tbody.appendChild(tr);
+        });
 
-        // 3. Extração dos Dados da Nuvem
-        async function carregarDivergencias() {
-            const tbody = document.getElementById('corpo-tabela');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Carregando dados da nuvem... Aguarde.</td></tr>';
+    } catch (erro) {
+        console.error("Falha ao buscar:", erro);
+        tbody.innerHTML = '<tr><td colspan="5" style="color: red; text-align: center;">Erro de conexão com a nuvem.</td></tr>';
+    }
+}
 
-            try {
-                // Puxa a tabela que o script em Node alimentou
-                const { data, error } = await supabase
-                    .from('relatorio_fornecedores')
-                    .select('*')
-                    .order('idloja', { ascending: true })
-                    .order('conta_contabil', { ascending: true });
-
-                if (error) throw error;
-
-                tbody.innerHTML = ''; // Limpa a mensagem
-
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: green; font-weight: bold;">Tudo certo! Nenhuma divergência contábil encontrada.</td></tr>';
-                    return;
-                }
-
-                // Monta as linhas na tela
-                data.forEach(item => {
-                    const tr = document.createElement('tr');
-                    
-                    // Formata os números para R$ Brasileiro
-                    const formataReal = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    
-                    const valorERP = formataReal(item.saldo_financeiro);
-                    const valorContabil = formataReal(item.saldo_contabil);
-                    const diferenca = formataReal(item.comparativo);
-
-                    // Deixa a diferença vermelha para destacar no relatório
-                    const corDiferenca = item.comparativo !== 0 ? '#e74c3c' : '#27ae60';
-
-                    tr.innerHTML = `
-                        <td>${item.loja}</td>
-                        <td><strong>${item.conta_mascara}</strong><br><small>${item.nome_conta}</small></td>
-                        <td>${valorERP}</td>
-                        <td>${valorContabil}</td>
-                        <td style="color: ${corDiferenca}; font-weight: bold;">${diferenca}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-            } catch (erro) {
-                console.error("Falha ao buscar os dados:", erro);
-                tbody.innerHTML = '<tr><td colspan="5" style="color: red; text-align: center;">Falha na conexão com o Supabase. Verifique o console.</td></tr>';
-            }
-        }
-
-        // Executa a verificação assim que a página é aberta
-        window.onload = verificarAutenticacao;
-    </script>
-</body>
-</html>
+// Inicia a checagem ao abrir a página
+window.onload = verificarAutenticacao;
