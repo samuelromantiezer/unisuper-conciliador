@@ -477,7 +477,6 @@
         function toggleDropdown(id, event) {
             event.stopPropagation();
             const el = document.getElementById(id);
-            // Fecha outros dropdowns abertos
             document.querySelectorAll('[id^="dropdown-"]').forEach(d => {
                 if (d.id !== id) d.classList.add('hidden');
             });
@@ -565,7 +564,7 @@
             const contabil = document.getElementById('cad-contabil').value.trim();
             if (!erp || !contabil) { alert("Preencha os dois campos."); return; }
             try {
-                const { error } = await supabaseClient.from('cadastros_depara')->insert([{ conta_erp: erp, conta_contabil: contabil }]);
+                const { error } = await supabaseClient.from('cadastros_depara').insert([{ conta_erp: erp, conta_contabil: contabil }]);
                 if (error) throw error;
                 alert('Mapeamento salvo com sucesso no Supabase!');
                 document.getElementById('form-cadastro').reset();
@@ -672,7 +671,6 @@
             });
 
             renderizarTabelaFornecedores(filtrados);
-            // Fecha os dropdowns após clicar em exibir
             document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
         }
 
