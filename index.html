@@ -240,7 +240,7 @@
                                 </div>
                             </div>
 
-                            <!-- PAINEL DE FILTROS COM DROPDOWNS SUSPENSOS E OPÇÃO "TODAS/TODOS" -->
+                            <!-- PAINEL DE FILTROS COM A COMPETÊNCIA DE CONSULTA INCLUÍDA -->
                             <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">
@@ -250,8 +250,14 @@
                                         <i class="fa-solid fa-search"></i><span>Exibir</span>
                                     </button>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2 border-t border-slate-100 relative">
+                                <div class="grid grid-cols-1 md:grid-cols-6 gap-3 pt-2 border-t border-slate-100 relative">
                                     
+                                    <!-- NOVO: CAMPO DE COMPETÊNCIA (DATA DE CORTE) -->
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Competência (Data)</label>
+                                        <input type="date" id="filtro-competencia" value="2026-07-31" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
+                                    </div>
+
                                     <!-- DROPDOWN MULTI-SELEÇÃO: LOJAS -->
                                     <div class="relative">
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Filtrar Lojas</label>
@@ -389,12 +395,9 @@
         const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
 
-        // URL DO TÚNEL CLOUDFLARE FICA APENAS AQUI NO CÓDIGO
         const URL_TUNEL_CLOUDFLARE = 'https://colleague-alone-phrase-warranty.trycloudflare.com';
 
         let supabaseClient = null;
-        let servidorOnline = false;
-        let processandoExtracao = false;
         let dadosFornecedoresCache = [];
 
         try {
@@ -519,7 +522,6 @@
             else span.innerText = `${checks.length} grupos selecionados`;
         }
 
-        // --- CLASSIFICAÇÃO DE GRUPO ECONÔMICO ---
         function obterGrupoEconomico(idloja) {
             const numLoja = String(idloja).trim().toUpperCase();
             if (numLoja === 'CD' || (!isNaN(numLoja) && Number(numLoja) >= 11 && Number(numLoja) <= 14)) {
@@ -586,7 +588,6 @@
             }
         }
 
-        // --- CARREGAMENTO DE DIVERGÊNCIAS FORNECEDORES ---
         async function carregarDivergenciasFornecedores() {
             if (!supabaseClient) return;
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
@@ -606,7 +607,6 @@
             }
         }
 
-        // Cria os checkboxes de lojas no dropdown dinamicamente
         function construirCheckboxesLojas(data) {
             const container = document.getElementById('container-checkboxes-lojas');
             container.innerHTML = '';
@@ -645,7 +645,6 @@
             });
         }
 
-        // --- APLICAR FILTROS APÓS CLICAR EM EXIBIR ---
         function aplicarFiltrosFornecedores() {
             const lojasSelecionadas = Array.from(document.querySelectorAll('input[name="filtro-loja"]:checked')).map(cb => cb.value);
             const gruposSelecionados = Array.from(document.querySelectorAll('input[name="filtro-grupo"]:checked')).map(cb => cb.value);
@@ -705,26 +704,36 @@
             });
         }
 
+        // Dispara a extração lendo a competência selecionada no filtro da tela
         async function dispararExtracaoServidor() {
-            if (!confirm("Deseja executar a extração no servidor local agora?")) return;
+            const dataCompetencia = document.getElementById('filtro-competencia').value;
+            if (!dataCompetencia) {
+                alert("Por favor, selecione a competência (data) de consulta.");
+                return;
+            }
+
+            if (!confirm(`Deseja executar a extração no servidor para a competência de ${dataCompetencia.split('-').reverse().join('/')}?`)) return;
+            
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao integrador local e processando... Aguarde.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
 
             try {
                 const resposta = await fetch(`${URL_TUNEL_CLOUDFLARE}/executar-conciliacao`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dataFinal: dataCompetencia })
                 });
                 const resultado = await resposta.json();
                 if (resultado.sucesso) {
-                    alert(`Sucesso! ${resultado.total} contas atualizadas.`);
+                    alert(`Sucesso! ${resultado.total} contas atualizadas pelo servidor.`);
                     carregarDivergenciasFornecedores();
                 } else {
-                    alert("Erro ao executar: " + resultado.erro);
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro: ${resultado.erro}</td></tr>`;
+                    alert("Erro ao executar no servidor: " + resultado.erro);
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
                 }
             } catch (e) {
                 console.error(e);
-                alert("Falha na comunicação. Por favor, verifique se o servidor local (Node.js) e o túnel estão rodando.");
+                alert("Não foi possível conectar ao servidor local. Verifique se o integrador está rodando.");
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
             }
         }
