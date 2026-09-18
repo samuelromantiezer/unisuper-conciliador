@@ -855,7 +855,7 @@
                                     <!-- BOTÃO EXECUTAR -->
 
                                     <button id="btn-extracao-servidor"
-                                            onclick="dispararExtracaoServidor()"
+                                            onclick="const resposta = ()"
                                             class="bg-unisuperBlue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-900 transition shadow flex items-center gap-1">
 
                                         <i class="fa-solid fa-bolt"></i>
@@ -2042,14 +2042,34 @@
            EXECUTAR EXTRAÇÃO NO NODE
         ========================================================= */
 
+        // DISPARA A EXTRAÇÃO DIRETO NO SERVIDOR LOCAL (VIA TÚNEL CLOUDFLARE)
         async function dispararExtracaoServidor() {
+            if (!confirm("Deseja rodar a extração no servidor do supermercado agora?")) return;
 
-            if (processandoExtracao) {
+            const tbody = document.getElementById('tabela-financeiro-fornecedores');
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao túnel seguro e processando query no VR... Aguarde.</td></tr>';
 
-                return;
+            try {
+                // AQUI ESTÁ A MUDANÇA: Usamos a URL segura do Cloudflare Tunnel
+                const resposta = await fetch('https://integrate-elements-passive-utilization.trycloudflare.com/executar-conciliacao', {
+                    method: 'POST'
+                });
+                
+                const resultado = await resposta.json();
 
+                if (resultado.sucesso) {
+                    alert(`Sucesso! ${resultado.total} contas atualizadas pelo servidor.`);
+                    carregarDivergenciasFornecedores(); // Atualiza a tabela na tela
+                } else {
+                    alert("Erro ao executar no servidor: " + resultado.erro);
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Não foi possível conectar ao túnel do Cloudflare. Verifique se o cloudflared está rodando.");
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Falha de conexão com o túnel seguro.</td></tr>`;
             }
-
+        }    
 
             const confirmar =
                 confirm(
