@@ -225,6 +225,22 @@
 
                         <!-- SUB-ABA FINANCEIRO (FORNECEDORES) -->
                         <div id="subtab-financeiro" class="subtab-content hidden space-y-6">
+                            
+                            <!-- CONFIGURAÇÃO DA URL DO TÚNEL CLOUDFLARE -->
+                            <div class="bg-amber-50 p-4 rounded-lg border border-amber-300 flex flex-col md:flex-row justify-between items-center gap-3">
+                                <div class="w-full md:w-auto flex-grow">
+                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">
+                                        <i class="fa-solid fa-link mr-1"></i> URL do Túnel Cloudflare (Servidor Local)
+                                    </label>
+                                    <input type="text" id="input-url-tunel" placeholder="Ex: https://modern-stack-42d9.trycloudflare.com" class="w-full text-xs border border-amber-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
+                                </div>
+                                <div class="flex items-end pt-4 md:pt-0">
+                                    <button onclick="salvarUrlTunel()" class="bg-amber-700 text-white px-4 py-2 rounded text-xs font-bold hover:bg-amber-800 transition shadow">
+                                        Salvar URL
+                                    </button>
+                                </div>
+                            </div>
+
                             <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 font-semibold text-slate-700 text-sm flex flex-col md:flex-row justify-between items-center gap-3">
                                 <span>
                                     <i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i> Módulo: Contas a Pagar e Receber (Fornecedores)
@@ -424,7 +440,7 @@
             document.getElementById('app-screen').classList.remove('hidden');
             atualizarStatusSupabase(true, "Conectado ao Supabase");
             carregarCadastros();
-            verificarServidorNode();
+            carregarUrlTunelSalva();
 
             const abaSalva = localStorage.getItem('unisuper_aba_atual') || 'cadastro';
             const subAbaSalva = localStorage.getItem('unisuper_subaba_atual') || 'caixa';
@@ -471,7 +487,23 @@
             if (dot) dot.className = conectado ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
         }
 
-        async function verificarServidorNode() {}
+        // --- GERENCIAMENTO DA URL DO TÚNEL DO CLOUDFLARE ---
+        function carregarUrlTunelSalva() {
+            const urlSalva = localStorage.getItem('unisuper_url_tunel') || '';
+            const input = document.getElementById('input-url-tunel');
+            if (input) input.value = urlSalva;
+        }
+
+        function salvarUrlTunel() {
+            const input = document.getElementById('input-url-tunel');
+            const url = input.value.trim().replace(/\/$/, ''); // Remove barra no final se houver
+            if (!url) {
+                alert("Digite uma URL válida.");
+                return;
+            }
+            localStorage.setItem('unisuper_url_tunel', url);
+            alert("URL do túnel salva com sucesso!");
+        }
 
         // --- CONTROLE DOS DROPDOWNS SUSPENSOS ---
         function toggleDropdown(id, event) {
@@ -705,12 +737,18 @@
         }
 
         async function dispararExtracaoServidor() {
+            const urlTunel = localStorage.getItem('unisuper_url_tunel');
+            if (!urlTunel) {
+                alert("Por favor, informe e salve a URL do túnel do Cloudflare no campo amarelo acima antes de executar.");
+                return;
+            }
+
             if (!confirm("Deseja rodar a extração no servidor do supermercado agora?")) return;
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
             tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao túnel seguro e processando query no VR... Aguarde.</td></tr>';
 
             try {
-                const resposta = await fetch('https://integrate-elements-passive-utilization.trycloudflare.com/executar-conciliacao', {
+                const resposta = await fetch(`${urlTunel}/executar-conciliacao`, {
                     method: 'POST'
                 });
                 const resultado = await resposta.json();
@@ -723,7 +761,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("Não foi possível conectar ao túnel do Cloudflare. Verifique se o cloudflared está rodando.");
+                alert("Não foi possível conectar ao túnel. Verifique se o cloudflared está rodando e se a URL está correta.");
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o túnel seguro.</td></tr>`;
             }
         }
