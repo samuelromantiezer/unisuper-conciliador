@@ -389,7 +389,7 @@
         const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
 
-        // URL DO TÚNEL CLOUDFLARE CONFIGURADA DIRETAMENTE NO CÓDIGO
+        // URL DO TÚNEL CLOUDFLARE FICA APENAS AQUI NO CÓDIGO
         const URL_TUNEL_CLOUDFLARE = 'https://modern-stack-42d9.trycloudflare.com';
 
         let supabaseClient = null;
@@ -706,9 +706,9 @@
         }
 
         async function dispararExtracaoServidor() {
-            if (!confirm("Deseja rodar a extração no servidor do supermercado agora?")) return;
+            if (!confirm("Deseja executar a extração no servidor local agora?")) return;
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao integrador e processando query no VR... Aguarde.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao integrador local e processando... Aguarde.</td></tr>';
 
             try {
                 const resposta = await fetch(`${URL_TUNEL_CLOUDFLARE}/executar-conciliacao`, {
@@ -716,15 +716,15 @@
                 });
                 const resultado = await resposta.json();
                 if (resultado.sucesso) {
-                    alert(`Sucesso! ${resultado.total} contas atualizadas pelo servidor.`);
+                    alert(`Sucesso! ${resultado.total} contas atualizadas.`);
                     carregarDivergenciasFornecedores();
                 } else {
-                    alert("Erro ao executar no servidor: " + resultado.erro);
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
+                    alert("Erro ao executar: " + resultado.erro);
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro: ${resultado.erro}</td></tr>`;
                 }
             } catch (e) {
                 console.error(e);
-                alert("Não foi possível conectar ao servidor do supermercado. Verifique se o sistema integrador está aberto e rodando na máquina local.");
+                alert("Falha na comunicação. Por favor, verifique se o servidor local (Node.js) e o túnel estão rodando.");
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
             }
         }
