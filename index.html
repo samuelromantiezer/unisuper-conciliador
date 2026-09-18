@@ -92,8 +92,16 @@
 
         <!-- CONTEÚDO PRINCIPAL -->
         <main class="flex-grow flex flex-col min-h-screen overflow-y-auto">
-            <header class="bg-white shadow-sm px-8 py-4 border-b border-slate-200 flex justify-between items-center">
+            <header class="bg-white shadow-sm px-8 py-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
                 <h2 id="titulo-pagina" class="text-xl font-bold text-slate-800">Cadastros (De/Para)</h2>
+                
+                <!-- PAINEL DINÂMICO DO TÚNEL CLOUDFLARE -->
+                <div class="flex items-center gap-2 bg-slate-100 p-2 rounded-lg border border-slate-300">
+                    <span class="text-[11px] font-bold text-slate-700 whitespace-nowrap"><i class="fa-solid fa-network-wired text-unisuperBlue mr-1"></i> URL Túnel:</span>
+                    <input type="text" id="input-url-tunel" placeholder="https://xxx.trycloudflare.com" class="text-xs border border-slate-300 rounded px-2 py-1 w-56 bg-white focus:outline-none focus:ring-1 focus:ring-unisuperBlue">
+                    <button onclick="salvarUrlTunel()" class="bg-slate-700 text-white px-3 py-1 rounded text-xs font-bold hover:bg-slate-800 transition shadow">Salvar</button>
+                </div>
+
                 <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
                     <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span>Modo Nuvem (Supabase Ativo)</span>
@@ -240,7 +248,7 @@
                                 </div>
                             </div>
 
-                            <!-- PAINEL DE FILTROS COM A COMPETÊNCIA DE CONSULTA INCLUÍDA -->
+                            <!-- PAINEL DE FILTROS COM A COMPETÊNCIA DE CONSULTA -->
                             <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">
@@ -252,7 +260,7 @@
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-6 gap-3 pt-2 border-t border-slate-100 relative">
                                     
-                                    <!-- NOVO: CAMPO DE COMPETÊNCIA (DATA DE CORTE) -->
+                                    <!-- CAMPO DE COMPETÊNCIA (DATA DE CORTE) -->
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Competência (Data)</label>
                                         <input type="date" id="filtro-competencia" value="2026-07-31" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
@@ -328,12 +336,6 @@
                                 </div>
                             </div>
 
-                            <!-- STATUS DO SERVIDOR -->
-                            <div id="painel-status-servidor" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
-                                <i class="fa-solid fa-circle-info mr-1"></i>
-                                <span id="texto-status-servidor">Processando...</span>
-                            </div>
-
                             <!-- TABELA FORNECEDORES (6 COLUNAS EXATAS) -->
                             <div class="space-y-3">
                                 <div class="overflow-x-auto border border-slate-200 rounded-lg">
@@ -395,10 +397,34 @@
         const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
 
-        const URL_TUNEL_CLOUDFLARE = 'https://colleague-alone-phrase-warranty.trycloudflare.com';
-
         let supabaseClient = null;
         let dadosFornecedoresCache = [];
+
+        // --- GESTÃO DINÂMICA DA URL DO TÚNEL CLOUDFLARE ---
+        function getUrlTunel() {
+            let urlSalva = localStorage.getItem('unisuper_url_tunel');
+            if (!urlSalva) {
+                urlSalva = 'https://colleague-alone-phrase-warranty.trycloudflare.com'; // Fallback padrão
+            }
+            return urlSalva.trim().replace(/\/$/, '');
+        }
+
+        function salvarUrlTunel() {
+            const novaUrl = document.getElementById('input-url-tunel').value.trim();
+            if (!novaUrl) {
+                alert("Por favor, insira uma URL válida.");
+                return;
+            }
+            localStorage.setItem('unisuper_url_tunel', novaUrl);
+            alert("URL do túnel salva com sucesso no navegador!");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const inputUrl = document.getElementById('input-url-tunel');
+            if (inputUrl) {
+                inputUrl.value = localStorage.getItem('unisuper_url_tunel') || 'https://colleague-alone-phrase-warranty.trycloudflare.com';
+            }
+        });
 
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -704,7 +730,7 @@
             });
         }
 
-        // Dispara a extração lendo a competência selecionada no filtro da tela
+        // Dispara a extração usando a URL dinâmica do túnel e a competência selecionada
         async function dispararExtracaoServidor() {
             const dataCompetencia = document.getElementById('filtro-competencia').value;
             if (!dataCompetencia) {
@@ -712,13 +738,14 @@
                 return;
             }
 
-            if (!confirm(`Deseja executar a extração no servidor para a competência de ${dataCompetencia.split('-').reverse().join('/')}?`)) return;
+            const urlAtual = getUrlTunel();
+            if (!confirm(`Deseja executar a extração no servidor local para a competência de ${dataCompetencia.split('-').reverse().join('/')}?`)) return;
             
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
             tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
 
             try {
-                const resposta = await fetch(`${URL_TUNEL_CLOUDFLARE}/executar-conciliacao`, {
+                const resposta = await fetch(`${urlAtual}/executar-conciliacao`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ dataFinal: dataCompetencia })
@@ -733,7 +760,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("Não foi possível conectar ao servidor local. Verifique se o integrador está rodando.");
+                alert("Não foi possível conectar ao servidor local. Verifique se o integrador e o túnel estão rodando.");
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
             }
         }
