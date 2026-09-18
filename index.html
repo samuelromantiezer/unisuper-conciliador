@@ -24,7 +24,7 @@
         }
     </script>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col" onclick="fecharDropdownsFora(event)">
 
     <!-- TELA DE LOGIN -->
     <div id="auth-screen" class="fixed inset-0 bg-unisuperDark z-50 flex items-center justify-center p-4">
@@ -239,46 +239,66 @@
                                 </div>
                             </div>
 
-                            <!-- PAINEL DE FILTROS COM BOTÕES DE CHECKBOX MÚLTIPLOS -->
+                            <!-- PAINEL DE FILTROS COM DROPDOWNS SUSPENSOS E OPÇÃO "TODAS/TODOS" -->
                             <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                        <i class="fa-solid fa-filter text-unisuperBlue mr-1"></i> Filtros de Consulta (Marque quantas opções quiser)
+                                        <i class="fa-solid fa-filter text-unisuperBlue mr-1"></i> Filtros de Consulta
                                     </span>
                                     <button onclick="aplicarFiltrosFornecedores()" class="bg-slate-800 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-slate-900 transition shadow flex items-center gap-1.5">
                                         <i class="fa-solid fa-search"></i><span>Exibir</span>
                                     </button>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2 border-t border-slate-100">
+                                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2 border-t border-slate-100 relative">
                                     
-                                    <!-- FILTRO LOJAS (CHECKBOXES) -->
-                                    <div>
+                                    <!-- DROPDOWN MULTI-SELEÇÃO: LOJAS -->
+                                    <div class="relative">
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Filtrar Lojas</label>
-                                        <div id="container-filtro-lojas" class="w-full h-24 overflow-y-auto border border-slate-300 rounded p-2 bg-slate-50 space-y-1 text-xs">
-                                            <span class="text-slate-400 italic">Puxe da nuvem primeiro...</span>
+                                        <button type="button" onclick="toggleDropdown('dropdown-lojas', event)" class="w-full text-xs border border-slate-300 rounded p-2 bg-white text-left flex justify-between items-center focus:ring-1 focus:ring-unisuperBlue">
+                                            <span id="texto-selecao-lojas">Todas as Lojas</span>
+                                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                                        </button>
+                                        <div id="dropdown-lojas" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-lg z-20 p-2 max-h-48 overflow-y-auto space-y-1 text-xs">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded font-bold border-b border-slate-100">
+                                                <input type="checkbox" id="check-todas-lojas" onchange="selecionarTodasLojas(this)" class="rounded text-unisuperBlue focus:ring-0">
+                                                <span>Todas</span>
+                                            </label>
+                                            <div id="container-checkboxes-lojas" class="space-y-1 pt-1">
+                                                <span class="text-slate-400 italic text-[11px]">Puxe da nuvem primeiro...</span>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- FILTRO GRUPO ECONÔMICO (CHECKBOXES) -->
-                                    <div>
+                                    <!-- DROPDOWN MULTI-SELEÇÃO: GRUPO ECONÔMICO -->
+                                    <div class="relative">
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Grupo Econômico</label>
-                                        <div class="w-full h-24 overflow-y-auto border border-slate-300 rounded p-2 bg-slate-50 space-y-1 text-xs">
-                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded">
-                                                <input type="checkbox" name="filtro-grupo" value="Unisuper" class="rounded text-unisuperBlue focus:ring-0">
-                                                <span>Unisuper</span>
+                                        <button type="button" onclick="toggleDropdown('dropdown-grupos', event)" class="w-full text-xs border border-slate-300 rounded p-2 bg-white text-left flex justify-between items-center focus:ring-1 focus:ring-unisuperBlue">
+                                            <span id="texto-selecao-grupos">Todos os Grupos</span>
+                                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                                        </button>
+                                        <div id="dropdown-grupos" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-lg z-20 p-2 space-y-1 text-xs">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded font-bold border-b border-slate-100">
+                                                <input type="checkbox" id="check-todos-grupos" onchange="selecionarTodosGrupos(this)" class="rounded text-unisuperBlue focus:ring-0">
+                                                <span>Todos</span>
                                             </label>
-                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded">
-                                                <input type="checkbox" name="filtro-grupo" value="Atacado" class="rounded text-unisuperBlue focus:ring-0">
-                                                <span>Atacado</span>
-                                            </label>
-                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded">
-                                                <input type="checkbox" name="filtro-grupo" value="Sim" class="rounded text-unisuperBlue focus:ring-0">
-                                                <span>Sim</span>
-                                            </label>
-                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded">
-                                                <input type="checkbox" name="filtro-grupo" value="Outros" class="rounded text-unisuperBlue focus:ring-0">
-                                                <span>Outros</span>
-                                            </label>
+                                            <div class="space-y-1 pt-1">
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Unisuper" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Unisuper</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Atacado" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Atacado</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Sim" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Sim</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Outros" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Outros</span>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -451,8 +471,52 @@
             if (dot) dot.className = conectado ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
         }
 
-        async function verificarServidorNode() {
-            // Mantido estático para verificação do túnel/servidor local
+        async function verificarServidorNode() {}
+
+        // --- CONTROLE DOS DROPDOWNS SUSPENSOS ---
+        function toggleDropdown(id, event) {
+            event.stopPropagation();
+            const el = document.getElementById(id);
+            // Fecha outros dropdowns abertos
+            document.querySelectorAll('[id^="dropdown-"]').forEach(d => {
+                if (d.id !== id) d.classList.add('hidden');
+            });
+            el.classList.toggle('hidden');
+        }
+
+        function fecharDropdownsFora(event) {
+            if (!event.target.closest('.relative')) {
+                document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
+            }
+        }
+
+        // --- SELECIONAR TODAS / TODOS ---
+        function selecionarTodasLojas(master) {
+            const checks = document.querySelectorAll('input[name="filtro-loja"]');
+            checks.forEach(cb => cb.checked = master.checked);
+            atualizarTextoLoja();
+        }
+
+        function selecionarTodosGrupos(master) {
+            const checks = document.querySelectorAll('input[name="filtro-grupo"]');
+            checks.forEach(cb => cb.checked = master.checked);
+            atualizarTextoGrupo();
+        }
+
+        function atualizarTextoLoja() {
+            const checks = document.querySelectorAll('input[name="filtro-loja"]:checked');
+            const span = document.getElementById('texto-selecao-lojas');
+            if (checks.length === 0) span.innerText = "Todas as Lojas";
+            else if (checks.length === 1) span.innerText = checks[0].getAttribute('data-nome');
+            else span.innerText = `${checks.length} lojas selecionadas`;
+        }
+
+        function atualizarTextoGrupo() {
+            const checks = document.querySelectorAll('input[name="filtro-grupo"]:checked');
+            const span = document.getElementById('texto-selecao-grupos');
+            if (checks.length === 0) span.innerText = "Todos os Grupos";
+            else if (checks.length === 1) span.innerText = checks[0].value;
+            else span.innerText = `${checks.length} grupos selecionados`;
         }
 
         // --- CLASSIFICAÇÃO DE GRUPO ECONÔMICO ---
@@ -501,7 +565,7 @@
             const contabil = document.getElementById('cad-contabil').value.trim();
             if (!erp || !contabil) { alert("Preencha os dois campos."); return; }
             try {
-                const { error } = await supabaseClient.from('cadastros_depara').insert([{ conta_erp: erp, conta_contabil: contabil }]);
+                const { error } = await supabaseClient.from('cadastros_depara')->insert([{ conta_erp: erp, conta_contabil: contabil }]);
                 if (error) throw error;
                 alert('Mapeamento salvo com sucesso no Supabase!');
                 document.getElementById('form-cadastro').reset();
@@ -542,9 +606,9 @@
             }
         }
 
-        // Cria dinamicamente os checkboxes de lojas baseado nos dados que vieram do Supabase
+        // Cria os checkboxes de lojas no dropdown dinamicamente
         function construirCheckboxesLojas(data) {
-            const container = document.getElementById('container-filtro-lojas');
+            const container = document.getElementById('container-checkboxes-lojas');
             container.innerHTML = '';
             
             const lojasUnicas = [...new Set(data.map(item => String(item.idloja)))].sort((a, b) => {
@@ -553,7 +617,7 @@
             });
 
             if (lojasUnicas.length === 0) {
-                container.innerHTML = '<span class="text-slate-400 italic">Nenhuma loja encontrada</span>';
+                container.innerHTML = '<span class="text-slate-400 italic text-[11px]">Nenhuma loja encontrada</span>';
                 return;
             }
 
@@ -562,13 +626,15 @@
                 const nomeLoja = itemExemplo && itemExemplo.loja ? itemExemplo.loja : ('Loja ' + idloja);
                 
                 const label = document.createElement('label');
-                label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded';
+                label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
                 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.name = 'filtro-loja';
                 checkbox.value = idloja;
+                checkbox.setAttribute('data-nome', nomeLoja);
                 checkbox.className = 'rounded text-unisuperBlue focus:ring-0';
+                checkbox.onchange = atualizarTextoLoja;
                 
                 const span = document.createElement('span');
                 span.textContent = nomeLoja;
@@ -579,12 +645,9 @@
             });
         }
 
-        // --- RENDERIZAÇÃO E FILTROS LOCAIS (MÚLTIPLA SELECÃO POR BOTÕES/CHECKBOXES) ---
+        // --- APLICAR FILTROS APÓS CLICAR EM EXIBIR ---
         function aplicarFiltrosFornecedores() {
-            // Pega todas as lojas marcadas
             const lojasSelecionadas = Array.from(document.querySelectorAll('input[name="filtro-loja"]:checked')).map(cb => cb.value);
-
-            // Pega todos os grupos marcados
             const gruposSelecionados = Array.from(document.querySelectorAll('input[name="filtro-grupo"]:checked')).map(cb => cb.value);
 
             const fConta = document.getElementById('filtro-conta').value.toLowerCase().trim();
@@ -598,12 +661,8 @@
                 const nomeStr = String(item.nome_conta || '').toLowerCase();
                 const diffNum = Number(item.comparativo || 0);
 
-                // Se marcou alguma loja, filtra apenas as marcadas
                 if (lojasSelecionadas.length > 0 && !lojasSelecionadas.includes(idLojaStr)) return false;
-
-                // Se marcou algum grupo, filtra apenas os marcados
                 if (gruposSelecionados.length > 0 && !gruposSelecionados.includes(grupoLoja)) return false;
-
                 if (fConta && !contaStr.includes(fConta)) return false;
                 if (fFornecedor && !nomeStr.includes(fFornecedor)) return false;
                 if (fStatus === 'divergente' && Math.abs(diffNum) <= 0.009) return false;
@@ -613,6 +672,8 @@
             });
 
             renderizarTabelaFornecedores(filtrados);
+            // Fecha os dropdowns após clicar em exibir
+            document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
         }
 
         function renderizarTabelaFornecedores(listaDados) {
