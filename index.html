@@ -1,1898 +1,813 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Conciliador Contábil União Supermercados</title>
-
-    <!-- Tailwind -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Supabase -->
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: #f8fafc;
-        }
-
-        .sidebar {
-            width: 260px;
-        }
-
-        .main-content {
-            margin-left: 260px;
-        }
-
-        .menu-item {
-            transition: all .2s ease;
-        }
-
-        .menu-item:hover {
-            background: rgba(255,255,255,.10);
-        }
-
-        .menu-item.active {
-            background: rgba(255,255,255,.15);
-            border-left: 4px solid #60a5fa;
-        }
-
-        .sub-menu {
-            display: none;
-        }
-
-        .sub-menu.active {
-            display: block;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            white-space: nowrap;
-        }
-
-        td {
-            white-space: nowrap;
-        }
-
-        .loading {
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%,100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: .5;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-<!-- ========================================================= -->
-<!-- LOGIN -->
-<!-- ========================================================= -->
-
-<div id="login-screen"
-     class="min-h-screen flex items-center justify-center bg-slate-100">
-
-    <div class="bg-white shadow-xl rounded-xl p-8 w-full max-w-md">
-
-        <div class="text-center mb-8">
-
-            <div class="w-16 h-16 bg-blue-700 rounded-xl
-                        flex items-center justify-center
-                        mx-auto mb-4">
-
-                <i class="fa-solid fa-scale-balanced text-white text-3xl"></i>
-
-            </div>
-
-            <h1 class="text-2xl font-bold text-slate-800">
-                Conciliador Contábil
-            </h1>
-
-            <p class="text-slate-500 mt-1">
-                União Supermercados
-            </p>
-
-        </div>
-
-        <form id="login-form">
-
-            <div class="mb-4">
-
-                <label class="block text-sm font-semibold text-slate-700 mb-1">
-                    E-mail
-                </label>
-
-                <input
-                    type="email"
-                    id="login-email"
-                    required
-                    class="w-full border border-slate-300 rounded-lg
-                           px-4 py-3 focus:outline-none
-                           focus:ring-2 focus:ring-blue-500"
-                    placeholder="Digite seu e-mail">
-
-            </div>
-
-            <div class="mb-6">
-
-                <label class="block text-sm font-semibold text-slate-700 mb-1">
-                    Senha
-                </label>
-
-                <input
-                    type="password"
-                    id="login-password"
-                    required
-                    class="w-full border border-slate-300 rounded-lg
-                           px-4 py-3 focus:outline-none
-                           focus:ring-2 focus:ring-blue-500"
-                    placeholder="Digite sua senha">
-
-            </div>
-
-            <button
-                type="submit"
-                id="btn-login"
-                class="w-full bg-blue-700 hover:bg-blue-800
-                       text-white font-semibold py-3 rounded-lg">
-
-                <i class="fa-solid fa-right-to-bracket mr-2"></i>
-                Entrar
-
-            </button>
-
-            <div id="login-error"
-                 class="hidden mt-4 bg-red-100 text-red-700
-                        rounded-lg p-3 text-sm">
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-<!-- ========================================================= -->
-<!-- APLICAÇÃO -->
-<!-- ========================================================= -->
-
-<div id="app"
-     class="hidden min-h-screen">
-
-    <!-- SIDEBAR -->
-
-    <aside class="sidebar fixed left-0 top-0 bottom-0
-                  bg-slate-900 text-white overflow-y-auto">
-
-        <div class="p-5 border-b border-slate-700">
-
-            <div class="flex items-center gap-3">
-
-                <div class="w-11 h-11 bg-blue-600 rounded-lg
-                            flex items-center justify-center">
-
-                    <i class="fa-solid fa-scale-balanced text-xl"></i>
-
-                </div>
-
-                <div>
-
-                    <div class="font-bold text-sm">
-                        Conciliador Contábil
-                    </div>
-
-                    <div class="text-xs text-slate-400">
-                        União Supermercados
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <nav class="p-3">
-
-            <!-- CADASTRO -->
-
-            <button
-                onclick="mostrarPagina('cadastro')"
-                id="menu-cadastro"
-                class="menu-item w-full flex items-center
-                       gap-3 px-4 py-3 rounded-lg text-left">
-
-                <i class="fa-solid fa-database w-5"></i>
-
-                <span>Cadastro</span>
-
-            </button>
-
-
-            <!-- CONCILIAÇÕES -->
-
-            <button
-                onclick="mostrarPagina('conciliacoes')"
-                id="menu-conciliacoes"
-                class="menu-item w-full flex items-center
-                       gap-3 px-4 py-3 rounded-lg text-left">
-
-                <i class="fa-solid fa-arrows-rotate w-5"></i>
-
-                <span>Conciliações</span>
-
-            </button>
-
-
-            <!-- FOLHA -->
-
-            <button
-                onclick="mostrarPagina('folha')"
-                id="menu-folha"
-                class="menu-item w-full flex items-center
-                       gap-3 px-4 py-3 rounded-lg text-left">
-
-                <i class="fa-solid fa-users w-5"></i>
-
-                <span>Folha de Pagamento</span>
-
-            </button>
-
-
-            <!-- IMPORTAÇÕES -->
-
-            <button
-                onclick="mostrarPagina('importacoes')"
-                id="menu-importacoes"
-                class="menu-item w-full flex items-center
-                       gap-3 px-4 py-3 rounded-lg text-left">
-
-                <i class="fa-solid fa-file-import w-5"></i>
-
-                <span>Importações</span>
-
-            </button>
-
-
-            <!-- EXPORTAÇÕES -->
-
-            <button
-                onclick="mostrarPagina('exportacoes')"
-                id="menu-exportacoes"
-                class="menu-item w-full flex items-center
-                       gap-3 px-4 py-3 rounded-lg text-left">
-
-                <i class="fa-solid fa-file-export w-5"></i>
-
-                <span>Exportações</span>
-
-            </button>
-
-
-            <!-- RELATÓRIOS -->
-
-            <button
-                onclick="mostrarPagina('relatorios')"
-                id="menu-relatorios"
-                class="menu-item w-full flex items-center
-                       gap-3 px-4 py-3 rounded-lg text-left">
-
-                <i class="fa-solid fa-chart-column w-5"></i>
-
-                <span>Relatórios</span>
-
-            </button>
-
-        </nav>
-
-
-        <div class="absolute bottom-0 left-0 right-0
-                    p-4 border-t border-slate-700">
-
-            <div class="text-xs text-slate-400 mb-3">
-                Usuário conectado
-            </div>
-
-            <div id="usuario-logado"
-                 class="text-sm font-semibold mb-3">
-            </div>
-
-            <button
-                onclick="fazerLogout()"
-                class="w-full bg-red-600 hover:bg-red-700
-                       rounded-lg py-2 text-sm">
-
-                <i class="fa-solid fa-right-from-bracket mr-2"></i>
-                Sair
-
-            </button>
-
-        </div>
-
-    </aside>
-
-
-    <!-- ===================================================== -->
-    <!-- CONTEÚDO -->
-    <!-- ===================================================== -->
-
-    <main class="main-content min-h-screen">
-
-        <!-- CABEÇALHO -->
-
-        <header class="bg-white border-b border-slate-200
-                       px-6 py-4 flex justify-between items-center">
-
-            <div>
-
-                <h2 id="titulo-pagina"
-                    class="text-xl font-bold text-slate-800">
-
-                    Conciliações
-
-                </h2>
-
-                <p id="subtitulo-pagina"
-                   class="text-sm text-slate-500">
-
-                    Conciliação dos módulos do ERP
-
-                </p>
-
-            </div>
-
-            <div class="text-sm text-slate-500">
-
-                <i class="fa-solid fa-circle text-green-500 text-xs mr-1"></i>
-                Sistema online
-
-            </div>
-
-        </header>
-
-
-        <!-- ================================================= -->
-        <!-- PÁGINA CADASTRO -->
-        <!-- ================================================= -->
-
-        <section id="pagina-cadastro"
-                 class="pagina hidden p-6">
-
-            <div class="bg-white rounded-xl shadow-sm
-                        border border-slate-200 p-6">
-
-                <h3 class="text-lg font-bold text-slate-800 mb-2">
-                    Cadastro
-                </h3>
-
-                <p class="text-slate-500">
-                    Área destinada aos cadastros do sistema.
-                </p>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================================= -->
-        <!-- PÁGINA CONCILIAÇÕES -->
-        <!-- ================================================= -->
-
-        <section id="pagina-conciliacoes"
-                 class="pagina p-6">
-
-            <!-- SUBMENU -->
-
-            <div class="flex flex-wrap gap-2 mb-6">
-
-                <button
-                    onclick="mostrarConciliacao('caixa')"
-                    id="sub-caixa"
-                    class="px-4 py-2 rounded-lg
-                           bg-slate-200 hover:bg-slate-300">
-
-                    <i class="fa-solid fa-cash-register mr-2"></i>
-                    Caixa
-
-                </button>
-
-
-                <button
-                    onclick="mostrarConciliacao('fiscal')"
-                    id="sub-fiscal"
-                    class="px-4 py-2 rounded-lg
-                           bg-slate-200 hover:bg-slate-300">
-
-                    <i class="fa-solid fa-file-invoice mr-2"></i>
-                    Fiscal
-
-                </button>
-
-
-                <button
-                    onclick="mostrarConciliacao('financeiro')"
-                    id="sub-financeiro"
-                    class="px-4 py-2 rounded-lg
-                           bg-blue-700 text-white">
-
-                    <i class="fa-solid fa-money-bill-transfer mr-2"></i>
-                    Financeiro
-
-                </button>
-
-            </div>
-
-
-            <!-- ================================================= -->
-            <!-- CAIXA -->
-            <!-- ================================================= -->
-
-            <div id="conciliacao-caixa"
-                 class="conciliacao-pagina hidden">
-
-                <div class="bg-white rounded-xl border
-                            border-slate-200 p-6">
-
-                    <h3 class="font-bold text-lg">
-                        Conciliação de Caixa
-                    </h3>
-
-                    <p class="text-slate-500 mt-2">
-                        Módulo de conciliação de caixa.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <!-- ================================================= -->
-            <!-- FISCAL -->
-            <!-- ================================================= -->
-
-            <div id="conciliacao-fiscal"
-                 class="conciliacao-pagina hidden">
-
-                <div class="bg-white rounded-xl border
-                            border-slate-200 p-6">
-
-                    <h3 class="font-bold text-lg">
-                        Conciliação Fiscal
-                    </h3>
-
-                    <p class="text-slate-500 mt-2">
-                        Módulo de conciliação fiscal.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-            <!-- ================================================= -->
-            <!-- FINANCEIRO -->
-            <!-- ================================================= -->
-
-            <div id="conciliacao-financeiro"
-                 class="conciliacao-pagina">
-
-                <div class="bg-white rounded-xl
-                            border border-slate-200">
-
-                    <!-- CABEÇALHO -->
-
-                    <div class="p-6 border-b border-slate-200">
-
-                        <div class="flex flex-wrap
-                                    justify-between items-center gap-4">
-
-                            <div>
-
-                                <h3 class="text-lg font-bold text-slate-800">
-
-                                    Financeiro x Contábil
-
-                                </h3>
-
-                                <p class="text-sm text-slate-500 mt-1">
-
-                                    Conciliação de fornecedores
-
-                                </p>
-
-                            </div>
-
-
-                            <div class="flex flex-wrap gap-2">
-
-                                <!-- EXTRAÇÃO -->
-
-                                <button
-                                    onclick="dispararExtracaoServidor()"
-                                    class="bg-blue-700 hover:bg-blue-800
-                                           text-white px-4 py-2
-                                           rounded-lg font-semibold">
-
-                                    <i class="fa-solid fa-server mr-2"></i>
-
-                                    Executar Extração no Servidor
-
-                                </button>
-
-
-                                <!-- NUVEM -->
-
-                                <button
-                                    onclick="carregarDivergenciasFornecedores()"
-                                    class="bg-slate-700 hover:bg-slate-800
-                                           text-white px-4 py-2
-                                           rounded-lg font-semibold">
-
-                                    <i class="fa-solid fa-cloud-arrow-down mr-2"></i>
-
-                                    Puxar da Nuvem
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- FILTROS -->
-
-                    <div class="p-6 bg-slate-50
-                                border-b border-slate-200">
-
-                        <div class="grid grid-cols-1
-                                    md:grid-cols-2
-                                    lg:grid-cols-4 gap-4">
-
-                            <div>
-
-                                <label class="block text-xs
-                                              font-semibold text-slate-600 mb-1">
-
-                                    Loja
-
-                                </label>
-
-                                <select
-                                    id="filtro-loja"
-                                    onchange="aplicarFiltrosFornecedores()"
-                                    class="w-full border border-slate-300
-                                           rounded-lg px-3 py-2">
-
-                                    <option value="">
-                                        Todas
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div>
-
-                                <label class="block text-xs
-                                              font-semibold text-slate-600 mb-1">
-
-                                    Grupo Econômico
-
-                                </label>
-
-                                <select
-                                    id="filtro-grupo"
-                                    onchange="aplicarFiltrosFornecedores()"
-                                    class="w-full border border-slate-300
-                                           rounded-lg px-3 py-2">
-
-                                    <option value="">
-                                        Todos
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div>
-
-                                <label class="block text-xs
-                                              font-semibold text-slate-600 mb-1">
-
-                                    Conta
-
-                                </label>
-
-                                <select
-                                    id="filtro-conta"
-                                    onchange="aplicarFiltrosFornecedores()"
-                                    class="w-full border border-slate-300
-                                           rounded-lg px-3 py-2">
-
-                                    <option value="">
-                                        Todas
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div>
-
-                                <label class="block text-xs
-                                              font-semibold text-slate-600 mb-1">
-
-                                    Status da Diferença
-
-                                </label>
-
-                                <select
-                                    id="filtro-diferenca"
-                                    onchange="aplicarFiltrosFornecedores()"
-                                    class="w-full border border-slate-300
-                                           rounded-lg px-3 py-2">
-
-                                    <option value="">
-                                        Todos
-                                    </option>
-
-                                    <option value="divergente">
-                                        Com diferença
-                                    </option>
-
-                                    <option value="igual">
-                                        Sem diferença
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="mt-4">
-
-                            <label class="block text-xs
-                                          font-semibold text-slate-600 mb-1">
-
-                                Fornecedor
-
-                            </label>
-
-                            <input
-                                type="text"
-                                id="filtro-fornecedor"
-                                oninput="aplicarFiltrosFornecedores()"
-                                placeholder="Digite o nome do fornecedor..."
-                                class="w-full border border-slate-300
-                                       rounded-lg px-3 py-2">
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- TABELA -->
-
-                    <div class="overflow-x-auto">
-
-                        <table>
-
-                            <thead class="bg-slate-100">
-
-                                <tr>
-
-                                    <th class="text-left px-4 py-3
-                                               text-xs font-bold
-                                               text-slate-600">
-
-                                        Loja
-
-                                    </th>
-
-                                    <th class="text-left px-4 py-3
-                                               text-xs font-bold
-                                               text-slate-600">
-
-                                        Conta Analítica
-
-                                    </th>
-
-                                    <th class="text-left px-4 py-3
-                                               text-xs font-bold
-                                               text-slate-600">
-
-                                        Nome do Fornecedor
-
-                                    </th>
-
-                                    <th class="text-right px-4 py-3
-                                               text-xs font-bold
-                                               text-slate-600">
-
-                                        Financeiro
-
-                                    </th>
-
-                                    <th class="text-right px-4 py-3
-                                               text-xs font-bold
-                                               text-slate-600">
-
-                                        Contábil
-
-                                    </th>
-
-                                    <th class="text-right px-4 py-3
-                                               text-xs font-bold
-                                               text-slate-600">
-
-                                        Diferença
-
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody id="tabela-financeiro-fornecedores">
-
-                                <tr>
-
-                                    <td colspan="6"
-                                        class="p-8 text-center
-                                               text-slate-400">
-
-                                        Clique em
-                                        <strong>
-                                            Puxar da Nuvem
-                                        </strong>
-                                        para carregar os dados.
-
-                                    </td>
-
-                                </tr>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================================= -->
-        <!-- FOLHA -->
-        <!-- ================================================= -->
-
-        <section id="pagina-folha"
-                 class="pagina hidden p-6">
-
-            <div class="bg-white rounded-xl shadow-sm
-                        border border-slate-200 p-6">
-
-                <h3 class="text-lg font-bold">
-                    Folha de Pagamento
-                </h3>
-
-                <p class="text-slate-500 mt-2">
-                    Módulo de conciliação da folha.
-                </p>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================================= -->
-        <!-- IMPORTAÇÕES -->
-        <!-- ================================================= -->
-
-        <section id="pagina-importacoes"
-                 class="pagina hidden p-6">
-
-            <div class="bg-white rounded-xl shadow-sm
-                        border border-slate-200 p-6">
-
-                <h3 class="text-lg font-bold">
-                    Importações
-                </h3>
-
-                <p class="text-slate-500 mt-2">
-                    Área de importação de arquivos.
-                </p>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================================= -->
-        <!-- EXPORTAÇÕES -->
-        <!-- ================================================= -->
-
-        <section id="pagina-exportacoes"
-                 class="pagina hidden p-6">
-
-            <div class="bg-white rounded-xl shadow-sm
-                        border border-slate-200 p-6">
-
-                <h3 class="text-lg font-bold">
-                    Exportações
-                </h3>
-
-                <p class="text-slate-500 mt-2">
-                    Área de exportação de dados.
-                </p>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================================================= -->
-        <!-- RELATÓRIOS -->
-        <!-- ================================================= -->
-
-        <section id="pagina-relatorios"
-                 class="pagina hidden p-6">
-
-            <div class="bg-white rounded-xl shadow-sm
-                        border border-slate-200 p-6">
-
-                <h3 class="text-lg font-bold">
-                    Relatórios
-                </h3>
-
-                <p class="text-slate-500 mt-2">
-                    Relatórios do Conciliador Contábil.
-                </p>
-
-            </div>
-
-        </section>
-
-    </main>
-
-</div>
-
-
-<script>
-
-/* ============================================================
-   CONFIGURAÇÃO SUPABASE
-   ============================================================ */
-
-const SUPABASE_URL =
-    'https://ikhutmmeeemkzkakpmal.supabase.co';
-
-const SUPABASE_ANON_KEY =
-    'SUA_CHAVE_SUPABASE_AQUI';
-
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_ANON_KEY
-    );
-
-
-/* ============================================================
-   CLOUDFLARE
-   ============================================================ */
-
-/*
-   IMPORTANTE:
-
-   NÃO utilizar mais o endereço trycloudflare.com.
-
-   O endereço abaixo deverá ser o hostname PERMANENTE
-   configurado no Named Tunnel da Cloudflare.
-
-   Exemplo:
-
-   https://api.conciliadorunisuper.com.br
-*/
-
-const URL_TUNEL_CLOUDFLARE =
-    'https://api.conciliadorunisuper.com.br';
-
-
-/* ============================================================
-   VARIÁVEIS
-   ============================================================ */
-
-let dadosFornecedores = [];
-
-
-/* ============================================================
-   LOGIN
-   ============================================================ */
-
-document
-    .getElementById('login-form')
-    .addEventListener('submit', async function(e) {
-
-        e.preventDefault();
-
-        const email =
-            document.getElementById('login-email').value.trim();
-
-        const password =
-            document.getElementById('login-password').value;
-
-        const btn =
-            document.getElementById('btn-login');
-
-        const erro =
-            document.getElementById('login-error');
-
-        erro.classList.add('hidden');
-
-        btn.disabled = true;
-
-        btn.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Entrando...';
-
-        try {
-
-            const { data, error } =
-                await supabaseClient.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
-            if (error) {
-                throw error;
-            }
-
-            if (data && data.user) {
-
-                document
-                    .getElementById('usuario-logado')
-                    .textContent =
-                    data.user.email || '';
-
-                document
-                    .getElementById('login-screen')
-                    .classList.add('hidden');
-
-                document
-                    .getElementById('app')
-                    .classList.remove('hidden');
-
-            }
-
-        } catch (e) {
-
-            console.error(e);
-
-            erro.textContent =
-                e.message || 'Erro ao realizar login.';
-
-            erro.classList.remove('hidden');
-
-        } finally {
-
-            btn.disabled = false;
-
-            btn.innerHTML =
-                '<i class="fa-solid fa-right-to-bracket mr-2"></i> Entrar';
-
-        }
-
-    });
-
-
-/* ============================================================
-   VERIFICAR SESSÃO
-   ============================================================ */
-
-async function verificarSessao() {
-
-    try {
-
-        const { data, error } =
-            await supabaseClient.auth.getSession();
-
-        if (error) {
-            console.error(error);
-            return;
-        }
-
-        if (data.session &&
-            data.session.user) {
-
-            document
-                .getElementById('usuario-logado')
-                .textContent =
-                data.session.user.email || '';
-
-            document
-                .getElementById('login-screen')
-                .classList.add('hidden');
-
-            document
-                .getElementById('app')
-                .classList.remove('hidden');
-
-        }
-
-    } catch (e) {
-
-        console.error(e);
-
-    }
-
-}
-
-
-/* ============================================================
-   LOGOUT
-   ============================================================ */
-
-async function fazerLogout() {
-
-    await supabaseClient.auth.signOut();
-
-    document
-        .getElementById('app')
-        .classList.add('hidden');
-
-    document
-        .getElementById('login-screen')
-        .classList.remove('hidden');
-
-}
-
-
-/* ============================================================
-   NAVEGAÇÃO
-   ============================================================ */
-
-function mostrarPagina(pagina) {
-
-    document
-        .querySelectorAll('.pagina')
-        .forEach(el => {
-
-            el.classList.add('hidden');
-
-        });
-
-
-    document
-        .querySelectorAll('.menu-item')
-        .forEach(el => {
-
-            el.classList.remove('active');
-
-        });
-
-
-    const paginaEl =
-        document.getElementById(
-            'pagina-' + pagina
-        );
-
-    if (paginaEl) {
-        paginaEl.classList.remove('hidden');
-    }
-
-
-    const menuEl =
-        document.getElementById(
-            'menu-' + pagina
-        );
-
-    if (menuEl) {
-        menuEl.classList.add('active');
-    }
-
-
-    const titulos = {
-
-        cadastro: [
-            'Cadastro',
-            'Cadastros do sistema'
-        ],
-
-        conciliacoes: [
-            'Conciliações',
-            'Conciliação dos módulos do ERP'
-        ],
-
-        folha: [
-            'Folha de Pagamento',
-            'Conciliação da folha'
-        ],
-
-        importacoes: [
-            'Importações',
-            'Importação de arquivos'
-        ],
-
-        exportacoes: [
-            'Exportações',
-            'Exportação de dados'
-        ],
-
-        relatorios: [
-            'Relatórios',
-            'Relatórios do sistema'
-        ]
-
-    };
-
-
-    if (titulos[pagina]) {
-
-        document
-            .getElementById('titulo-pagina')
-            .textContent =
-            titulos[pagina][0];
-
-        document
-            .getElementById('subtitulo-pagina')
-            .textContent =
-            titulos[pagina][1];
-
-    }
-
-}
-
-
-/* ============================================================
-   SUBMENU CONCILIAÇÃO
-   ============================================================ */
-
-function mostrarConciliacao(tipo) {
-
-    document
-        .querySelectorAll('.conciliacao-pagina')
-        .forEach(el => {
-
-            el.classList.add('hidden');
-
-        });
-
-
-    document
-        .querySelectorAll('[id^="sub-"]')
-        .forEach(el => {
-
-            el.classList.remove(
-                'bg-blue-700',
-                'text-white'
-            );
-
-            el.classList.add(
-                'bg-slate-200'
-            );
-
-        });
-
-
-    const pagina =
-        document.getElementById(
-            'conciliacao-' + tipo
-        );
-
-    if (pagina) {
-        pagina.classList.remove('hidden');
-    }
-
-
-    const botao =
-        document.getElementById(
-            'sub-' + tipo
-        );
-
-    if (botao) {
-
-        botao.classList.remove(
-            'bg-slate-200'
-        );
-
-        botao.classList.add(
-            'bg-blue-700',
-            'text-white'
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   EXECUTAR EXTRAÇÃO NO SERVIDOR
-   ============================================================ */
-
-async function dispararExtracaoServidor() {
-
-    if (!confirm(
-        'Deseja rodar a extração no servidor do supermercado agora?'
-    )) {
-        return;
-    }
-
-
-    const tbody =
-        document.getElementById(
-            'tabela-financeiro-fornecedores'
-        );
-
-
-    tbody.innerHTML = `
-
-        <tr>
-
-            <td colspan="6"
-                class="p-4 text-center
-                       text-blue-600 font-semibold">
-
-                <i class="fa-solid fa-spinner fa-spin mr-2"></i>
-
-                Conectando ao servidor seguro
-                e processando a consulta no VR...
-
-            </td>
-
-        </tr>
-
-    `;
-
-
-    try {
-
-        const resposta =
-            await fetch(
-                `${URL_TUNEL_CLOUDFLARE}/executar-conciliacao`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type':
-                            'application/json'
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        unisuperBlue: '#1e3a8a',
+                        unisuperRed: '#dc2626',
+                        unisuperDark: '#0f172a'
                     }
                 }
-            );
-
-
-        if (!resposta.ok) {
-
-            throw new Error(
-                `Servidor retornou HTTP ${resposta.status}`
-            );
-
+            }
         }
+    </script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col" onclick="fecharDropdownsFora(event)">
 
+    <!-- TELA DE LOGIN -->
+    <div id="auth-screen" class="fixed inset-0 bg-unisuperDark z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-t-4 border-unisuperRed space-y-6">
+            <div class="text-center space-y-2">
+                <h1 class="text-xl font-bold uppercase text-unisuperDark tracking-wide">Conciliador Contábil</h1>
+                <p class="text-xs text-unisuperRed font-semibold tracking-wider">UNIÃO SUPERMERCADOS</p>
+                <p class="text-xs text-slate-500 pt-2">Entre com suas credenciais para acessar o sistema.</p>
+            </div>
+            <form id="form-login" onsubmit="event.preventDefault(); fazerLogin();" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">E-mail de Acesso</label>
+                    <input type="email" id="login-email" placeholder="seu.email@uniao.com" class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-unisuperBlue focus:outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Senha</label>
+                    <input type="password" id="login-senha" placeholder="••••••••" class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-unisuperBlue focus:outline-none" required>
+                </div>
+                <button type="submit" class="w-full bg-unisuperBlue text-white py-3 rounded-lg text-sm font-semibold shadow hover:bg-blue-900 transition">Entrar no Sistema</button>
+            </form>
+            <div id="auth-error" class="text-xs text-red-600 text-center font-medium hidden"></div>
+        </div>
+    </div>
 
-        const resultado =
-            await resposta.json();
+    <!-- APLICAÇÃO PRINCIPAL -->
+    <div id="app-screen" class="hidden min-h-screen flex flex-col md:flex-row flex-grow">
+        <!-- MENU LATERAL -->
+        <aside class="w-full md:w-64 bg-unisuperDark text-white flex flex-col justify-between shadow-xl border-r-4 border-unisuperRed shrink-0">
+            <div>
+                <div class="p-6 border-b border-slate-800 bg-black/30">
+                    <h1 class="text-sm font-bold tracking-wide uppercase text-white leading-tight">Conciliador Contábil</h1>
+                    <p class="text-[10px] text-unisuperRed font-semibold tracking-wider mt-0.5">UNIÃO SUPERMERCADOS</p>
+                </div>
+                <nav class="p-4 space-y-1.5">
+                    <button onclick="switchTab('cadastro')" id="btn-tab-cadastro" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-folder-plus w-5"></i><span>Cadastro</span>
+                    </button>
+                    <button onclick="switchTab('conciliacoes')" id="btn-tab-conciliacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-scale-balanced w-5"></i><span>Conciliações</span>
+                    </button>
+                    <button onclick="switchTab('folha')" id="btn-tab-folha" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-users-rectangle w-5"></i><span>Folha de Pagamento</span>
+                    </button>
+                    <button onclick="switchTab('importacoes')" id="btn-tab-importacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-file-import w-5"></i><span>Importações</span>
+                    </button>
+                    <button onclick="switchTab('exportacoes')" id="btn-tab-exportacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-file-export w-5"></i><span>Exportações</span>
+                    </button>
+                    <button onclick="switchTab('relatorios')" id="btn-tab-relatorios" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-chart-line w-5"></i><span>Relatórios</span>
+                    </button>
+                </nav>
+            </div>
+            <div class="p-4 border-t border-slate-800 space-y-3">
+                <button onclick="fazerLogout()" class="w-full flex items-center justify-center space-x-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white py-2 rounded-lg text-xs font-semibold transition border border-red-600/30">
+                    <i class="fa-solid fa-power-off"></i><span>Sair do Sistema</span>
+                </button>
+                <div class="text-center text-xs text-slate-400 pt-1">
+                    <span id="db-status-dot" class="inline-block h-2 w-2 rounded-full bg-orange-500 mr-1"></span>
+                    <span id="db-status-text">Verificando conexões...</span>
+                </div>
+            </div>
+        </aside>
 
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="flex-grow flex flex-col min-h-screen overflow-y-auto">
+            <header class="bg-white shadow-sm px-8 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h2 id="titulo-pagina" class="text-xl font-bold text-slate-800">Cadastros (De/Para)</h2>
+                <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Modo Nuvem (Supabase Ativo)</span>
+                </div>
+            </header>
 
-        if (resultado.sucesso) {
-
-            alert(
-                `Sucesso! ${resultado.total} contas atualizadas pelo servidor.`
-            );
-
-            await carregarDivergenciasFornecedores();
-
-        } else {
-
-            throw new Error(
-                resultado.erro ||
-                'Erro desconhecido no servidor.'
-            );
-
-        }
-
-    } catch (e) {
-
-        console.error(e);
-
-        alert(
-            'Não foi possível conectar ao servidor.\n\n' +
-            'Verifique se o Named Tunnel e o servidor Node.js estão funcionando.\n\n' +
-            e.message
-        );
-
-
-        tbody.innerHTML = `
-
-            <tr>
-
-                <td colspan="6"
-                    class="p-4 text-center text-red-500">
-
-                    <i class="fa-solid fa-triangle-exclamation mr-2"></i>
-
-                    Falha de conexão com o servidor.
-
-                    <div class="text-xs mt-2 text-slate-500">
-
-                        ${e.message}
-
+            <div class="p-8 space-y-6 flex-grow">
+                <!-- ABA CADASTRO -->
+                <div id="tab-cadastro" class="tab-content space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-1">
+                            <i class="fa-solid fa-folder-plus text-unisuperBlue mr-2"></i> Cadastro de De/Para Contábil (Planos de Conta)
+                        </h3>
+                        <p class="text-sm text-slate-500 mb-6">Mapeamento salvo diretamente na nuvem (Supabase) para acesso global.</p>
+                        <form id="form-cadastro" onsubmit="event.preventDefault(); salvarCadastro();" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Conta do ERP</label>
+                                <input type="text" id="cad-erp" placeholder="Ex: 1.1.1.02 - Caixa Lojas" class="w-full text-sm border border-slate-300 rounded p-2 focus:ring-2 focus:ring-unisuperBlue" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Conta Contábil Oficial</label>
+                                <input type="text" id="cad-contabil" placeholder="Ex: 1.1.1.01.002 - Caixa Matriz" class="w-full text-sm border border-slate-300 rounded p-2 focus:ring-2 focus:ring-unisuperBlue" required>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-unisuperBlue text-white py-2 rounded text-sm font-semibold hover:bg-blue-900 transition">Salvar Mapeamento</button>
+                            </div>
+                        </form>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700 border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">Conta ERP</th>
+                                        <th class="p-3">Conta Contábil</th>
+                                        <th class="p-3 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-cadastros" class="divide-y divide-slate-100 text-slate-600">
+                                    <tr><td colspan="3" class="p-6 text-center text-slate-400">Carregando dados da nuvem...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+                </div>
 
-                </td>
+                <!-- ABA CONCILIAÇÕES -->
+                <div id="tab-conciliacoes" class="tab-content hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-slate-800">
+                                <i class="fa-solid fa-scale-balanced text-unisuperBlue mr-2"></i> Central de Conciliações e Cruzamentos
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1">Selecione o módulo desejado e execute a validação contábil.</p>
+                        </div>
 
-            </tr>
+                        <!-- SUB-ABAS -->
+                        <div class="flex border-b border-slate-200 mb-6 space-x-2">
+                            <button onclick="switchSubTab('caixa')" id="subtab-btn-caixa" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue flex items-center space-x-2 transition">
+                                <i class="fa-solid fa-cash-register"></i><span>Módulo Caixa</span>
+                            </button>
+                            <button onclick="switchSubTab('fiscal')" id="subtab-btn-fiscal" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition">
+                                <i class="fa-solid fa-receipt"></i><span>Módulo Fiscal</span>
+                            </button>
+                            <button onclick="switchSubTab('financeiro')" id="subtab-btn-financeiro" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition">
+                                <i class="fa-solid fa-wallet"></i><span>Módulo Financeiro</span>
+                            </button>
+                        </div>
 
-        `;
+                        <!-- SUB-ABA CAIXA -->
+                        <div id="subtab-caixa" class="subtab-content space-y-4">
+                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div>
+                                    <h4 class="font-bold text-slate-700 text-sm">Conciliação Mapa Resumo</h4>
+                                    <p class="text-xs text-slate-500">Cruza o fechamento de frente de caixa com a contabilidade.</p>
+                                </div>
+                                <button onclick="executarCruzamento('caixa')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-play"></i><span>Executar</span>
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                            <th class="p-3">Conta / Loja / PDV</th>
+                                            <th class="p-3">Valor Mapa Resumo (ERP)</th>
+                                            <th class="p-3">Valor Contábil</th>
+                                            <th class="p-3">Diferença</th>
+                                            <th class="p-3">Status</th>
+                                            <th class="p-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-caixa-mapa" class="text-sm divide-y divide-slate-100">
+                                        <tr><td colspan="6" class="p-6 text-center text-slate-400">Clique em executar para processar o Mapa Resumo.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
 
-    }
+                        <!-- SUB-ABA FISCAL -->
+                        <div id="subtab-fiscal" class="subtab-content hidden space-y-6">
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                    <div>
+                                        <h4 class="font-bold text-slate-700 text-sm">Conciliação ICMS</h4>
+                                        <p class="text-xs text-slate-500">Validação de débitos, créditos e apuração de ICMS.</p>
+                                    </div>
+                                    <button onclick="executarCruzamento('fiscal-icms')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
+                                        <i class="fa-solid fa-play"></i><span>Executar</span>
+                                    </button>
+                                </div>
+                                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                                <th class="p-3">Conta / Apuração ICMS</th>
+                                                <th class="p-3">Valor Fiscal (SPED)</th>
+                                                <th class="p-3">Valor Contábil</th>
+                                                <th class="p-3">Diferença</th>
+                                                <th class="p-3">Status</th>
+                                                <th class="p-3 text-center">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabela-fiscal-icms" class="text-sm divide-y divide-slate-100">
+                                            <tr><td colspan="6" class="p-4 text-center text-slate-400">Aguardando execução...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
 
-}
+                        <!-- SUB-ABA FINANCEIRO (FORNECEDORES) -->
+                        <div id="subtab-financeiro" class="subtab-content hidden space-y-6">
+                            
+                            <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 font-semibold text-slate-700 text-sm flex flex-col md:flex-row justify-between items-center gap-3">
+                                <span>
+                                    <i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i> Módulo: Contas a Pagar e Receber (Fornecedores)
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button id="btn-extracao-servidor" onclick="dispararExtracaoServidor()" class="bg-unisuperBlue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-900 transition shadow flex items-center gap-1">
+                                        <i class="fa-solid fa-bolt"></i><span>Executar Extração no Servidor</span>
+                                    </button>
+                                    <button id="btn-puxar-nuvem" onclick="carregarDivergenciasFornecedores()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-emerald-700 transition shadow flex items-center gap-1">
+                                        <i class="fa-solid fa-sync"></i><span>Puxar da Nuvem</span>
+                                    </button>
+                                </div>
+                            </div>
 
+                            <!-- PAINEL DE FILTROS COM DROPDOWNS SUSPENSOS E OPÇÃO "TODAS/TODOS" -->
+                            <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                        <i class="fa-solid fa-filter text-unisuperBlue mr-1"></i> Filtros de Consulta
+                                    </span>
+                                    <button onclick="aplicarFiltrosFornecedores()" class="bg-slate-800 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-slate-900 transition shadow flex items-center gap-1.5">
+                                        <i class="fa-solid fa-search"></i><span>Exibir</span>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2 border-t border-slate-100 relative">
+                                    
+                                    <!-- DROPDOWN MULTI-SELEÇÃO: LOJAS -->
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Filtrar Lojas</label>
+                                        <button type="button" onclick="toggleDropdown('dropdown-lojas', event)" class="w-full text-xs border border-slate-300 rounded p-2 bg-white text-left flex justify-between items-center focus:ring-1 focus:ring-unisuperBlue">
+                                            <span id="texto-selecao-lojas">Todas as Lojas</span>
+                                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                                        </button>
+                                        <div id="dropdown-lojas" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-lg z-20 p-2 max-h-48 overflow-y-auto space-y-1 text-xs">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded font-bold border-b border-slate-100">
+                                                <input type="checkbox" id="check-todas-lojas" onchange="selecionarTodasLojas(this)" class="rounded text-unisuperBlue focus:ring-0">
+                                                <span>Todas</span>
+                                            </label>
+                                            <div id="container-checkboxes-lojas" class="space-y-1 pt-1">
+                                                <span class="text-slate-400 italic text-[11px]">Puxe da nuvem primeiro...</span>
+                                            </div>
+                                        </div>
+                                    </div>
 
-/* ============================================================
-   CARREGAR DA NUVEM
-   ============================================================ */
+                                    <!-- DROPDOWN MULTI-SELEÇÃO: GRUPO ECONÔMICO -->
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Grupo Econômico</label>
+                                        <button type="button" onclick="toggleDropdown('dropdown-grupos', event)" class="w-full text-xs border border-slate-300 rounded p-2 bg-white text-left flex justify-between items-center focus:ring-1 focus:ring-unisuperBlue">
+                                            <span id="texto-selecao-grupos">Todos os Grupos</span>
+                                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                                        </button>
+                                        <div id="dropdown-grupos" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-lg z-20 p-2 space-y-1 text-xs">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded font-bold border-b border-slate-100">
+                                                <input type="checkbox" id="check-todos-grupos" onchange="selecionarTodosGrupos(this)" class="rounded text-unisuperBlue focus:ring-0">
+                                                <span>Todos</span>
+                                            </label>
+                                            <div class="space-y-1 pt-1">
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Unisuper" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Unisuper</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Atacado" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Atacado</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Sim" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Sim</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-grupo" value="Outros" onchange="atualizarTextoGrupo()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Outros</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
 
-async function carregarDivergenciasFornecedores() {
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Conta Analítica</label>
+                                        <input type="text" id="filtro-conta" placeholder="Pesquisar conta..." class="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-unisuperBlue">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Nome do Fornecedor</label>
+                                        <input type="text" id="filtro-fornecedor" placeholder="Pesquisar fornecedor..." class="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-unisuperBlue">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Status Diferença</label>
+                                        <select id="filtro-status" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
+                                            <option value="">Todos</option>
+                                            <option value="divergente">Com Divergência</option>
+                                            <option value="conciliado">Sem Divergência (R$ 0,00)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
 
-    const tbody =
-        document.getElementById(
-            'tabela-financeiro-fornecedores'
-        );
+                            <!-- STATUS DO SERVIDOR -->
+                            <div id="painel-status-servidor" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+                                <i class="fa-solid fa-circle-info mr-1"></i>
+                                <span id="texto-status-servidor">Processando...</span>
+                            </div>
 
+                            <!-- TABELA FORNECEDORES (6 COLUNAS EXATAS) -->
+                            <div class="space-y-3">
+                                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                                <th class="p-3">Loja</th>
+                                                <th class="p-3">Conta Analítica</th>
+                                                <th class="p-3">Nome do Fornecedor</th>
+                                                <th class="p-3">Financeiro</th>
+                                                <th class="p-3">Contábil</th>
+                                                <th class="p-3">Diferença</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabela-financeiro-fornecedores" class="text-sm divide-y divide-slate-100">
+                                            <tr><td colspan="6" class="p-4 text-center text-slate-400">Clique em "Puxar da Nuvem" ou execute a extração no servidor.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    tbody.innerHTML = `
+                <!-- OUTRAS ABAS -->
+                <div id="tab-folha" class="tab-content hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-users-rectangle text-unisuperBlue mr-2"></i> Integração de Folha de Pagamento</h3>
+                        <p class="text-sm text-slate-500 mb-6">Cruzamento de provisões, salários, INSS e FGTS.</p>
+                    </div>
+                </div>
+                <div id="tab-importacoes" class="tab-content hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-cloud-arrow-down text-unisuperBlue mr-2"></i> Sincronização Manual / Arquivos Auxiliares</h3>
+                        <input type="file" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-unisuperBlue file:text-white cursor-pointer">
+                    </div>
+                </div>
+                <div id="tab-exportacoes" class="tab-content hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-file-export text-unisuperBlue mr-2"></i> Exportação de Lotes Conciliados</h3>
+                        <button onclick="alert('Lote gerado com sucesso!')" class="bg-unisuperBlue text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-900 transition">Exportar Lote Contábil (.TXT)</button>
+                    </div>
+                </div>
+                <div id="tab-relatorios" class="tab-content hidden space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-chart-line text-unisuperBlue mr-2"></i> Relatórios Gerenciais e de Divergências</h3>
+                    </div>
+                </div>
+            </div>
 
-        <tr>
+            <footer class="bg-white text-slate-500 text-center py-4 text-xs border-t border-slate-200 mt-auto">
+                Conciliador Contábil União Supermercados &copy; 2026. Todos os direitos reservados.
+            </footer>
+        </main>
+    </div>
 
-            <td colspan="6"
-                class="p-4 text-center text-blue-600">
+    <!-- JAVASCRIPT -->
+    <script>
+        const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
 
-                <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+        // URL DO TÚNEL CLOUDFLARE CONFIGURADA DIRETAMENTE NO CÓDIGO
+        const URL_TUNEL_CLOUDFLARE = 'https://modern-stack-42d9.trycloudflare.com';
 
-                Carregando dados da nuvem...
+        let supabaseClient = null;
+        let servidorOnline = false;
+        let processandoExtracao = false;
+        let dadosFornecedoresCache = [];
 
-            </td>
-
-        </tr>
-
-    `;
-
-
-    try {
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-                .from('relatorio_fornecedores')
-                .select('*');
-
-
-        if (error) {
-            throw error;
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            verificarSessao();
+        } catch (e) {
+            console.error("Erro ao inicializar Supabase:", e);
+            atualizarStatusSupabase(false, "Erro de inicialização");
         }
 
-
-        dadosFornecedores =
-            data || [];
-
-
-        montarFiltrosFornecedores();
-
-        aplicarFiltrosFornecedores();
-
-
-    } catch (e) {
-
-        console.error(e);
-
-
-        tbody.innerHTML = `
-
-            <tr>
-
-                <td colspan="6"
-                    class="p-4 text-center text-red-500">
-
-                    Erro ao carregar dados:
-
-                    ${e.message}
-
-                </td>
-
-            </tr>
-
-        `;
-
-    }
-
-}
-
-
-/* ============================================================
-   MONTAR FILTROS
-   ============================================================ */
-
-function montarFiltrosFornecedores() {
-
-    const filtroLoja =
-        document.getElementById(
-            'filtro-loja'
-        );
-
-    const filtroGrupo =
-        document.getElementById(
-            'filtro-grupo'
-        );
-
-    const filtroConta =
-        document.getElementById(
-            'filtro-conta'
-        );
-
-
-    const lojas =
-        [...new Set(
-            dadosFornecedores
-                .map(x => x.loja)
-                .filter(Boolean)
-        )]
-        .sort();
-
-
-    const grupos =
-        [...new Set(
-            dadosFornecedores
-                .map(x => x.produtor_rural)
-                .filter(Boolean)
-        )]
-        .sort();
-
-
-    const contas =
-        [...new Set(
-            dadosFornecedores
-                .map(x => x.conta_mascara)
-                .filter(Boolean)
-        )]
-        .sort();
-
-
-    filtroLoja.innerHTML =
-        '<option value="">Todas</option>' +
-        lojas.map(x =>
-            `<option value="${escapeHtml(x)}">
-                ${escapeHtml(x)}
-             </option>`
-        ).join('');
-
-
-    filtroGrupo.innerHTML =
-        '<option value="">Todos</option>' +
-        grupos.map(x =>
-            `<option value="${escapeHtml(x)}">
-                ${escapeHtml(x)}
-             </option>`
-        ).join('');
-
-
-    filtroConta.innerHTML =
-        '<option value="">Todas</option>' +
-        contas.map(x =>
-            `<option value="${escapeHtml(x)}">
-                ${escapeHtml(x)}
-             </option>`
-        ).join('');
-
-}
-
-
-/* ============================================================
-   APLICAR FILTROS
-   ============================================================ */
-
-function aplicarFiltrosFornecedores() {
-
-    const loja =
-        document.getElementById(
-            'filtro-loja'
-        ).value;
-
-    const grupo =
-        document.getElementById(
-            'filtro-grupo'
-        ).value;
-
-    const conta =
-        document.getElementById(
-            'filtro-conta'
-        ).value;
-
-    const fornecedor =
-        document.getElementById(
-            'filtro-fornecedor'
-        ).value
-        .toLowerCase()
-        .trim();
-
-    const diferenca =
-        document.getElementById(
-            'filtro-diferenca'
-        ).value;
-
-
-    const filtrados =
-        dadosFornecedores.filter(item => {
-
-            if (
-                loja &&
-                String(item.loja) !== String(loja)
-            ) {
-                return false;
+        async function verificarSessao() {
+            if (!supabaseClient) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) { mostrarApp(); } else { mostrarLogin(); }
+                supabaseClient.auth.onAuthStateChange((_event, session) => {
+                    if (session) { mostrarApp(); } else { mostrarLogin(); }
+                });
+            } catch (err) {
+                mostrarLogin();
             }
-
-
-            if (
-                grupo &&
-                String(item.produtor_rural) !== String(grupo)
-            ) {
-                return false;
-            }
-
-
-            if (
-                conta &&
-                String(item.conta_mascara) !== String(conta)
-            ) {
-                return false;
-            }
-
-
-            if (
-                fornecedor &&
-                !String(
-                    item.nome_conta || ''
-                )
-                .toLowerCase()
-                .includes(fornecedor)
-            ) {
-                return false;
-            }
-
-
-            const comparativo =
-                Number(
-                    item.comparativo || 0
-                );
-
-
-            if (
-                diferenca === 'divergente' &&
-                comparativo === 0
-            ) {
-                return false;
-            }
-
-
-            if (
-                diferenca === 'igual' &&
-                comparativo !== 0
-            ) {
-                return false;
-            }
-
-
-            return true;
-
-        });
-
-
-    renderizarTabelaFornecedores(
-        filtrados
-    );
-
-}
-
-
-/* ============================================================
-   RENDERIZAR TABELA
-   ============================================================ */
-
-function renderizarTabelaFornecedores(
-    dados
-) {
-
-    const tbody =
-        document.getElementById(
-            'tabela-financeiro-fornecedores'
-        );
-
-
-    if (!dados.length) {
-
-        tbody.innerHTML = `
-
-            <tr>
-
-                <td colspan="6"
-                    class="p-8 text-center
-                           text-slate-400">
-
-                    Nenhum registro encontrado.
-
-                </td>
-
-            </tr>
-
-        `;
-
-        return;
-
-    }
-
-
-    tbody.innerHTML =
-        dados.map(item => {
-
-            const financeiro =
-                Number(
-                    item.saldo_financeiro || 0
-                );
-
-            const contabil =
-                Number(
-                    item.saldo_contabil || 0
-                );
-
-            const comparativo =
-                Number(
-                    item.comparativo || 0
-                );
-
-
-            const classe =
-                comparativo === 0
-                    ? 'text-green-600'
-                    : 'text-red-600';
-
-
-            return `
-
-                <tr class="border-b
-                           border-slate-100
-                           hover:bg-slate-50">
-
-                    <td class="px-4 py-3 text-sm">
-
-                        ${escapeHtml(
-                            item.loja ?? ''
-                        )}
-
-                    </td>
-
-
-                    <td class="px-4 py-3 text-sm font-mono">
-
-                        ${escapeHtml(
-                            item.conta_mascara ??
-                            item.conta_contabil ??
-                            ''
-                        )}
-
-                    </td>
-
-
-                    <td class="px-4 py-3 text-sm">
-
-                        ${escapeHtml(
-                            item.nome_conta ?? ''
-                        )}
-
-                    </td>
-
-
-                    <td class="px-4 py-3 text-sm text-right">
-
-                        ${formatarMoeda(
-                            financeiro
-                        )}
-
-                    </td>
-
-
-                    <td class="px-4 py-3 text-sm text-right">
-
-                        ${formatarMoeda(
-                            contabil
-                        )}
-
-                    </td>
-
-
-                    <td class="px-4 py-3 text-sm
-                               text-right font-bold
-                               ${classe}">
-
-                        ${formatarMoeda(
-                            comparativo
-                        )}
-
-                    </td>
-
-                </tr>
-
-            `;
-
-        }).join('');
-
-}
-
-
-/* ============================================================
-   FORMATAR MOEDA
-   ============================================================ */
-
-function formatarMoeda(valor) {
-
-    return Number(valor || 0)
-        .toLocaleString(
-            'pt-BR',
-            {
-                style: 'currency',
-                currency: 'BRL'
-            }
-        );
-
-}
-
-
-/* ============================================================
-   ESCAPAR HTML
-   ============================================================ */
-
-function escapeHtml(valor) {
-
-    return String(valor ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-
-}
-
-
-/* ============================================================
-   TESTAR CLOUDFLARE
-   ============================================================ */
-
-async function testarServidorCloudflare() {
-
-    try {
-
-        const resposta =
-            await fetch(
-                `${URL_TUNEL_CLOUDFLARE}/status`
-            );
-
-
-        if (!resposta.ok) {
-
-            throw new Error(
-                `HTTP ${resposta.status}`
-            );
-
         }
 
-
-        const resultado =
-            await resposta.json();
-
-
-        console.log(
-            'Servidor Cloudflare:',
-            resultado
-        );
-
-
-        return resultado;
-
-
-    } catch (e) {
-
-        console.error(
-            'Erro no servidor Cloudflare:',
-            e
-        );
-
-        throw e;
-
-    }
-
-}
-
-
-/* ============================================================
-   INICIALIZAÇÃO
-   ============================================================ */
-
-verificarSessao();
-
-
-/* ============================================================
-   EVENTO DE ALTERAÇÃO DA SESSÃO
-   ============================================================ */
-
-supabaseClient.auth.onAuthStateChange(
-    (event, session) => {
-
-        if (
-            event === 'SIGNED_IN' &&
-            session &&
-            session.user
-        ) {
-
-            document
-                .getElementById('usuario-logado')
-                .textContent =
-                session.user.email || '';
-
-            document
-                .getElementById('login-screen')
-                .classList.add('hidden');
-
-            document
-                .getElementById('app')
-                .classList.remove('hidden');
-
+        function mostrarLogin() {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('app-screen').classList.add('hidden');
         }
 
+        function mostrarApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            atualizarStatusSupabase(true, "Conectado ao Supabase");
+            carregarCadastros();
 
-        if (event === 'SIGNED_OUT') {
+            const abaSalva = localStorage.getItem('unisuper_aba_atual') || 'cadastro';
+            const subAbaSalva = localStorage.getItem('unisuper_subaba_atual') || 'caixa';
 
-            document
-                .getElementById('app')
-                .classList.add('hidden');
+            switchTab(abaSalva, false);
+            switchSubTab(subAbaSalva, false);
 
-            document
-                .getElementById('login-screen')
-                .classList.remove('hidden');
-
+            if (abaSalva === 'conciliacoes' && subAbaSalva === 'financeiro') {
+                carregarDivergenciasFornecedores();
+            }
         }
 
-    }
-);
+        async function fazerLogin() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            const errorDiv = document.getElementById('auth-error');
+            errorDiv.classList.add('hidden');
 
-</script>
+            try {
+                const { error } = await supabaseClient.auth.signInWithPassword({ email: email, password: senha });
+                if (error) {
+                    errorDiv.innerText = "Erro ao entrar: " + error.message;
+                    errorDiv.classList.remove('hidden');
+                } else {
+                    mostrarApp();
+                }
+            } catch (err) {
+                errorDiv.innerText = "Erro de conexão com o Supabase.";
+                errorDiv.classList.remove('hidden');
+            }
+        }
 
+        async function fazerLogout() {
+            if (supabaseClient) { await supabaseClient.auth.signOut(); }
+            localStorage.removeItem('unisuper_aba_atual');
+            localStorage.removeItem('unisuper_subaba_atual');
+            mostrarLogin();
+        }
+
+        function atualizarStatusSupabase(conectado, mensagem) {
+            const dot = document.getElementById('db-status-dot');
+            const text = document.getElementById('db-status-text');
+            if (text) text.innerText = mensagem;
+            if (dot) dot.className = conectado ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
+        }
+
+        // --- CONTROLE DOS DROPDOWNS SUSPENSOS ---
+        function toggleDropdown(id, event) {
+            event.stopPropagation();
+            const el = document.getElementById(id);
+            document.querySelectorAll('[id^="dropdown-"]').forEach(d => {
+                if (d.id !== id) d.classList.add('hidden');
+            });
+            el.classList.toggle('hidden');
+        }
+
+        function fecharDropdownsFora(event) {
+            if (!event.target.closest('.relative')) {
+                document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
+            }
+        }
+
+        // --- SELECIONAR TODAS / TODOS ---
+        function selecionarTodasLojas(master) {
+            const checks = document.querySelectorAll('input[name="filtro-loja"]');
+            checks.forEach(cb => cb.checked = master.checked);
+            atualizarTextoLoja();
+        }
+
+        function selecionarTodosGrupos(master) {
+            const checks = document.querySelectorAll('input[name="filtro-grupo"]');
+            checks.forEach(cb => cb.checked = master.checked);
+            atualizarTextoGrupo();
+        }
+
+        function atualizarTextoLoja() {
+            const checks = document.querySelectorAll('input[name="filtro-loja"]:checked');
+            const span = document.getElementById('texto-selecao-lojas');
+            if (checks.length === 0) span.innerText = "Todas as Lojas";
+            else if (checks.length === 1) span.innerText = checks[0].getAttribute('data-nome');
+            else span.innerText = `${checks.length} lojas selecionadas`;
+        }
+
+        function atualizarTextoGrupo() {
+            const checks = document.querySelectorAll('input[name="filtro-grupo"]:checked');
+            const span = document.getElementById('texto-selecao-grupos');
+            if (checks.length === 0) span.innerText = "Todos os Grupos";
+            else if (checks.length === 1) span.innerText = checks[0].value;
+            else span.innerText = `${checks.length} grupos selecionados`;
+        }
+
+        // --- CLASSIFICAÇÃO DE GRUPO ECONÔMICO ---
+        function obterGrupoEconomico(idloja) {
+            const numLoja = String(idloja).trim().toUpperCase();
+            if (numLoja === 'CD' || (!isNaN(numLoja) && Number(numLoja) >= 11 && Number(numLoja) <= 14)) {
+                return 'Atacado';
+            }
+            if (!isNaN(numLoja)) {
+                const n = Number(numLoja);
+                if (n >= 1 && n <= 10) return 'Unisuper';
+                if (n >= 15) return 'Sim';
+            }
+            return 'Outros';
+        }
+
+        async function carregarCadastros() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.from('cadastros_depara').select('*').order('id', { ascending: true });
+                if (error) throw error;
+                const lista = document.getElementById('lista-cadastros');
+                if (data && data.length > 0) {
+                    lista.innerHTML = '';
+                    data.forEach(item => {
+                        lista.innerHTML += `
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-medium">${escapeHtml(item.conta_erp)}</td>
+                                <td class="p-3">${escapeHtml(item.conta_contabil)}</td>
+                                <td class="p-3 text-center">
+                                    <button onclick="deletarCadastro(${item.id})" class="text-red-500 hover:text-red-700 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    lista.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhum mapeamento cadastrado.</td></tr>`;
+                }
+            } catch (e) {
+                console.error("Erro ao carregar cadastros:", e);
+            }
+        }
+
+        async function salvarCadastro() {
+            const erp = document.getElementById('cad-erp').value.trim();
+            const contabil = document.getElementById('cad-contabil').value.trim();
+            if (!erp || !contabil) { alert("Preencha os dois campos."); return; }
+            try {
+                const { error } = await supabaseClient.from('cadastros_depara').insert([{ conta_erp: erp, conta_contabil: contabil }]);
+                if (error) throw error;
+                alert('Mapeamento salvo com sucesso no Supabase!');
+                document.getElementById('form-cadastro').reset();
+                carregarCadastros();
+            } catch (err) {
+                alert('Erro ao salvar no Supabase: ' + err.message);
+            }
+        }
+
+        async function deletarCadastro(id) {
+            if (!confirm('Deseja excluir este mapeamento?')) return;
+            try {
+                const { error } = await supabaseClient.from('cadastros_depara').delete().eq('id', id);
+                if (error) throw error;
+                carregarCadastros();
+            } catch (err) {
+                alert('Erro ao excluir: ' + err.message);
+            }
+        }
+
+        // --- CARREGAMENTO DE DIVERGÊNCIAS FORNECEDORES ---
+        async function carregarDivergenciasFornecedores() {
+            if (!supabaseClient) return;
+            const tbody = document.getElementById('tabela-financeiro-fornecedores');
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Buscando dados da nuvem...</td></tr>`;
+
+            try {
+                const { data, error } = await supabaseClient.from('relatorio_fornecedores').select('*').order('idloja', { ascending: true }).order('conta_contabil', { ascending: true });
+                if (error) throw error;
+
+                dadosFornecedoresCache = data || [];
+                construirCheckboxesLojas(dadosFornecedoresCache);
+                renderizarTabelaFornecedores(dadosFornecedoresCache);
+
+            } catch (err) {
+                console.error("Erro ao carregar fornecedores:", err);
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Erro ao carregar dados do Supabase.</td></tr>`;
+            }
+        }
+
+        // Cria os checkboxes de lojas no dropdown dinamicamente
+        function construirCheckboxesLojas(data) {
+            const container = document.getElementById('container-checkboxes-lojas');
+            container.innerHTML = '';
+            
+            const lojasUnicas = [...new Set(data.map(item => String(item.idloja)))].sort((a, b) => {
+                if (!isNaN(a) && !isNaN(b)) return Number(a) - Number(b);
+                return a.localeCompare(b);
+            });
+
+            if (lojasUnicas.length === 0) {
+                container.innerHTML = '<span class="text-slate-400 italic text-[11px]">Nenhuma loja encontrada</span>';
+                return;
+            }
+
+            lojasUnicas.forEach(idloja => {
+                const itemExemplo = data.find(i => String(i.idloja) === idloja);
+                const nomeLoja = itemExemplo && itemExemplo.loja ? itemExemplo.loja : ('Loja ' + idloja);
+                
+                const label = document.createElement('label');
+                label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'filtro-loja';
+                checkbox.value = idloja;
+                checkbox.setAttribute('data-nome', nomeLoja);
+                checkbox.className = 'rounded text-unisuperBlue focus:ring-0';
+                checkbox.onchange = atualizarTextoLoja;
+                
+                const span = document.createElement('span');
+                span.textContent = nomeLoja;
+
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                container.appendChild(label);
+            });
+        }
+
+        // --- APLICAR FILTROS APÓS CLICAR EM EXIBIR ---
+        function aplicarFiltrosFornecedores() {
+            const lojasSelecionadas = Array.from(document.querySelectorAll('input[name="filtro-loja"]:checked')).map(cb => cb.value);
+            const gruposSelecionados = Array.from(document.querySelectorAll('input[name="filtro-grupo"]:checked')).map(cb => cb.value);
+
+            const fConta = document.getElementById('filtro-conta').value.toLowerCase().trim();
+            const fFornecedor = document.getElementById('filtro-fornecedor').value.toLowerCase().trim();
+            const fStatus = document.getElementById('filtro-status').value;
+
+            const filtrados = dadosFornecedoresCache.filter(item => {
+                const idLojaStr = String(item.idloja);
+                const grupoLoja = obterGrupoEconomico(item.idloja);
+                const contaStr = String(item.conta_mascara || '').toLowerCase();
+                const nomeStr = String(item.nome_conta || '').toLowerCase();
+                const diffNum = Number(item.comparativo || 0);
+
+                if (lojasSelecionadas.length > 0 && !lojasSelecionadas.includes(idLojaStr)) return false;
+                if (gruposSelecionados.length > 0 && !gruposSelecionados.includes(grupoLoja)) return false;
+                if (fConta && !contaStr.includes(fConta)) return false;
+                if (fFornecedor && !nomeStr.includes(fFornecedor)) return false;
+                if (fStatus === 'divergente' && Math.abs(diffNum) <= 0.009) return false;
+                if (fStatus === 'conciliado' && Math.abs(diffNum) > 0.009) return false;
+
+                return true;
+            });
+
+            renderizarTabelaFornecedores(filtrados);
+            document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
+        }
+
+        function renderizarTabelaFornecedores(listaDados) {
+            const tbody = document.getElementById('tabela-financeiro-fornecedores');
+            if (!listaDados || listaDados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Nenhum registro encontrado com os filtros informados.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            listaDados.forEach(item => {
+                const formataReal = (val) => Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const valorERP = formataReal(item.saldo_financeiro);
+                const valorContabil = formataReal(item.saldo_contabil);
+                const diferencaNumero = Number(item.comparativo || 0);
+                const diferenca = formataReal(diferencaNumero);
+                const corDiferenca = Math.abs(diferencaNumero) > 0.009 ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold';
+                const lojaTexto = item.loja || ('Loja ' + item.idloja);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">${escapeHtml(lojaTexto)}</td>
+                        <td class="p-3 font-semibold text-slate-700">${escapeHtml(item.conta_mascara || '')}</td>
+                        <td class="p-3 text-slate-600">${escapeHtml(item.nome_conta || '')}</td>
+                        <td class="p-3 text-slate-600">${valorERP}</td>
+                        <td class="p-3 text-slate-600">${valorContabil}</td>
+                        <td class="p-3 ${corDiferenca}">${diferenca}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function dispararExtracaoServidor() {
+            if (!confirm("Deseja rodar a extração no servidor do supermercado agora?")) return;
+            const tbody = document.getElementById('tabela-financeiro-fornecedores');
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao integrador e processando query no VR... Aguarde.</td></tr>';
+
+            try {
+                const resposta = await fetch(`${URL_TUNEL_CLOUDFLARE}/executar-conciliacao`, {
+                    method: 'POST'
+                });
+                const resultado = await resposta.json();
+                if (resultado.sucesso) {
+                    alert(`Sucesso! ${resultado.total} contas atualizadas pelo servidor.`);
+                    carregarDivergenciasFornecedores();
+                } else {
+                    alert("Erro ao executar no servidor: " + resultado.erro);
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Não foi possível conectar ao servidor do supermercado. Verifique se o sistema integrador está aberto e rodando na máquina local.");
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
+            }
+        }
+
+        function executarCruzamento(tipo) {
+            if (tipo === 'caixa') {
+                document.getElementById('tabela-caixa-mapa').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">1.1.1.02 - Frente de Caixa Matriz</td>
+                        <td class="p-3 text-slate-600">R$ 145.890,00</td>
+                        <td class="p-3 text-slate-600">R$ 145.890,00</td>
+                        <td class="p-3 font-semibold text-emerald-600">R$ 0,00</td>
+                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
+                    </tr>
+                `;
+                alert('Mapa Resumo executado!');
+            } else if (tipo === 'fiscal-icms') {
+                document.getElementById('tabela-fiscal-icms').innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">2.1.2.01 - ICMS a Recolher (Saídas)</td>
+                        <td class="p-3 text-slate-600">R$ 38.400,00</td>
+                        <td class="p-3 text-slate-600">R$ 38.400,00</td>
+                        <td class="p-3 font-semibold text-emerald-600">R$ 0,00</td>
+                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span></td>
+                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
+                    </tr>
+                `;
+                alert('Conciliação de ICMS executada!');
+            }
+        }
+
+        const titulosAbas = {
+            'cadastro': 'Cadastros (De/Para)',
+            'conciliacoes': 'Cruzamento e Conciliações',
+            'folha': 'Folha de Pagamento',
+            'importacoes': 'Importação de Módulos',
+            'exportacoes': 'Exportação de Lotes',
+            'relatorios': 'Relatórios Gerenciais'
+        };
+
+        function switchTab(tabId, salvar = true) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            const abaAlvo = document.getElementById(`tab-${tabId}`);
+            if (abaAlvo) abaAlvo.classList.remove('hidden');
+            if (titulosAbas[tabId]) document.getElementById('titulo-pagina').innerText = titulosAbas[tabId];
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-unisuperBlue', 'text-white', 'shadow');
+                btn.classList.add('text-slate-300');
+            });
+            const btnAlvo = document.getElementById(`btn-tab-${tabId}`);
+            if (btnAlvo) {
+                btnAlvo.classList.remove('text-slate-300');
+                btnAlvo.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
+            }
+            if (salvar) localStorage.setItem('unisuper_aba_atual', tabId);
+        }
+
+        function switchSubTab(subTabId, salvar = true) {
+            document.querySelectorAll('.subtab-content').forEach(el => el.classList.add('hidden'));
+            const subAbaAlvo = document.getElementById(`subtab-${subTabId}`);
+            if (subAbaAlvo) subAbaAlvo.classList.remove('hidden');
+
+            document.querySelectorAll('.subtab-btn').forEach(btn => {
+                btn.classList.remove('border-unisuperBlue', 'text-unisuperBlue');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+            const btnSubAlvo = document.getElementById(`subtab-btn-${subTabId}`);
+            if (btnSubAlvo) {
+                btnSubAlvo.classList.remove('border-transparent', 'text-slate-500');
+                btnSubAlvo.classList.add('border-unisuperBlue', 'text-unisuperBlue');
+            }
+            if (salvar) localStorage.setItem('unisuper_subaba_atual', subTabId);
+            if (subTabId === 'financeiro') {
+                carregarDivergenciasFornecedores();
+            }
+        }
+
+        function escapeHtml(valor) {
+            if (valor === null || valor === undefined) return '';
+            return String(valor).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+    </script>
 </body>
 </html>
-```
