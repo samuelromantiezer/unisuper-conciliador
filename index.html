@@ -356,6 +356,15 @@
                                     </div>
 
                                     <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Status da Conciliação</label>
+                                        <select id="filtro-conciliacao" onchange="aplicarFiltrosFornecedores()" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
+                                            <option value="">Todos</option>
+                                            <option value="conciliado">Conciliados</option>
+                                            <option value="nao_conciliado">Não Conciliados</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Status Diferença</label>
                                         <select id="filtro-status" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
                                             <option value="">Todos</option>
@@ -1021,6 +1030,7 @@
             const fConta = (document.getElementById('filtro-conta')?.value || '').toLowerCase().trim();
             const fFornecedor = (document.getElementById('filtro-fornecedor')?.value || '').toLowerCase().trim();
             const fStatus = document.getElementById('filtro-status')?.value || '';
+            const fConciliacao = document.getElementById('filtro-conciliacao')?.value || '';
 
             return dadosFornecedoresCache.filter(item => {
                 const idLojaStr = String(item.idloja);
@@ -1041,6 +1051,9 @@
                 if (fFornecedor && !nomeStr.includes(fFornecedor)) return false;
                 if (fStatus === 'divergente' && Math.abs(diffNum) <= 0.009) return false;
                 if (fStatus === 'conciliado' && Math.abs(diffNum) > 0.009) return false;
+
+                if (fConciliacao === 'conciliado' && !Boolean(item.conciliado)) return false;
+                if (fConciliacao === 'nao_conciliado' && Boolean(item.conciliado)) return false;
 
                 return true;
             });
