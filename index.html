@@ -372,6 +372,7 @@
                                     <table class="w-full text-left border-collapse min-w-[1100px]">
                                         <thead>
                                             <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
+                                                <th class="p-3 text-center min-w-[125px]">Status</th>
                                                 <th class="p-3">Conta Máscara</th>
                                                 <th class="p-3">Conta Contábil</th>
                                                 <th class="p-3">Produtor Rural</th>
@@ -384,7 +385,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-financeiro-fornecedores" class="text-sm divide-y divide-slate-100">
-                                            <tr><td colspan="8" class="p-4 text-center text-slate-400">Clique em "Puxar da Nuvem" ou execute a extração no servidor.</td></tr>
+                                            <tr><td colspan="10" class="p-4 text-center text-slate-400">Clique em "Puxar da Nuvem" ou execute a extração no servidor.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -688,7 +689,7 @@
 
             const { data, error } = await supabaseClient
                 .from('fornecedores_observacoes')
-                .select('registro_chave, observacao');
+                .select('registro_chave, observacao, conciliado');
 
             if (error) {
                 console.error('Erro ao carregar observações:', error);
@@ -697,13 +698,23 @@
             }
 
             const mapa = new Map(
-                (data || []).map(item => [item.registro_chave, item.observacao || ''])
+                (data || []).map(item => [
+                    item.registro_chave,
+                    {
+                        observacao: item.observacao || '',
+                        conciliado: Boolean(item.conciliado)
+                    }
+                ])
             );
 
-            dadosFornecedoresCache = dadosFornecedoresCache.map(item => ({
-                ...item,
-                observacao: mapa.get(criarChaveObservacao(item)) || ''
-            }));
+            dadosFornecedoresCache = dadosFornecedoresCache.map(item => {
+                const salvo = mapa.get(criarChaveObservacao(item));
+                return {
+                    ...item,
+                    observacao: salvo?.observacao || '',
+                    conciliado: salvo?.conciliado || false
+                };
+            });
         }
 
         let observacaoRegistroAtual = null;
@@ -765,6 +776,7 @@
                     conta_contabil: String(item.conta_contabil ?? ''),
                     nome_conta: item.nome_conta || '',
                     observacao: observacao,
+                    conciliado: Boolean(item.conciliado),
                     updated_at: new Date().toISOString()
                 };
 
@@ -791,10 +803,53 @@
             }
         }
 
+        async function alternarConciliado(chaveCodificada) {
+            if (!supabaseClient) return;
+
+            const chave = decodeURIComponent(chaveCodificada || '');
+            const item = dadosFornecedoresCache.find(
+                registro => criarChaveObservacao(registro) === chave
+            );
+
+            if (!item) {
+                alert('Não foi possível localizar o fornecedor selecionado.');
+                return;
+            }
+
+            const novoStatus = !Boolean(item.conciliado);
+            item.conciliado = novoStatus;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('fornecedores_observacoes')
+                    .upsert({
+                        registro_chave: chave,
+                        idloja: String(item.idloja ?? ''),
+                        loja: item.loja || '',
+                        conta_mascara: item.conta_mascara || '',
+                        conta_contabil: String(item.conta_contabil ?? ''),
+                        nome_conta: item.nome_conta || '',
+                        observacao: item.observacao || '',
+                        conciliado: novoStatus,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'registro_chave' });
+
+                if (error) throw error;
+
+                // Re-renderiza para aplicar a cor imediatamente.
+                aplicarFiltrosFornecedores();
+            } catch (err) {
+                item.conciliado = !novoStatus;
+                console.error('Erro ao salvar status de conciliação:', err);
+                alert('Erro ao salvar a conciliação no banco: ' + err.message);
+                aplicarFiltrosFornecedores();
+            }
+        }
+
         async function carregarDivergenciasFornecedores() {
             if (!supabaseClient) return;
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
-            tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Buscando dados da nuvem...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Buscando dados da nuvem...</td></tr>`;
 
             try {
                 const { data, error } = await supabaseClient.from('relatorio_fornecedores').select('*').order('idloja', { ascending: true }).order('conta_contabil', { ascending: true });
@@ -809,7 +864,7 @@
 
             } catch (err) {
                 console.error("Erro ao carregar fornecedores:", err);
-                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Erro ao carregar dados do Supabase.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Erro ao carregar dados do Supabase.</td></tr>`;
             }
         }
 
@@ -1146,7 +1201,7 @@
         function renderizarTabelaFornecedores(listaDados) {
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
             if (!listaDados || listaDados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">Nenhum registro encontrado com os filtros informados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-400">Nenhum registro encontrado com os filtros informados.</td></tr>`;
                 return;
             }
 
@@ -1160,8 +1215,39 @@
                 const corDiferenca = Math.abs(diferencaNumero) > 0.009 ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold';
                 const lojaTexto = item.loja || ('Loja ' + item.idloja);
 
+                const temObservacao = String(item.observacao || '').trim().length > 0;
+                const estaConciliado = Boolean(item.conciliado);
+
+                // Prioridade visual:
+                // conciliado = verde claro
+                // somente com observação = amarelo claro
+                // sem os dois = normal
+                const classeLinha = estaConciliado
+                    ? 'bg-emerald-50 hover:bg-emerald-100'
+                    : (temObservacao
+                        ? 'bg-amber-50 hover:bg-amber-100'
+                        : 'hover:bg-slate-50');
+
+                const classeBotaoConciliado = estaConciliado
+                    ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                    : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50';
+
+                const textoBotaoConciliado = estaConciliado ? 'Conciliado' : 'Conciliar';
+                const iconeBotaoConciliado = estaConciliado ? 'fa-circle-check' : 'fa-check';
+
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50">
+                    <tr class="${classeLinha} transition-colors">
+                        <td class="p-2 text-center align-middle">
+                            <button
+                                type="button"
+                                onclick="alternarConciliado('${encodeURIComponent(criarChaveObservacao(item))}')"
+                                title="${estaConciliado ? 'Clique para desfazer a conciliação' : 'Marcar como conciliado'}"
+                                class="inline-flex items-center justify-center gap-1.5 border px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${classeBotaoConciliado}"
+                            >
+                                <i class="fa-solid ${iconeBotaoConciliado}"></i>
+                                ${textoBotaoConciliado}
+                            </button>
+                        </td>
                         <td class="p-3 font-semibold text-slate-700 whitespace-nowrap">${escapeHtml(item.conta_mascara || '')}</td>
                         <td class="p-3 text-slate-700 whitespace-nowrap">${escapeHtml(item.conta_contabil ?? '')}</td>
                         <td class="p-3 text-slate-600 text-center">${escapeHtml(item.produtor_rural ?? '')}</td>
@@ -1196,7 +1282,7 @@
             if (!confirm(`Deseja executar a extração no servidor local para a competência de ${dataCompetencia.split('-').reverse().join('/')}?`)) return;
             
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
-            tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
 
             try {
                 const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-conciliacao`, {
@@ -1210,12 +1296,12 @@
                     carregarDivergenciasFornecedores();
                 } else {
                     alert("Erro ao executar no servidor: " + resultado.erro);
-                    tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
                 }
             } catch (e) {
                 console.error(e);
                 alert("Não foi possível conectar ao servidor local. Verifique se o servidor local está rodando na porta 5000.");
-                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
             }
         }
 
