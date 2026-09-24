@@ -317,6 +317,31 @@
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Nome do Fornecedor</label>
                                         <input type="text" id="filtro-fornecedor" placeholder="Pesquisar fornecedor..." class="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-unisuperBlue">
                                     </div>
+                                    <!-- DROPDOWN MULTI-SELEÇÃO: PRODUTOR RURAL -->
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Produtor Rural</label>
+                                        <button type="button" onclick="toggleDropdown('dropdown-produtor-rural', event)" class="w-full text-xs border border-slate-300 rounded p-2 bg-white text-left flex justify-between items-center focus:ring-1 focus:ring-unisuperBlue">
+                                            <span id="texto-selecao-produtor-rural">Todos</span>
+                                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                                        </button>
+                                        <div id="dropdown-produtor-rural" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-lg z-20 p-2 space-y-1 text-xs">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded font-bold border-b border-slate-100">
+                                                <input type="checkbox" id="check-todos-produtor-rural" onchange="selecionarTodosProdutoresRurais(this)" class="rounded text-unisuperBlue focus:ring-0">
+                                                <span>Todos</span>
+                                            </label>
+                                            <div class="space-y-1 pt-1">
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-produtor-rural" value="Sim" onchange="atualizarTextoProdutorRural()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Sim</span>
+                                                </label>
+                                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
+                                                    <input type="checkbox" name="filtro-produtor-rural" value="Não" onchange="atualizarTextoProdutorRural()" class="rounded text-unisuperBlue focus:ring-0">
+                                                    <span>Não</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Status Diferença</label>
                                         <select id="filtro-status" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue">
@@ -392,7 +417,7 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
 
         // URL ATUAL DO TÚNEL CLOUDFLARE GERADA NO POWERSHELL
-        const URL_TUNEL_CLOUDFLARE = 'https://twiki-involve-monitors-parade.trycloudflare.com';
+        const URL_SERVIDOR_LOCAL = 'http://localhost:5000';
 
         let supabaseClient = null;
         let dadosFornecedoresCache = [];
@@ -642,9 +667,36 @@
             });
         }
 
+        function atualizarTextoProdutorRural() {
+            const selecionados = Array.from(document.querySelectorAll('input[name="filtro-produtor-rural"]:checked'))
+                .map(cb => cb.value);
+
+            const texto = document.getElementById('texto-selecao-produtor-rural');
+            const todos = document.getElementById('check-todos-produtor-rural');
+
+            if (selecionados.length === 0) {
+                texto.textContent = 'Todos';
+                todos.checked = false;
+            } else if (selecionados.length === 2) {
+                texto.textContent = 'Todos';
+                todos.checked = true;
+            } else {
+                texto.textContent = selecionados[0];
+                todos.checked = false;
+            }
+        }
+
+        function selecionarTodosProdutoresRurais(checkbox) {
+            document.querySelectorAll('input[name="filtro-produtor-rural"]').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            atualizarTextoProdutorRural();
+        }
+
         function aplicarFiltrosFornecedores() {
             const lojasSelecionadas = Array.from(document.querySelectorAll('input[name="filtro-loja"]:checked')).map(cb => cb.value);
             const gruposSelecionados = Array.from(document.querySelectorAll('input[name="filtro-grupo"]:checked')).map(cb => cb.value);
+            const produtoresRuraisSelecionados = Array.from(document.querySelectorAll('input[name="filtro-produtor-rural"]:checked')).map(cb => cb.value);
 
             const fConta = document.getElementById('filtro-conta').value.toLowerCase().trim();
             const fFornecedor = document.getElementById('filtro-fornecedor').value.toLowerCase().trim();
@@ -655,10 +707,12 @@
                 const grupoLoja = obterGrupoEconomico(item.idloja);
                 const contaStr = String(item.conta_mascara || '').toLowerCase();
                 const nomeStr = String(item.nome_conta || '').toLowerCase();
+                const produtorRuralStr = String(item.produtor_rural ?? '').trim().toLowerCase();
                 const diffNum = Number(item.comparativo || 0);
 
                 if (lojasSelecionadas.length > 0 && !lojasSelecionadas.includes(idLojaStr)) return false;
                 if (gruposSelecionados.length > 0 && !gruposSelecionados.includes(grupoLoja)) return false;
+                if (produtoresRuraisSelecionados.length > 0 && !produtoresRuraisSelecionados.some(valor => valor.toLowerCase() === produtorRuralStr)) return false;
                 if (fConta && !contaStr.includes(fConta)) return false;
                 if (fFornecedor && !nomeStr.includes(fFornecedor)) return false;
                 if (fStatus === 'divergente' && Math.abs(diffNum) <= 0.009) return false;
@@ -703,7 +757,7 @@
             });
         }
 
-        // Dispara a extração usando a constante URL_TUNEL_CLOUDFLARE e a competência selecionada
+        // Dispara a extração diretamente para o servidor local e usa a competência selecionada
         async function dispararExtracaoServidor() {
             const dataCompetencia = document.getElementById('filtro-competencia').value;
             if (!dataCompetencia) {
@@ -717,7 +771,7 @@
             tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
 
             try {
-                const resposta = await fetch(`${URL_TUNEL_CLOUDFLARE}/executar-conciliacao`, {
+                const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-conciliacao`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ dataFinal: dataCompetencia })
@@ -732,7 +786,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("Não foi possível conectar ao servidor local. Verifique se o integrador e o túnel estão rodando.");
+                alert("Não foi possível conectar ao servidor local. Verifique se o servidor local está rodando na porta 5000.");
                 tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
             }
         }
