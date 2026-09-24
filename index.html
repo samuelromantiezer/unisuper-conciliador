@@ -380,7 +380,7 @@
                                                 <th class="p-3">Comparativo</th>
                                                 <th class="p-3">Loja</th>
                                                 <th class="p-3">Nome da Conta</th>
-                                                <th class="p-3 min-w-[280px]">Observações</th>
+                                                <th class="p-3 min-w-[150px]">Observações</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-financeiro-fornecedores" class="text-sm divide-y divide-slate-100">
@@ -425,6 +425,56 @@
         </main>
     </div>
 
+    <!-- POPUP DE OBSERVAÇÕES -->
+    <div id="popup-observacao" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4">
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">
+                        <i class="fa-solid fa-comment-dots text-unisuperBlue mr-2"></i>
+                        Observações
+                    </h3>
+                    <p id="popup-observacao-fornecedor" class="text-sm font-semibold text-slate-700 mt-1"></p>
+                    <p id="popup-observacao-detalhes" class="text-xs text-slate-500 mt-0.5"></p>
+                </div>
+                <button type="button" onclick="fecharPopupObservacao()" class="text-slate-400 hover:text-slate-700 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5">
+                <label class="block text-xs font-bold text-slate-600 mb-2">
+                    Observação
+                </label>
+                <textarea
+                    id="popup-observacao-texto"
+                    rows="8"
+                    placeholder="Digite suas observações..."
+                    class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-unisuperBlue resize-y"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-200 bg-slate-50">
+                <button
+                    type="button"
+                    onclick="fecharPopupObservacao()"
+                    class="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="button"
+                    id="btn-salvar-observacao"
+                    onclick="salvarObservacaoPopup()"
+                    class="px-5 py-2 rounded-lg text-sm font-semibold bg-unisuperBlue text-white hover:bg-blue-900"
+                >
+                    <i class="fa-solid fa-floppy-disk mr-2"></i>
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JAVASCRIPT -->
     <script>
         const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
@@ -435,7 +485,6 @@
 
         let supabaseClient = null;
         let dadosFornecedoresCache = [];
-        const timersObservacoes = {};
 
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -657,64 +706,89 @@
             }));
         }
 
-        function salvarObservacaoFornecedor(campo) {
-            const chave = decodeURIComponent(campo.dataset.chave || '');
-            const observacao = campo.value;
+        let observacaoRegistroAtual = null;
 
+        function abrirPopupObservacao(chaveCodificada) {
+            const chave = decodeURIComponent(chaveCodificada || '');
             const item = dadosFornecedoresCache.find(
                 registro => criarChaveObservacao(registro) === chave
             );
 
-            if (item) {
-                item.observacao = observacao;
+            if (!item) {
+                alert('Não foi possível localizar o fornecedor selecionado.');
+                return;
             }
 
-            clearTimeout(timersObservacoes[chave]);
+            observacaoRegistroAtual = item;
 
-            // Salva automaticamente 800 ms após a última alteração.
-            timersObservacoes[chave] = setTimeout(async () => {
-                if (!supabaseClient || !chave) return;
+            document.getElementById('popup-observacao-fornecedor').textContent =
+                item.nome_conta || 'Fornecedor';
 
-                const registro = dadosFornecedoresCache.find(
-                    item => criarChaveObservacao(item) === chave
-                );
+            document.getElementById('popup-observacao-detalhes').textContent =
+                `${item.loja || ''} • Conta: ${item.conta_mascara || ''}`;
 
-                if (!registro) return;
+            document.getElementById('popup-observacao-texto').value =
+                item.observacao || '';
 
-                campo.classList.remove('border-red-400');
-                campo.classList.add('border-amber-400');
+            document.getElementById('popup-observacao').classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('popup-observacao-texto').focus();
+            }, 50);
+        }
+
+        function fecharPopupObservacao() {
+            document.getElementById('popup-observacao').classList.add('hidden');
+            observacaoRegistroAtual = null;
+        }
+
+        async function salvarObservacaoPopup() {
+            if (!observacaoRegistroAtual || !supabaseClient) return;
+
+            const item = observacaoRegistroAtual;
+            const observacao = document.getElementById('popup-observacao-texto').value;
+
+            const botao = document.getElementById('btn-salvar-observacao');
+            const textoOriginal = botao.innerHTML;
+
+            botao.disabled = true;
+            botao.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Salvando...';
+
+            try {
+                const chave = criarChaveObservacao(item);
 
                 const payload = {
                     registro_chave: chave,
-                    idloja: String(registro.idloja ?? ''),
-                    loja: registro.loja || '',
-                    conta_mascara: registro.conta_mascara || '',
-                    conta_contabil: String(registro.conta_contabil ?? ''),
-                    nome_conta: registro.nome_conta || '',
+                    idloja: String(item.idloja ?? ''),
+                    loja: item.loja || '',
+                    conta_mascara: item.conta_mascara || '',
+                    conta_contabil: String(item.conta_contabil ?? ''),
+                    nome_conta: item.nome_conta || '',
                     observacao: observacao,
                     updated_at: new Date().toISOString()
                 };
 
-                try {
-                    const { error } = await supabaseClient
-                        .from('fornecedores_observacoes')
-                        .upsert(payload, { onConflict: 'registro_chave' });
+                const { error } = await supabaseClient
+                    .from('fornecedores_observacoes')
+                    .upsert(payload, { onConflict: 'registro_chave' });
 
-                    if (error) throw error;
+                if (error) throw error;
 
-                    campo.classList.remove('border-amber-400');
-                    campo.classList.add('border-emerald-400');
+                item.observacao = observacao;
 
-                    setTimeout(() => {
-                        campo.classList.remove('border-emerald-400');
-                    }, 700);
-                } catch (err) {
-                    console.error('Erro ao salvar observação:', err);
-                    campo.classList.remove('border-amber-400');
-                    campo.classList.add('border-red-400');
-                    alert('Erro ao gravar a observação no banco: ' + err.message);
-                }
-            }, 800);
+                fecharPopupObservacao();
+
+                // Atualiza a tabela para manter o estado local sincronizado.
+                aplicarFiltrosFornecedores();
+
+                alert('Observação salva com sucesso.');
+            } catch (err) {
+                console.error('Erro ao salvar observação:', err);
+                alert('Erro ao gravar a observação no banco: ' + err.message);
+            } finally {
+                botao.disabled = false;
+                botao.innerHTML = textoOriginal;
+            }
         }
 
         async function carregarDivergenciasFornecedores() {
@@ -1096,13 +1170,15 @@
                         <td class="p-3 ${corDiferenca} whitespace-nowrap">${diferenca}</td>
                         <td class="p-3 text-slate-600 whitespace-nowrap">${escapeHtml(lojaTexto)}</td>
                         <td class="p-3 text-slate-600">${escapeHtml(item.nome_conta || '')}</td>
-                        <td class="p-2 align-top">
-                            <textarea
-                                class="w-full min-w-[260px] min-h-[58px] text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none resize-y"
-                                placeholder="Digite uma observação..."
-                                data-chave="${encodeURIComponent(criarChaveObservacao(item))}"
-                                oninput="salvarObservacaoFornecedor(this)"
-                            >${escapeHtml(item.observacao || '')}</textarea>
+                        <td class="p-2 align-top text-center">
+                            <button
+                                type="button"
+                                onclick="abrirPopupObservacao('${encodeURIComponent(criarChaveObservacao(item))}')"
+                                class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900 transition"
+                            >
+                                <i class="fa-solid fa-comment-dots"></i>
+                                Observações
+                            </button>
                         </td>
                     </tr>
                 `;
