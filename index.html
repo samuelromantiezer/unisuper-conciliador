@@ -380,6 +380,7 @@
                                                 <th class="p-3">Comparativo</th>
                                                 <th class="p-3">Loja</th>
                                                 <th class="p-3">Nome da Conta</th>
+                                                <th class="p-3 min-w-[280px]">Observações</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-financeiro-fornecedores" class="text-sm divide-y divide-slate-100">
@@ -434,6 +435,7 @@
 
         let supabaseClient = null;
         let dadosFornecedoresCache = [];
+        const timersObservacoes = {};
 
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -623,23 +625,117 @@
             }
         }
 
+        function criarChaveObservacao(item) {
+            return [
+                String(item.idloja ?? ''),
+                String(item.conta_contabil ?? ''),
+                String(item.conta_mascara ?? ''),
+                String(item.nome_conta ?? '')
+            ].join('|');
+        }
+
+        async function carregarObservacoesFornecedores() {
+            if (!supabaseClient) return;
+
+            const { data, error } = await supabaseClient
+                .from('fornecedores_observacoes')
+                .select('registro_chave, observacao');
+
+            if (error) {
+                console.error('Erro ao carregar observações:', error);
+                alert('A tabela de observações ainda não está disponível no banco. Execute o SQL que acompanha esta versão.');
+                return;
+            }
+
+            const mapa = new Map(
+                (data || []).map(item => [item.registro_chave, item.observacao || ''])
+            );
+
+            dadosFornecedoresCache = dadosFornecedoresCache.map(item => ({
+                ...item,
+                observacao: mapa.get(criarChaveObservacao(item)) || ''
+            }));
+        }
+
+        function salvarObservacaoFornecedor(campo) {
+            const chave = decodeURIComponent(campo.dataset.chave || '');
+            const observacao = campo.value;
+
+            const item = dadosFornecedoresCache.find(
+                registro => criarChaveObservacao(registro) === chave
+            );
+
+            if (item) {
+                item.observacao = observacao;
+            }
+
+            clearTimeout(timersObservacoes[chave]);
+
+            // Salva automaticamente 800 ms após a última alteração.
+            timersObservacoes[chave] = setTimeout(async () => {
+                if (!supabaseClient || !chave) return;
+
+                const registro = dadosFornecedoresCache.find(
+                    item => criarChaveObservacao(item) === chave
+                );
+
+                if (!registro) return;
+
+                campo.classList.remove('border-red-400');
+                campo.classList.add('border-amber-400');
+
+                const payload = {
+                    registro_chave: chave,
+                    idloja: String(registro.idloja ?? ''),
+                    loja: registro.loja || '',
+                    conta_mascara: registro.conta_mascara || '',
+                    conta_contabil: String(registro.conta_contabil ?? ''),
+                    nome_conta: registro.nome_conta || '',
+                    observacao: observacao,
+                    updated_at: new Date().toISOString()
+                };
+
+                try {
+                    const { error } = await supabaseClient
+                        .from('fornecedores_observacoes')
+                        .upsert(payload, { onConflict: 'registro_chave' });
+
+                    if (error) throw error;
+
+                    campo.classList.remove('border-amber-400');
+                    campo.classList.add('border-emerald-400');
+
+                    setTimeout(() => {
+                        campo.classList.remove('border-emerald-400');
+                    }, 700);
+                } catch (err) {
+                    console.error('Erro ao salvar observação:', err);
+                    campo.classList.remove('border-amber-400');
+                    campo.classList.add('border-red-400');
+                    alert('Erro ao gravar a observação no banco: ' + err.message);
+                }
+            }, 800);
+        }
+
         async function carregarDivergenciasFornecedores() {
             if (!supabaseClient) return;
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
-            tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Buscando dados da nuvem...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Buscando dados da nuvem...</td></tr>`;
 
             try {
                 const { data, error } = await supabaseClient.from('relatorio_fornecedores').select('*').order('idloja', { ascending: true }).order('conta_contabil', { ascending: true });
                 if (error) throw error;
 
                 dadosFornecedoresCache = data || [];
+                await carregarObservacoesFornecedores();
                 construirCheckboxesLojas(dadosFornecedoresCache);
                 atualizarCheckboxesNomeConta(dadosFornecedoresCache);
+                reconstruirCheckboxesCascata();
                 renderizarTabelaFornecedores(dadosFornecedoresCache);
 
             } catch (err) {
                 console.error("Erro ao carregar fornecedores:", err);
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Erro ao carregar dados do Supabase.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Erro ao carregar dados do Supabase.</td></tr>`;
             }
         }
 
@@ -777,16 +873,27 @@
             atualizarTextoProdutorRural();
         }
 
-        function aplicarFiltrosFornecedores() {
-            const lojasSelecionadas = Array.from(document.querySelectorAll('input[name="filtro-loja"]:checked')).map(cb => cb.value);
-            const gruposSelecionados = Array.from(document.querySelectorAll('input[name="filtro-grupo"]:checked')).map(cb => cb.value);
-            const produtoresRuraisSelecionados = Array.from(document.querySelectorAll('input[name="filtro-produtor-rural"]:checked')).map(cb => cb.value);
-            const nomesContaSelecionados = Array.from(document.querySelectorAll('input[name="filtro-nome-conta"]:checked')).map(cb => cb.value);
+        // --- FILTROS EM CASCATA ---
+        // Cada dropdown é reconstruído com base nos demais filtros já selecionados.
+        // Assim, ao aplicar um filtro, os outros passam a mostrar somente opções
+        // existentes no conjunto atualmente filtrado.
 
-            const fConta = document.getElementById('filtro-conta').value.toLowerCase().trim();
-            const fStatus = document.getElementById('filtro-status').value;
+        function obterSelecoesFiltro(nome) {
+            return Array.from(document.querySelectorAll(`input[name="${nome}"]:checked`))
+                .map(cb => cb.value);
+        }
 
-            const filtrados = dadosFornecedoresCache.filter(item => {
+        function obterDadosBaseParaFiltro(filtroIgnorar) {
+            const lojasSelecionadas = filtroIgnorar === 'loja' ? [] : obterSelecoesFiltro('filtro-loja');
+            const gruposSelecionados = filtroIgnorar === 'grupo' ? [] : obterSelecoesFiltro('filtro-grupo');
+            const produtoresSelecionados = filtroIgnorar === 'produtor' ? [] : obterSelecoesFiltro('filtro-produtor-rural');
+            const nomesSelecionados = filtroIgnorar === 'nome' ? [] : obterSelecoesFiltro('filtro-nome-conta');
+
+            const fConta = (document.getElementById('filtro-conta')?.value || '').toLowerCase().trim();
+            const fFornecedor = (document.getElementById('filtro-fornecedor')?.value || '').toLowerCase().trim();
+            const fStatus = document.getElementById('filtro-status')?.value || '';
+
+            return dadosFornecedoresCache.filter(item => {
                 const idLojaStr = String(item.idloja);
                 const grupoLoja = obterGrupoEconomico(item.idloja);
                 const contaStr = String(item.conta_mascara || '').toLowerCase();
@@ -796,23 +903,176 @@
 
                 if (lojasSelecionadas.length > 0 && !lojasSelecionadas.includes(idLojaStr)) return false;
                 if (gruposSelecionados.length > 0 && !gruposSelecionados.includes(grupoLoja)) return false;
-                if (produtoresRuraisSelecionados.length > 0 && !produtoresRuraisSelecionados.some(valor => valor.toLowerCase() === produtorRuralStr)) return false;
-                if (nomesContaSelecionados.length > 0 && !nomesContaSelecionados.includes(String(item.nome_conta ?? '').trim())) return false;
+                if (produtoresSelecionados.length > 0 &&
+                    !produtoresSelecionados.some(valor => valor.toLowerCase() === produtorRuralStr)) return false;
+                if (nomesSelecionados.length > 0 &&
+                    !nomesSelecionados.includes(String(item.nome_conta ?? '').trim())) return false;
+
                 if (fConta && !contaStr.includes(fConta)) return false;
+                if (fFornecedor && !nomeStr.includes(fFornecedor)) return false;
                 if (fStatus === 'divergente' && Math.abs(diffNum) <= 0.009) return false;
                 if (fStatus === 'conciliado' && Math.abs(diffNum) > 0.009) return false;
 
                 return true;
             });
+        }
+
+        function reconstruirCheckboxesCascata() {
+            // Guarda as seleções atuais para não perdê-las ao reconstruir os dropdowns.
+            const lojasSelecionadas = obterSelecoesFiltro('filtro-loja');
+            const gruposSelecionados = obterSelecoesFiltro('filtro-grupo');
+            const produtoresSelecionados = obterSelecoesFiltro('filtro-produtor-rural');
+            const nomesSelecionados = obterSelecoesFiltro('filtro-nome-conta');
+
+            // LOJAS: opções disponíveis considerando os demais filtros.
+            const dadosLojas = obterDadosBaseParaFiltro('loja');
+            const lojasUnicas = [...new Map(
+                dadosLojas.map(item => [
+                    String(item.idloja),
+                    item.loja || ('Loja ' + item.idloja)
+                ])
+            ).entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'pt-BR'));
+
+            const containerLojas = document.getElementById('container-checkboxes-lojas');
+            if (containerLojas) {
+                containerLojas.innerHTML = '';
+                lojasUnicas.forEach(([id, nome]) => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'filtro-loja';
+                    cb.value = id;
+                    cb.setAttribute('data-nome', nome);
+                    cb.className = 'rounded text-unisuperBlue focus:ring-0';
+                    cb.checked = lojasSelecionadas.includes(id);
+                    cb.onchange = atualizarTextoLoja;
+
+                    const span = document.createElement('span');
+                    span.textContent = nome;
+
+                    label.appendChild(cb);
+                    label.appendChild(span);
+                    containerLojas.appendChild(label);
+                });
+                atualizarTextoLoja();
+            }
+
+            // GRUPOS: opções disponíveis considerando os demais filtros.
+            const dadosGrupos = obterDadosBaseParaFiltro('grupo');
+            const gruposDisponiveis = [...new Set(
+                dadosGrupos.map(item => obterGrupoEconomico(item.idloja))
+            )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            const containerGrupos = document.getElementById('container-checkboxes-grupos');
+            if (containerGrupos) {
+                containerGrupos.innerHTML = '';
+                gruposDisponiveis.forEach(grupo => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'filtro-grupo';
+                    cb.value = grupo;
+                    cb.className = 'rounded text-unisuperBlue focus:ring-0';
+                    cb.checked = gruposSelecionados.includes(grupo);
+                    cb.onchange = atualizarTextoGrupo;
+
+                    const span = document.createElement('span');
+                    span.textContent = grupo;
+
+                    label.appendChild(cb);
+                    label.appendChild(span);
+                    containerGrupos.appendChild(label);
+                });
+                atualizarTextoGrupo();
+            }
+
+            // PRODUTOR RURAL: opções disponíveis considerando os demais filtros.
+            const dadosProdutores = obterDadosBaseParaFiltro('produtor');
+            const produtoresDisponiveis = [...new Set(
+                dadosProdutores
+                    .map(item => String(item.produtor_rural ?? '').trim())
+                    .filter(v => v !== '')
+            )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            document.querySelectorAll('input[name="filtro-produtor-rural"]').forEach(cb => cb.checked = false);
+            const containerProdutor = document.querySelector('#dropdown-produtor-rural > div.space-y-1.pt-1');
+            if (containerProdutor) {
+                containerProdutor.innerHTML = '';
+                produtoresDisponiveis.forEach(valor => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'filtro-produtor-rural';
+                    cb.value = valor;
+                    cb.className = 'rounded text-unisuperBlue focus:ring-0';
+                    cb.checked = produtoresSelecionados.includes(valor);
+                    cb.onchange = atualizarTextoProdutorRural;
+
+                    const span = document.createElement('span');
+                    span.textContent = valor;
+
+                    label.appendChild(cb);
+                    label.appendChild(span);
+                    containerProdutor.appendChild(label);
+                });
+                atualizarTextoProdutorRural();
+            }
+
+            // NOME DA CONTA: opções disponíveis considerando os demais filtros.
+            const dadosNomes = obterDadosBaseParaFiltro('nome');
+            const nomesDisponiveis = [...new Set(
+                dadosNomes
+                    .map(item => String(item.nome_conta ?? '').trim())
+                    .filter(v => v !== '')
+            )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            const containerNomes = document.getElementById('container-checkboxes-nome-conta');
+            if (containerNomes) {
+                containerNomes.innerHTML = '';
+                nomesDisponiveis.forEach(nome => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.name = 'filtro-nome-conta';
+                    cb.value = nome;
+                    cb.className = 'rounded text-unisuperBlue focus:ring-0';
+                    cb.checked = nomesSelecionados.includes(nome);
+                    cb.onchange = atualizarTextoNomeConta;
+
+                    const span = document.createElement('span');
+                    span.textContent = nome;
+
+                    label.appendChild(cb);
+                    label.appendChild(span);
+                    containerNomes.appendChild(label);
+                });
+                atualizarTextoNomeConta();
+            }
+        }
+
+        function aplicarFiltrosFornecedores() {
+            const filtrados = obterDadosBaseParaFiltro(null);
 
             renderizarTabelaFornecedores(filtrados);
+
+            // Recalcula as opções dos demais filtros com base no conjunto atual.
+            reconstruirCheckboxesCascata();
+
             document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
         }
 
         function renderizarTabelaFornecedores(listaDados) {
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
             if (!listaDados || listaDados.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">Nenhum registro encontrado com os filtros informados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">Nenhum registro encontrado com os filtros informados.</td></tr>`;
                 return;
             }
 
@@ -836,6 +1096,14 @@
                         <td class="p-3 ${corDiferenca} whitespace-nowrap">${diferenca}</td>
                         <td class="p-3 text-slate-600 whitespace-nowrap">${escapeHtml(lojaTexto)}</td>
                         <td class="p-3 text-slate-600">${escapeHtml(item.nome_conta || '')}</td>
+                        <td class="p-2 align-top">
+                            <textarea
+                                class="w-full min-w-[260px] min-h-[58px] text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none resize-y"
+                                placeholder="Digite uma observação..."
+                                data-chave="${encodeURIComponent(criarChaveObservacao(item))}"
+                                oninput="salvarObservacaoFornecedor(this)"
+                            >${escapeHtml(item.observacao || '')}</textarea>
+                        </td>
                     </tr>
                 `;
             });
@@ -852,7 +1120,7 @@
             if (!confirm(`Deseja executar a extração no servidor local para a competência de ${dataCompetencia.split('-').reverse().join('/')}?`)) return;
             
             const tbody = document.getElementById('tabela-financeiro-fornecedores');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Conectando ao servidor local e processando query no VR... Aguarde.</td></tr>';
 
             try {
                 const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-conciliacao`, {
@@ -866,12 +1134,12 @@
                     carregarDivergenciasFornecedores();
                 } else {
                     alert("Erro ao executar no servidor: " + resultado.erro);
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">Erro no servidor: ${resultado.erro}</td></tr>`;
                 }
             } catch (e) {
                 console.error(e);
                 alert("Não foi possível conectar ao servidor local. Verifique se o servidor local está rodando na porta 5000.");
-                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">Falha de conexão com o integrador local.</td></tr>`;
             }
         }
 
