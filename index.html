@@ -313,9 +313,22 @@
                                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Conta Analítica</label>
                                         <input type="text" id="filtro-conta" placeholder="Pesquisar conta..." class="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-unisuperBlue">
                                     </div>
-                                    <div>
-                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Nome do Fornecedor</label>
-                                        <input type="text" id="filtro-fornecedor" placeholder="Pesquisar fornecedor..." class="w-full text-xs border border-slate-300 rounded p-2 focus:ring-1 focus:ring-unisuperBlue">
+                                    <!-- DROPDOWN MULTI-SELEÇÃO: NOME DA CONTA -->
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Nome da Conta</label>
+                                        <button type="button" onclick="toggleDropdown('dropdown-nome-conta', event)" class="w-full text-xs border border-slate-300 rounded p-2 bg-white text-left flex justify-between items-center focus:ring-1 focus:ring-unisuperBlue">
+                                            <span id="texto-selecao-nome-conta">Todos</span>
+                                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                                        </button>
+                                        <div id="dropdown-nome-conta" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded shadow-lg z-20 p-2 max-h-56 overflow-y-auto space-y-1 text-xs">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded font-bold border-b border-slate-100">
+                                                <input type="checkbox" id="check-todos-nome-conta" onchange="selecionarTodosNomesConta(this)" class="rounded text-unisuperBlue focus:ring-0">
+                                                <span>Todos</span>
+                                            </label>
+                                            <div id="container-checkboxes-nome-conta" class="space-y-1 pt-1">
+                                                <span class="text-slate-400 italic text-[11px]">Carregue os dados primeiro...</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <!-- DROPDOWN MULTI-SELEÇÃO: PRODUTOR RURAL -->
                                     <div class="relative">
@@ -667,6 +680,76 @@
             });
         }
 
+        function atualizarCheckboxesNomeConta(data) {
+            const container = document.getElementById('container-checkboxes-nome-conta');
+            if (!container) return;
+
+            const nomesUnicos = [...new Set(
+                (data || [])
+                    .map(item => String(item.nome_conta ?? '').trim())
+                    .filter(nome => nome !== '')
+            )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            container.innerHTML = '';
+
+            if (nomesUnicos.length === 0) {
+                container.innerHTML = '<span class="text-slate-400 italic text-[11px]">Nenhuma conta encontrada</span>';
+                return;
+            }
+
+            nomesUnicos.forEach(nome => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center space-x-2 cursor-pointer hover:bg-slate-100 p-1 rounded';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'filtro-nome-conta';
+                checkbox.value = nome;
+                checkbox.className = 'rounded text-unisuperBlue focus:ring-0';
+                checkbox.onchange = atualizarTextoNomeConta;
+
+                const span = document.createElement('span');
+                span.textContent = nome;
+
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                container.appendChild(label);
+            });
+
+            atualizarTextoNomeConta();
+        }
+
+        function atualizarTextoNomeConta() {
+            const selecionados = Array.from(document.querySelectorAll('input[name="filtro-nome-conta"]:checked'))
+                .map(cb => cb.value);
+
+            const texto = document.getElementById('texto-selecao-nome-conta');
+            const todos = document.getElementById('check-todos-nome-conta');
+
+            if (!texto || !todos) return;
+
+            if (selecionados.length === 0) {
+                texto.textContent = 'Todos';
+                todos.checked = false;
+            } else if (selecionados.length === document.querySelectorAll('input[name="filtro-nome-conta"]').length) {
+                texto.textContent = 'Todos';
+                todos.checked = true;
+            } else if (selecionados.length <= 2) {
+                texto.textContent = selecionados.join(', ');
+                todos.checked = false;
+            } else {
+                texto.textContent = `${selecionados.length} selecionados`;
+                todos.checked = false;
+            }
+        }
+
+        function selecionarTodosNomesConta(checkbox) {
+            document.querySelectorAll('input[name="filtro-nome-conta"]').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            atualizarTextoNomeConta();
+        }
+
         function atualizarTextoProdutorRural() {
             const selecionados = Array.from(document.querySelectorAll('input[name="filtro-produtor-rural"]:checked'))
                 .map(cb => cb.value);
@@ -697,9 +780,9 @@
             const lojasSelecionadas = Array.from(document.querySelectorAll('input[name="filtro-loja"]:checked')).map(cb => cb.value);
             const gruposSelecionados = Array.from(document.querySelectorAll('input[name="filtro-grupo"]:checked')).map(cb => cb.value);
             const produtoresRuraisSelecionados = Array.from(document.querySelectorAll('input[name="filtro-produtor-rural"]:checked')).map(cb => cb.value);
+            const nomesContaSelecionados = Array.from(document.querySelectorAll('input[name="filtro-nome-conta"]:checked')).map(cb => cb.value);
 
             const fConta = document.getElementById('filtro-conta').value.toLowerCase().trim();
-            const fFornecedor = document.getElementById('filtro-fornecedor').value.toLowerCase().trim();
             const fStatus = document.getElementById('filtro-status').value;
 
             const filtrados = dadosFornecedoresCache.filter(item => {
@@ -713,8 +796,8 @@
                 if (lojasSelecionadas.length > 0 && !lojasSelecionadas.includes(idLojaStr)) return false;
                 if (gruposSelecionados.length > 0 && !gruposSelecionados.includes(grupoLoja)) return false;
                 if (produtoresRuraisSelecionados.length > 0 && !produtoresRuraisSelecionados.some(valor => valor.toLowerCase() === produtorRuralStr)) return false;
+                if (nomesContaSelecionados.length > 0 && !nomesContaSelecionados.includes(String(item.nome_conta ?? '').trim())) return false;
                 if (fConta && !contaStr.includes(fConta)) return false;
-                if (fFornecedor && !nomeStr.includes(fFornecedor)) return false;
                 if (fStatus === 'divergente' && Math.abs(diffNum) <= 0.009) return false;
                 if (fStatus === 'conciliado' && Math.abs(diffNum) > 0.009) return false;
 
