@@ -23,6 +23,89 @@
             }
         }
     </script>
+
+    <style>
+        /* MENU LATERAL RECOLHÍVEL / RESPONSIVO */
+        #app-screen { min-width: 0; }
+        #menu-lateral {
+            width: 16rem;
+            min-width: 16rem;
+            transition: width .22s ease, min-width .22s ease;
+            position: relative;
+        }
+        #menu-lateral.menu-recolhido {
+            width: 4.25rem;
+            min-width: 4.25rem;
+        }
+        #menu-lateral.menu-recolhido .menu-brand,
+        #menu-lateral.menu-recolhido .menu-label,
+        #menu-lateral.menu-recolhido #db-status-text,
+        #menu-lateral.menu-recolhido .logout-label {
+            display: none;
+        }
+        #menu-lateral.menu-recolhido .menu-nav { padding-left: .5rem; padding-right: .5rem; }
+        #menu-lateral.menu-recolhido .menu-item { justify-content: center; padding-left: .5rem; padding-right: .5rem; }
+        #menu-lateral.menu-recolhido .menu-item i { margin: 0; width: 1.25rem; }
+        #menu-lateral.menu-recolhido .menu-footer { padding-left: .5rem; padding-right: .5rem; }
+        #menu-lateral.menu-recolhido .logout-btn { justify-content: center; padding-left: .5rem; padding-right: .5rem; }
+        #menu-toggle {
+            position: absolute;
+            top: .85rem;
+            right: -.75rem;
+            z-index: 10;
+            width: 1.8rem;
+            height: 1.8rem;
+            border-radius: 9999px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,.18);
+            cursor: pointer;
+        }
+        #menu-toggle:hover { background: #1e3a8a; }
+        #menu-lateral.menu-recolhido #menu-toggle { right: -.85rem; }
+        #menu-lateral.menu-recolhido #menu-toggle i { transform: rotate(180deg); }
+        #menu-lateral .menu-item { min-height: 44px; }
+        #menu-lateral .logout-btn { min-height: 42px; }
+        #conteudo-principal { min-width: 0; }
+
+        @media (max-width: 767px) {
+            #app-screen { flex-direction: row !important; }
+            #menu-lateral {
+                width: 4.25rem !important;
+                min-width: 4.25rem !important;
+                height: 100vh;
+                position: sticky;
+                top: 0;
+                align-self: flex-start;
+            }
+            #menu-lateral:not(.menu-recolhido) {
+                width: 16rem !important;
+                min-width: 16rem !important;
+            }
+            #menu-lateral:not(.menu-recolhido) .menu-brand,
+            #menu-lateral:not(.menu-recolhido) .menu-label,
+            #menu-lateral:not(.menu-recolhido) #db-status-text,
+            #menu-lateral:not(.menu-recolhido) .logout-label { display: inline; }
+            #menu-lateral:not(.menu-recolhido) .menu-brand { display: block; }
+            #conteudo-principal header { padding-left: .75rem; padding-right: .75rem; }
+            #conteudo-principal > .conteudo-padding { padding: .75rem; }
+            #titulo-pagina { font-size: 1rem; }
+            #status-nuvem { display: none; }
+        }
+
+        @media (max-width: 480px) {
+            #menu-lateral:not(.menu-recolhido) {
+                width: 15rem !important;
+                min-width: 15rem !important;
+            }
+            #menu-toggle { width: 2rem; height: 2rem; }
+        }
+    </style>
+
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col" onclick="fecharDropdownsFora(event)">
 
@@ -50,38 +133,41 @@
     </div>
 
     <!-- APLICAÇÃO PRINCIPAL -->
-    <div id="app-screen" class="hidden min-h-screen flex flex-col md:flex-row flex-grow">
+    <div id="app-screen" class="hidden min-h-screen flex flex-row flex-grow">
         <!-- MENU LATERAL -->
-        <aside class="w-full md:w-64 bg-unisuperDark text-white flex flex-col justify-between shadow-xl border-r-4 border-unisuperRed shrink-0">
+        <aside id="menu-lateral" class="w-full md:w-64 bg-unisuperDark text-white flex flex-col justify-between shadow-xl border-r-4 border-unisuperRed shrink-0">
+            <button id="menu-toggle" type="button" onclick="alternarMenu()" aria-label="Recolher ou expandir menu" title="Recolher ou expandir menu">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
             <div>
-                <div class="p-6 border-b border-slate-800 bg-black/30">
+                <div class="menu-brand p-6 border-b border-slate-800 bg-black/30">
                     <h1 class="text-sm font-bold tracking-wide uppercase text-white leading-tight">Conciliador Contábil</h1>
                     <p class="text-[10px] text-unisuperRed font-semibold tracking-wider mt-0.5">UNIÃO SUPERMERCADOS</p>
                 </div>
-                <nav class="p-4 space-y-1.5">
-                    <button onclick="switchTab('cadastro')" id="btn-tab-cadastro" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-folder-plus w-5"></i><span>Cadastro</span>
+                <nav class="menu-nav p-4 space-y-1.5">
+                    <button onclick="switchTab('cadastro')" id="btn-tab-cadastro" title="Cadastro" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-folder-plus w-5"></i><span class="menu-label">Cadastro</span>
                     </button>
-                    <button onclick="switchTab('conciliacoes')" id="btn-tab-conciliacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-scale-balanced w-5"></i><span>Conciliações</span>
+                    <button onclick="switchTab('conciliacoes')" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-scale-balanced w-5"></i><span class="menu-label">Conciliações</span>
                     </button>
-                    <button onclick="switchTab('folha')" id="btn-tab-folha" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-users-rectangle w-5"></i><span>Folha de Pagamento</span>
+                    <button onclick="switchTab('folha')" id="btn-tab-folha" title="Folha de Pagamento" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-users-rectangle w-5"></i><span class="menu-label">Folha de Pagamento</span>
                     </button>
-                    <button onclick="switchTab('importacoes')" id="btn-tab-importacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-file-import w-5"></i><span>Importações</span>
+                    <button onclick="switchTab('importacoes')" id="btn-tab-importacoes" title="Importações" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-file-import w-5"></i><span class="menu-label">Importações</span>
                     </button>
-                    <button onclick="switchTab('exportacoes')" id="btn-tab-exportacoes" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-file-export w-5"></i><span>Exportações</span>
+                    <button onclick="switchTab('exportacoes')" id="btn-tab-exportacoes" title="Exportações" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-file-export w-5"></i><span class="menu-label">Exportações</span>
                     </button>
-                    <button onclick="switchTab('relatorios')" id="btn-tab-relatorios" class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-chart-line w-5"></i><span>Relatórios</span>
+                    <button onclick="switchTab('relatorios')" id="btn-tab-relatorios" title="Relatórios" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <i class="fa-solid fa-chart-line w-5"></i><span class="menu-label">Relatórios</span>
                     </button>
                 </nav>
             </div>
-            <div class="p-4 border-t border-slate-800 space-y-3">
-                <button onclick="fazerLogout()" class="w-full flex items-center justify-center space-x-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white py-2 rounded-lg text-xs font-semibold transition border border-red-600/30">
-                    <i class="fa-solid fa-power-off"></i><span>Sair do Sistema</span>
+            <div class="menu-footer p-4 border-t border-slate-800 space-y-3">
+                <button onclick="fazerLogout()" class="logout-btn w-full flex items-center justify-center space-x-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white py-2 rounded-lg text-xs font-semibold transition border border-red-600/30">
+                    <i class="fa-solid fa-power-off"></i><span class="logout-label">Sair do Sistema</span>
                 </button>
                 <div class="text-center text-xs text-slate-400 pt-1">
                     <span id="db-status-dot" class="inline-block h-2 w-2 rounded-full bg-orange-500 mr-1"></span>
@@ -91,16 +177,16 @@
         </aside>
 
         <!-- CONTEÚDO PRINCIPAL -->
-        <main class="flex-grow flex flex-col min-h-screen overflow-y-auto">
+        <main id="conteudo-principal" class="flex-grow flex flex-col min-h-screen overflow-y-auto">
             <header class="bg-white shadow-sm px-8 py-4 border-b border-slate-200 flex justify-between items-center">
                 <h2 id="titulo-pagina" class="text-xl font-bold text-slate-800">Cadastros (De/Para)</h2>
-                <div class="flex items-center space-x-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                <div id="status-nuvem" class="flex items-center space-x-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
                     <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span>Modo Nuvem (Supabase Ativo)</span>
                 </div>
             </header>
 
-            <div class="p-8 space-y-6 flex-grow">
+            <div class="conteudo-padding p-8 space-y-6 flex-grow">
                 <!-- ABA CADASTRO -->
                 <div id="tab-cadastro" class="tab-content space-y-6">
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
@@ -163,29 +249,42 @@
 
                         <!-- SUB-ABA CAIXA -->
                         <div id="subtab-caixa" class="subtab-content space-y-4">
-                            <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
-                                <div>
-                                    <h4 class="font-bold text-slate-700 text-sm">Conciliação Mapa Resumo</h4>
-                                    <p class="text-xs text-slate-500">Cruza o fechamento de frente de caixa com a contabilidade.</p>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+                                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                                    <div>
+                                        <h4 class="font-bold text-slate-700 text-sm">Conciliação Mapa Resumo</h4>
+                                        <p class="text-xs text-slate-500">Compara o Mapa Resumo com o Caixa do ERP no intervalo de datas selecionado.</p>
+                                    </div>
+                                    <div class="flex items-end gap-2">
+                                        <div>
+                                            <label for="filtro-mapa-resumo-inicial" class="block text-[10px] font-bold text-slate-500 mb-1">Data Inicial</label>
+                                            <input type="date" id="filtro-mapa-resumo-inicial" class="text-xs border border-slate-300 rounded p-2 bg-white focus:ring-2 focus:ring-unisuperBlue focus:outline-none">
+                                        </div>
+                                        <div>
+                                            <label for="filtro-mapa-resumo-final" class="block text-[10px] font-bold text-slate-500 mb-1">Data Final</label>
+                                            <input type="date" id="filtro-mapa-resumo-final" class="text-xs border border-slate-300 rounded p-2 bg-white focus:ring-2 focus:ring-unisuperBlue focus:outline-none">
+                                        </div>
+                                        <button onclick="executarCruzamento('caixa')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2 h-[34px]">
+                                            <i class="fa-solid fa-play"></i><span>Executar</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <button onclick="executarCruzamento('caixa')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2">
-                                    <i class="fa-solid fa-play"></i><span>Executar</span>
-                                </button>
                             </div>
                             <div class="overflow-x-auto border border-slate-200 rounded-lg">
                                 <table class="w-full text-left border-collapse">
                                     <thead>
                                         <tr class="bg-slate-50 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
-                                            <th class="p-3">Conta / Loja / PDV</th>
-                                            <th class="p-3">Valor Mapa Resumo (ERP)</th>
-                                            <th class="p-3">Valor Contábil</th>
+                                            <th class="p-3">Loja</th>
+                                            <th class="p-3">Data</th>
+                                            <th class="p-3">Valor Mapa Resumo</th>
+                                            <th class="p-3">Venda Líquida Caixa</th>
                                             <th class="p-3">Diferença</th>
                                             <th class="p-3">Status</th>
                                             <th class="p-3 text-center">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tabela-caixa-mapa" class="text-sm divide-y divide-slate-100">
-                                        <tr><td colspan="6" class="p-6 text-center text-slate-400">Clique em executar para processar o Mapa Resumo.</td></tr>
+                                        <tr><td colspan="7" class="p-6 text-center text-slate-400">Selecione a Data Inicial e a Data Final e clique em Executar para processar o Mapa Resumo.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1318,19 +1417,75 @@
             }
         }
 
-        function executarCruzamento(tipo) {
+        async function executarCruzamento(tipo) {
             if (tipo === 'caixa') {
-                document.getElementById('tabela-caixa-mapa').innerHTML = `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-3 font-medium text-slate-700">1.1.1.02 - Frente de Caixa Matriz</td>
-                        <td class="p-3 text-slate-600">R$ 145.890,00</td>
-                        <td class="p-3 text-slate-600">R$ 145.890,00</td>
-                        <td class="p-3 font-semibold text-emerald-600">R$ 0,00</td>
-                        <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span></td>
-                        <td class="p-3 text-center"><button class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
-                    </tr>
-                `;
-                alert('Mapa Resumo executado!');
+                const dataInicial = document.getElementById('filtro-mapa-resumo-inicial').value;
+                const dataFinal = document.getElementById('filtro-mapa-resumo-final').value;
+                const tbody = document.getElementById('tabela-caixa-mapa');
+
+                if (!dataInicial || !dataFinal) {
+                    alert('Selecione a Data Inicial e a Data Final da conciliação do Mapa Resumo.');
+                    return;
+                }
+
+                if (dataInicial > dataFinal) {
+                    alert('A Data Inicial não pode ser maior que a Data Final.');
+                    return;
+                }
+
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Consultando Mapa Resumo e Caixa no ERP...</td></tr>';
+
+                try {
+                    const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-mapa-resumo`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dataInicial, dataFinal })
+                    });
+
+                    const resultado = await resposta.json();
+                    if (!resposta.ok || !resultado.sucesso) {
+                        throw new Error(resultado.erro || 'Erro ao executar a conciliação do Mapa Resumo.');
+                    }
+
+                    if (!resultado.dados || resultado.dados.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum registro encontrado no intervalo selecionado.</td></tr>';
+                        alert('Consulta concluída, mas não foram encontrados registros no intervalo selecionado.');
+                        return;
+                    }
+
+                    const formataReal = (valor) => Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    tbody.innerHTML = '';
+
+                    resultado.dados.forEach(item => {
+                        const diferenca = Number(item.diferenca || 0);
+                        const conciliado = Math.abs(diferenca) <= 0.009;
+                        const cor = conciliado ? 'text-emerald-600' : 'text-red-600';
+                        const status = conciliado
+                            ? '<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span>'
+                            : '<span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Não Conciliado</span>';
+
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-semibold text-slate-700">${escapeHtml(String(item.id_loja ?? ''))}</td>
+                                <td class="p-3 text-slate-600">${escapeHtml(String(item.data ?? ''))}</td>
+                                <td class="p-3 text-slate-600">${formataReal(item.valor_venda)}</td>
+                                <td class="p-3 text-slate-600">${formataReal(item.venda_liquida)}</td>
+                                <td class="p-3 ${cor} font-bold">${formataReal(diferenca)}</td>
+                                <td class="p-3">${status}</td>
+                                <td class="p-3 text-center"><button onclick="alert('Loja: ${escapeHtml(String(item.id_loja ?? ''))}\nData: ${escapeHtml(String(item.data ?? ''))}\nDiferença: ${formataReal(diferenca)}')" class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
+                            </tr>
+                        `;
+                    });
+
+                    const dataInicialBR = dataInicial.split('-').reverse().join('/');
+                    const dataFinalBR = dataFinal.split('-').reverse().join('/');
+                    alert(`Mapa Resumo executado de ${dataInicialBR} até ${dataFinalBR} com ${resultado.dados.length} registro(s).`);
+                } catch (erro) {
+                    console.error(erro);
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">${escapeHtml(erro.message)}</td></tr>`;
+                    alert('Erro ao executar o Mapa Resumo: ' + erro.message);
+                }
+                return;
             } else if (tipo === 'fiscal-icms') {
                 document.getElementById('tabela-fiscal-icms').innerHTML = `
                     <tr class="hover:bg-slate-50">
@@ -1397,6 +1552,49 @@
             if (valor === null || valor === undefined) return '';
             return String(valor).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
-    </script>
+    
+
+        // Menu lateral recolhível
+        function alternarMenu() {
+            const menu = document.getElementById('menu-lateral');
+            if (!menu) return;
+            menu.classList.toggle('menu-recolhido');
+            const recolhido = menu.classList.contains('menu-recolhido');
+            const botao = document.getElementById('menu-toggle');
+            if (botao) {
+                botao.setAttribute('aria-expanded', String(!recolhido));
+                botao.title = recolhido ? 'Expandir menu' : 'Recolher menu';
+            }
+            try { localStorage.setItem('menuRecolhido', recolhido ? '1' : '0'); } catch (e) {}
+        }
+
+        function inicializarMenuResponsivo() {
+            const menu = document.getElementById('menu-lateral');
+            if (!menu) return;
+            let recolhido = window.innerWidth < 768;
+            try {
+                const salvo = localStorage.getItem('menuRecolhido');
+                if (salvo !== null && window.innerWidth >= 768) recolhido = salvo === '1';
+            } catch (e) {}
+            menu.classList.toggle('menu-recolhido', recolhido);
+            const botao = document.getElementById('menu-toggle');
+            if (botao) {
+                botao.setAttribute('aria-expanded', String(!recolhido));
+                botao.title = recolhido ? 'Expandir menu' : 'Recolher menu';
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            const menu = document.getElementById('menu-lateral');
+            if (!menu) return;
+            if (window.innerWidth < 768 && !menu.classList.contains('menu-recolhido')) {
+                // Em telas pequenas, mantém o menu expandido se o usuário acabou de abrir.
+                return;
+            }
+            if (window.innerWidth < 768) menu.classList.add('menu-recolhido');
+        });
+
+        inicializarMenuResponsivo();
+</script>
 </body>
 </html>
