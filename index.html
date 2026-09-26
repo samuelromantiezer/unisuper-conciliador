@@ -249,24 +249,60 @@
 
                         <!-- SUB-ABA CAIXA -->
                         <div id="subtab-caixa" class="subtab-content space-y-4">
-                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
-                                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                                    <div>
-                                        <h4 class="font-bold text-slate-700 text-sm">Conciliação Mapa Resumo</h4>
-                                        <p class="text-xs text-slate-500">Compara o Mapa Resumo com o Caixa do ERP no intervalo de datas selecionado.</p>
-                                    </div>
-                                    <div class="flex items-end gap-2">
-                                        <div>
-                                            <label for="filtro-mapa-resumo-inicial" class="block text-[10px] font-bold text-slate-500 mb-1">Data Inicial</label>
-                                            <input type="date" id="filtro-mapa-resumo-inicial" class="text-xs border border-slate-300 rounded p-2 bg-white focus:ring-2 focus:ring-unisuperBlue focus:outline-none">
-                                        </div>
-                                        <div>
-                                            <label for="filtro-mapa-resumo-final" class="block text-[10px] font-bold text-slate-500 mb-1">Data Final</label>
-                                            <input type="date" id="filtro-mapa-resumo-final" class="text-xs border border-slate-300 rounded p-2 bg-white focus:ring-2 focus:ring-unisuperBlue focus:outline-none">
-                                        </div>
-                                        <button onclick="executarCruzamento('caixa')" class="bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold shadow hover:bg-blue-900 transition flex items-center space-x-2 h-[34px]">
+                            <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                        <i class="fa-solid fa-filter text-unisuperBlue mr-1"></i> Filtros de Consulta
+                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="aplicarFiltrosMapaResumo()" class="bg-slate-800 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-slate-900 transition shadow flex items-center gap-1.5">
+                                            <i class="fa-solid fa-search"></i><span>Exibir</span>
+                                        </button>
+                                        <button onclick="executarCruzamento('caixa')" class="bg-unisuperBlue text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-900 transition shadow flex items-center gap-1.5">
                                             <i class="fa-solid fa-play"></i><span>Executar</span>
                                         </button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-100 relative">
+                                    <div>
+                                        <label for="filtro-mapa-resumo-inicial" class="block text-[10px] font-bold text-slate-500 mb-1">Data Inicial</label>
+                                        <input type="date" id="filtro-mapa-resumo-inicial" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label for="filtro-mapa-resumo-final" class="block text-[10px] font-bold text-slate-500 mb-1">Data Final</label>
+                                        <input type="date" id="filtro-mapa-resumo-final" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label for="filtro-mapa-loja" class="block text-[10px] font-bold text-slate-500 mb-1">Filtrar Lojas</label>
+                                        <select id="filtro-mapa-loja" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none">
+                                            <option value="">Todas as Lojas</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="filtro-mapa-grupo" class="block text-[10px] font-bold text-slate-500 mb-1">Grupo Econômico</label>
+                                        <select id="filtro-mapa-grupo" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none">
+                                            <option value="">Todos os Grupos</option>
+                                            <option value="Unisuper">Unisuper</option>
+                                            <option value="Atacado">Atacado</option>
+                                            <option value="Sim">Sim</option>
+                                            <option value="Outros">Outros</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="filtro-mapa-status-conciliacao" class="block text-[10px] font-bold text-slate-500 mb-1">Status da Conciliação</label>
+                                        <select id="filtro-mapa-status-conciliacao" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none">
+                                            <option value="">Todos</option>
+                                            <option value="conciliado">Conciliados</option>
+                                            <option value="nao-conciliado">Não Conciliados</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="filtro-mapa-status-diferenca" class="block text-[10px] font-bold text-slate-500 mb-1">Status Diferença</label>
+                                        <select id="filtro-mapa-status-diferenca" class="w-full text-xs border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-unisuperBlue focus:outline-none">
+                                            <option value="">Todos</option>
+                                            <option value="divergente">Com Divergência</option>
+                                            <option value="conciliado">Sem Divergência (R$ 0,00)</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -591,6 +627,7 @@
 
         // URL ATUAL DO TÚNEL CLOUDFLARE GERADA NO POWERSHELL
         const URL_SERVIDOR_LOCAL = 'http://localhost:5000';
+        const URL_MAPA_RESUMO = URL_SERVIDOR_LOCAL;
 
         let supabaseClient = null;
         let dadosFornecedoresCache = [];
@@ -629,6 +666,11 @@
 
             const abaSalva = localStorage.getItem('unisuper_aba_atual') || 'cadastro';
             const subAbaSalva = localStorage.getItem('unisuper_subaba_atual') || 'caixa';
+
+            const mapaDataInicialSalva = localStorage.getItem('mapa_resumo_data_inicial');
+            const mapaDataFinalSalva = localStorage.getItem('mapa_resumo_data_final');
+            if (mapaDataInicialSalva) document.getElementById('filtro-mapa-resumo-inicial').value = mapaDataInicialSalva;
+            if (mapaDataFinalSalva) document.getElementById('filtro-mapa-resumo-final').value = mapaDataFinalSalva;
 
             switchTab(abaSalva, false);
             switchSubTab(subAbaSalva, false);
@@ -1417,6 +1459,142 @@
             }
         }
 
+        // Dados do último processamento do Mapa Resumo.
+        let mapaResumoDados = [];
+
+        function obterGrupoEconomicoMapa(idLoja) {
+            const valor = String(idLoja ?? '').trim().toUpperCase();
+            if (valor === 'CD' || (!isNaN(valor) && Number(valor) >= 11 && Number(valor) <= 14)) return 'Atacado';
+            if (!isNaN(valor)) {
+                const n = Number(valor);
+                if (n >= 1 && n <= 10) return 'Unisuper';
+                if (n >= 15) return 'Sim';
+            }
+            return 'Outros';
+        }
+
+        function preencherFiltrosMapaResumo() {
+            const selectLoja = document.getElementById('filtro-mapa-loja');
+            if (!selectLoja) return;
+
+            const lojas = [...new Set(
+                mapaResumoDados.map(item => String(item.id_loja ?? '').trim()).filter(Boolean)
+            )].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+
+            const valorAtual = selectLoja.value;
+            selectLoja.innerHTML = '<option value="">Todas as Lojas</option>';
+
+            lojas.forEach(loja => {
+                const option = document.createElement('option');
+                option.value = loja;
+                option.textContent = `Loja ${loja}`;
+                selectLoja.appendChild(option);
+            });
+
+            if (lojas.includes(valorAtual)) selectLoja.value = valorAtual;
+        }
+
+        function renderizarMapaResumo() {
+            const tbody = document.getElementById('tabela-caixa-mapa');
+            if (!tbody) return;
+
+            const lojaSelecionada = document.getElementById('filtro-mapa-loja')?.value || '';
+            const grupoSelecionado = document.getElementById('filtro-mapa-grupo')?.value || '';
+            const statusConciliacao = document.getElementById('filtro-mapa-status-conciliacao')?.value || '';
+            const statusDiferenca = document.getElementById('filtro-mapa-status-diferenca')?.value || '';
+
+            const filtrados = mapaResumoDados.filter(item => {
+                const loja = String(item.id_loja ?? '').trim();
+                const diferenca = Number(item.diferenca || 0);
+                const conciliado = Math.abs(diferenca) <= 0.009;
+                const grupo = obterGrupoEconomicoMapa(loja);
+
+                if (lojaSelecionada && loja !== lojaSelecionada) return false;
+                if (grupoSelecionado && grupo !== grupoSelecionado) return false;
+                if (statusConciliacao === 'conciliado' && !conciliado) return false;
+                if (statusConciliacao === 'nao-conciliado' && conciliado) return false;
+                if (statusDiferenca === 'divergente' && conciliado) return false;
+                if (statusDiferenca === 'conciliado' && !conciliado) return false;
+
+                return true;
+            });
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum registro encontrado com os filtros selecionados.</td></tr>';
+                return;
+            }
+
+            const formataReal = valor => Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            tbody.innerHTML = '';
+
+            filtrados.forEach(item => {
+                const idLoja = String(item.id_loja ?? '');
+                let data = String(item.data ?? '');
+                if (data.length >= 10 && data.includes('-')) {
+                    const partes = data.substring(0, 10).split('-');
+                    if (partes.length === 3) data = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                }
+
+                const diferenca = Number(item.diferenca || 0);
+                const conciliado = Math.abs(diferenca) <= 0.009;
+                const cor = conciliado ? 'text-emerald-600' : 'text-red-600';
+                const status = conciliado
+                    ? '<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span>'
+                    : '<span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Não Conciliado</span>';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-semibold text-slate-700">${escapeHtml(idLoja)}</td>
+                        <td class="p-3 text-slate-600">${escapeHtml(data)}</td>
+                        <td class="p-3 text-slate-600">${formataReal(item.valor_venda)}</td>
+                        <td class="p-3 text-slate-600">${formataReal(item.venda_liquida)}</td>
+                        <td class="p-3 ${cor} font-bold">${formataReal(diferenca)}</td>
+                        <td class="p-3">${status}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="alert('Loja: ${escapeHtml(idLoja)}\nData: ${escapeHtml(data)}\nDiferença: ${formataReal(diferenca)}')" class="text-blue-600 hover:underline text-xs">Detalhes</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function carregarMapaResumoSalvo() {
+            const dataInicial = document.getElementById('filtro-mapa-resumo-inicial')?.value;
+            const dataFinal = document.getElementById('filtro-mapa-resumo-final')?.value;
+            const tbody = document.getElementById('tabela-caixa-mapa');
+            if (!dataInicial || !dataFinal || !tbody) return;
+
+            tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando Mapa Resumo salvo...</td></tr>';
+
+            try {
+                const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/mapa-resumo-salvo?dataInicial=${encodeURIComponent(dataInicial)}&dataFinal=${encodeURIComponent(dataFinal)}`);
+                const resultado = await resposta.json();
+                if (!resposta.ok || !resultado.sucesso) throw new Error(resultado.erro || `Erro HTTP ${resposta.status}`);
+
+                mapaResumoDados = Array.isArray(resultado.dados) ? resultado.dados : [];
+                preencherFiltrosMapaResumo();
+
+                if (!mapaResumoDados.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum Mapa Resumo salvo para o período selecionado. Clique em Executar para consultar o VR.</td></tr>';
+                    return;
+                }
+
+                renderizarMapaResumo();
+            } catch (erro) {
+                console.error('Erro ao carregar Mapa Resumo salvo:', erro);
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">${escapeHtml(erro.message)}</td></tr>`;
+            }
+        }
+
+        function aplicarFiltrosMapaResumo() {
+            if (!mapaResumoDados.length) {
+                alert('Execute o Mapa Resumo primeiro para carregar os dados.');
+                return;
+            }
+            renderizarMapaResumo();
+        }
+
         async function executarCruzamento(tipo) {
             if (tipo === 'caixa') {
                 const dataInicial = document.getElementById('filtro-mapa-resumo-inicial').value;
@@ -1436,50 +1614,45 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Consultando Mapa Resumo e Caixa no ERP...</td></tr>';
 
                 try {
-                    const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-mapa-resumo`, {
+                    const resposta = await fetch(`${URL_MAPA_RESUMO}/executar-mapa-resumo`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ dataInicial, dataFinal })
+                        body: JSON.stringify({ dataInicial, dataFinal, forcarAtualizacao: true })
                     });
 
-                    const resultado = await resposta.json();
-                    if (!resposta.ok || !resultado.sucesso) {
-                        throw new Error(resultado.erro || 'Erro ao executar a conciliação do Mapa Resumo.');
+                    const textoResposta = await resposta.text();
+                    console.log('Resposta recebida do servidor Mapa Resumo:', textoResposta);
+
+                    let resultado;
+                    try {
+                        resultado = JSON.parse(textoResposta);
+                    } catch (erroJSON) {
+                        console.error('O servidor do Mapa Resumo não retornou JSON:', textoResposta);
+                        throw new Error('O servidor do Mapa Resumo não retornou JSON. Resposta recebida: ' + textoResposta.substring(0, 300));
                     }
 
-                    if (!resultado.dados || resultado.dados.length === 0) {
+                    if (!resposta.ok || !resultado.sucesso) {
+                        throw new Error(resultado.erro || resultado.message || `Erro HTTP ${resposta.status} ao executar a conciliação do Mapa Resumo.`);
+                    }
+
+                    mapaResumoDados = Array.isArray(resultado.dados) ? resultado.dados : [];
+                    preencherFiltrosMapaResumo();
+                    try {
+                        localStorage.setItem('mapa_resumo_data_inicial', dataInicial);
+                        localStorage.setItem('mapa_resumo_data_final', dataFinal);
+                    } catch (e) {}
+
+                    if (!mapaResumoDados.length) {
                         tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum registro encontrado no intervalo selecionado.</td></tr>';
                         alert('Consulta concluída, mas não foram encontrados registros no intervalo selecionado.');
                         return;
                     }
 
-                    const formataReal = (valor) => Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    tbody.innerHTML = '';
-
-                    resultado.dados.forEach(item => {
-                        const diferenca = Number(item.diferenca || 0);
-                        const conciliado = Math.abs(diferenca) <= 0.009;
-                        const cor = conciliado ? 'text-emerald-600' : 'text-red-600';
-                        const status = conciliado
-                            ? '<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Conciliado</span>'
-                            : '<span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Não Conciliado</span>';
-
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-slate-50">
-                                <td class="p-3 font-semibold text-slate-700">${escapeHtml(String(item.id_loja ?? ''))}</td>
-                                <td class="p-3 text-slate-600">${escapeHtml(String(item.data ?? ''))}</td>
-                                <td class="p-3 text-slate-600">${formataReal(item.valor_venda)}</td>
-                                <td class="p-3 text-slate-600">${formataReal(item.venda_liquida)}</td>
-                                <td class="p-3 ${cor} font-bold">${formataReal(diferenca)}</td>
-                                <td class="p-3">${status}</td>
-                                <td class="p-3 text-center"><button onclick="alert('Loja: ${escapeHtml(String(item.id_loja ?? ''))}\nData: ${escapeHtml(String(item.data ?? ''))}\nDiferença: ${formataReal(diferenca)}')" class="text-blue-600 hover:underline text-xs">Detalhes</button></td>
-                            </tr>
-                        `;
-                    });
+                    renderizarMapaResumo();
 
                     const dataInicialBR = dataInicial.split('-').reverse().join('/');
                     const dataFinalBR = dataFinal.split('-').reverse().join('/');
-                    alert(`Mapa Resumo executado de ${dataInicialBR} até ${dataFinalBR} com ${resultado.dados.length} registro(s).`);
+                    alert(`Mapa Resumo executado de ${dataInicialBR} até ${dataFinalBR} com ${mapaResumoDados.length} registro(s).`);
                 } catch (erro) {
                     console.error(erro);
                     tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">${escapeHtml(erro.message)}</td></tr>`;
@@ -1545,6 +1718,9 @@
             if (salvar) localStorage.setItem('unisuper_subaba_atual', subTabId);
             if (subTabId === 'financeiro') {
                 carregarDivergenciasFornecedores();
+            }
+            if (subTabId === 'caixa') {
+                carregarMapaResumoSalvo();
             }
         }
 
