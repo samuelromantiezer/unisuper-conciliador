@@ -1874,7 +1874,7 @@
             if (tipo === 'historicos') item = { codigo: document.getElementById('historico-numero').value.trim(), descricao: document.getElementById('historico-descricao').value.trim() };
             if (!item) return;
             if (tipo === 'rubricas' && !['Provento','Desconto','Imposto','Totalizador'].includes(item.tipo)) return alert('Selecione o tipo da rubrica: Provento, Desconto, Imposto ou Totalizador.');
-            if (!item.codigo || !item.descricao) return alert('Preencha todos os campos obrigatórios.');
+            if (tipo === 'lojas') { if (!item.codigo || !item.nome) return alert('Preencha todos os campos obrigatórios.'); } else if (!item.codigo || !item.descricao) { return alert('Preencha todos os campos obrigatórios.'); }
 
             const tabelas = { lojas:'cadastro_lojas', plano:'plano_contas', rubricas:'rubricas', historicos:'historicos' };
             try {
