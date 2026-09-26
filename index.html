@@ -189,40 +189,97 @@
             <div class="conteudo-padding p-8 space-y-6 flex-grow">
                 <!-- ABA CADASTRO -->
                 <div id="tab-cadastro" class="tab-content space-y-6">
-                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-                        <h3 class="text-base font-bold text-slate-800 mb-1">
-                            <i class="fa-solid fa-folder-plus text-unisuperBlue mr-2"></i> Cadastro de De/Para Contábil (Planos de Conta)
-                        </h3>
-                        <p class="text-sm text-slate-500 mb-6">Mapeamento salvo diretamente na nuvem (Supabase) para acesso global.</p>
-                        <form id="form-cadastro" onsubmit="event.preventDefault(); salvarCadastro();" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Conta do ERP</label>
-                                <input type="text" id="cad-erp" placeholder="Ex: 1.1.1.02 - Caixa Lojas" class="w-full text-sm border border-slate-300 rounded p-2 focus:ring-2 focus:ring-unisuperBlue" required>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Conta Contábil Oficial</label>
-                                <input type="text" id="cad-contabil" placeholder="Ex: 1.1.1.01.002 - Caixa Matriz" class="w-full text-sm border border-slate-300 rounded p-2 focus:ring-2 focus:ring-unisuperBlue" required>
-                            </div>
-                            <div class="flex items-end">
-                                <button type="submit" class="w-full bg-unisuperBlue text-white py-2 rounded text-sm font-semibold hover:bg-blue-900 transition">Salvar Mapeamento</button>
-                            </div>
-                        </form>
-                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700 border-b border-slate-200">
-                                    <tr>
-                                        <th class="p-3">Conta ERP</th>
-                                        <th class="p-3">Conta Contábil</th>
-                                        <th class="p-3 text-center">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lista-cadastros" class="divide-y divide-slate-100 text-slate-600">
-                                    <tr><td colspan="3" class="p-6 text-center text-slate-400">Carregando dados da nuvem...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-5 border-b border-slate-200">
+            <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-folder-plus text-unisuperBlue mr-2"></i> Cadastros</h3>
+            <p class="text-sm text-slate-500 mt-1">Cadastros básicos para utilização na contabilidade e na folha de pagamento.</p>
+        </div>
+        <div class="flex flex-wrap border-b border-slate-200 px-4 pt-3 gap-1">
+            <button onclick="switchCadastroTab('plano')" id="cadtab-btn-plano" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue"><i class="fa-solid fa-list-ol mr-2"></i>Plano de Contas</button>
+            <button onclick="switchCadastroTab('rubricas')" id="cadtab-btn-rubricas" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-receipt mr-2"></i>Rubricas</button>
+            <button onclick="switchCadastroTab('historicos')" id="cadtab-btn-historicos" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Históricos</button>
+        </div>
+
+        <div id="cadtab-plano" class="cadtab-content p-5 space-y-5">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div><h4 class="font-bold text-slate-800">Plano de Contas</h4><p class="text-xs text-slate-500">Número da conta e descrição da conta. Você pode selecionar várias contas para exclusão.</p></div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" onclick="selecionarTodasContasPlano()" class="inline-flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-800"><i class="fa-solid fa-check-double"></i> Selecionar várias</button>
+                    <button type="button" onclick="excluirContasPlanoSelecionadas()" class="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700"><i class="fa-solid fa-trash"></i> Excluir selecionadas</button>
+                    <button type="button" onclick="excluirTodasContasPlano()" class="inline-flex items-center gap-2 bg-red-800 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-900"><i class="fa-solid fa-trash-can"></i> Excluir todas</button>
+                    <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900">
+                        <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
+                        <input type="file" accept=".txt,text/plain" class="hidden" onchange="importarCadastroTXT(this,'plano')">
+                    </label>
                 </div>
+            </div>
+            <form onsubmit="event.preventDefault(); adicionarCadastro('plano')" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input id="plano-numero" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Número da Conta" required>
+                <input id="plano-descricao" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Descrição da Conta" required>
+                <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-plus mr-2"></i>Adicionar</button>
+            </form>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="relative"><i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i><input id="filtro-plano-codigo" oninput="renderCadastros()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 pl-9" placeholder="Pesquisar pelo código da conta"></div>
+                <div class="relative"><i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i><input id="filtro-plano-nome" oninput="renderCadastros()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 pl-9" placeholder="Pesquisar pelo nome / descrição"></div>
+            </div>
+            <div class="flex items-center justify-between gap-3 flex-wrap bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer"><input id="plano-selecionar-visiveis" type="checkbox" onchange="selecionarContasVisiveis(this.checked)" class="rounded"> Selecionar todas as contas exibidas</label>
+                <span id="plano-contagem-selecionadas" class="text-xs text-slate-500">0 selecionada(s)</span>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3 w-12 text-center">Sel.</th><th class="p-3">Número da Conta</th><th class="p-3">Descrição</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-plano" class="divide-y divide-slate-100"></tbody></table></div>
+        </div>
+
+        <div id="cadtab-rubricas" class="cadtab-content hidden p-5 space-y-5">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div><h4 class="font-bold text-slate-800">Rubricas</h4><p class="text-xs text-slate-500">Cadastro de rubricas separado por loja.</p></div>
+                <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900">
+                    <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
+                    <input type="file" accept=".txt,text/plain" class="hidden" onchange="importarCadastroTXT(this,'rubricas')">
+                </label>
+            </div>
+            <form onsubmit="event.preventDefault(); adicionarCadastro('rubricas')" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <input id="rubrica-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Loja" required>
+                <input id="rubrica-numero" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Número da Rubrica" required>
+                <input id="rubrica-descricao" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Descrição da Rubrica" required>
+                <select id="rubrica-tipo" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required>
+                    <option value="">Tipo da Rubrica</option>
+                    <option value="Provento">Provento</option>
+                    <option value="Desconto">Desconto</option>
+                    <option value="Imposto">Imposto</option>
+                    <option value="Totalizador">Totalizador</option>
+                </select>
+                <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-plus mr-2"></i>Adicionar</button>
+            </form>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-slate-500">Filtrar:</span>
+                <select id="filtro-rubricas-tipo" onchange="renderCadastros()" class="text-xs border border-slate-300 rounded-lg p-2 bg-white">
+                    <option value="">Todos</option>
+                    <option value="Provento">Proventos</option>
+                    <option value="Desconto">Descontos</option>
+                    <option value="Imposto">Impostos</option>
+                    <option value="Totalizador">Totalizadores</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Loja</th><th class="p-3">Número da Rubrica</th><th class="p-3">Descrição</th><th class="p-3">Tipo</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-rubricas" class="divide-y divide-slate-100"></tbody></table></div>
+        </div>
+
+        <div id="cadtab-historicos" class="cadtab-content hidden p-5 space-y-5">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div><h4 class="font-bold text-slate-800">Históricos</h4><p class="text-xs text-slate-500">Número e descrição do histórico contábil.</p></div>
+                <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900">
+                    <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
+                    <input type="file" accept=".txt,text/plain" class="hidden" onchange="importarCadastroTXT(this,'historicos')">
+                </label>
+            </div>
+            <form onsubmit="event.preventDefault(); adicionarCadastro('historicos')" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input id="historico-numero" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Número do Histórico" required>
+                <input id="historico-descricao" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Descrição do Histórico" required>
+                <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-plus mr-2"></i>Adicionar</button>
+            </form>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Número do Histórico</th><th class="p-3">Descrição</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-historicos" class="divide-y divide-slate-100"></tbody></table></div>
+        </div>
+    </div>
+</div>
 
                 <!-- ABA CONCILIAÇÕES -->
                 <div id="tab-conciliacoes" class="tab-content hidden space-y-6">
@@ -540,11 +597,27 @@
 
                 <!-- OUTRAS ABAS -->
                 <div id="tab-folha" class="tab-content hidden space-y-6">
-                    <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-                        <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-users-rectangle text-unisuperBlue mr-2"></i> Integração de Folha de Pagamento</h3>
-                        <p class="text-sm text-slate-500 mb-6">Cruzamento de provisões, salários, INSS e FGTS.</p>
-                    </div>
-                </div>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-5 border-b border-slate-200"><h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-users-rectangle text-unisuperBlue mr-2"></i> Folha de Pagamento</h3><p class="text-sm text-slate-500 mt-1">Configurações e preparação da integração contábil da folha.</p></div>
+        <div class="flex flex-wrap border-b border-slate-200 px-4 pt-3 gap-1">
+            <button onclick="switchFolhaTab('depara')" id="folhatab-btn-depara" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue"><i class="fa-solid fa-link mr-2"></i>DePara</button>
+            <button onclick="switchFolhaTab('gerador')" id="folhatab-btn-gerador" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-file-export mr-2"></i>Gerador de Folha de Pagamento</button>
+        </div>
+        <div id="folhatab-depara" class="folhatab-content p-5 space-y-5">
+            <div><h4 class="font-bold text-slate-800">DePara de Rubricas</h4><p class="text-xs text-slate-500">Vincule a rubrica à conta contábil por loja.</p></div>
+            <form onsubmit="event.preventDefault(); adicionarDeParaFolha()" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Loja" required>
+                <select id="depara-rubrica" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" required><option value="">Selecione a Rubrica</option></select>
+                <select id="depara-conta" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" required><option value="">Selecione a Conta Contábil</option></select>
+                <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-link mr-2"></i>Vincular</button>
+            </form>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Loja</th><th class="p-3">Rubrica</th><th class="p-3">Descrição da Rubrica</th><th class="p-3">Conta Contábil</th><th class="p-3">Descrição da Conta</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-depara-folha" class="divide-y divide-slate-100"></tbody></table></div>
+        </div>
+        <div id="folhatab-gerador" class="folhatab-content hidden p-5 space-y-5">
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-5"><h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-lines text-unisuperBlue mr-2"></i>Gerador de Folha de Pagamento</h4><p class="text-sm text-slate-600 mt-2">Tela preparada para a futura geração dos arquivos da folha.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5"><div class="border border-slate-200 bg-white rounded-lg p-4"><div class="font-semibold text-sm text-slate-700">Arquivo TXT</div><div class="text-xs text-slate-500 mt-1">Geração será implementada posteriormente.</div></div><div class="border border-slate-200 bg-white rounded-lg p-4"><div class="font-semibold text-sm text-slate-700">Planilha Excel 97–2003 (.xls)</div><div class="text-xs text-slate-500 mt-1">Geração será implementada posteriormente.</div></div></div></div>
+        </div>
+    </div>
+</div>
                 <div id="tab-importacoes" class="tab-content hidden space-y-6">
                     <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
                         <h3 class="text-base font-bold text-slate-800 mb-1"><i class="fa-solid fa-cloud-arrow-down text-unisuperBlue mr-2"></i> Sincronização Manual / Arquivos Auxiliares</h3>
@@ -627,7 +700,7 @@
 
         // URL ATUAL DO TÚNEL CLOUDFLARE GERADA NO POWERSHELL
         const URL_SERVIDOR_LOCAL = 'http://localhost:5000';
-        const URL_MAPA_RESUMO = URL_SERVIDOR_LOCAL;
+        const URL_MAPA_RESUMO = 'http://localhost:5000';
 
         let supabaseClient = null;
         let dadosFornecedoresCache = [];
@@ -666,11 +739,6 @@
 
             const abaSalva = localStorage.getItem('unisuper_aba_atual') || 'cadastro';
             const subAbaSalva = localStorage.getItem('unisuper_subaba_atual') || 'caixa';
-
-            const mapaDataInicialSalva = localStorage.getItem('mapa_resumo_data_inicial');
-            const mapaDataFinalSalva = localStorage.getItem('mapa_resumo_data_final');
-            if (mapaDataInicialSalva) document.getElementById('filtro-mapa-resumo-inicial').value = mapaDataInicialSalva;
-            if (mapaDataFinalSalva) document.getElementById('filtro-mapa-resumo-final').value = mapaDataFinalSalva;
 
             switchTab(abaSalva, false);
             switchSubTab(subAbaSalva, false);
@@ -1559,34 +1627,6 @@
             });
         }
 
-        async function carregarMapaResumoSalvo() {
-            const dataInicial = document.getElementById('filtro-mapa-resumo-inicial')?.value;
-            const dataFinal = document.getElementById('filtro-mapa-resumo-final')?.value;
-            const tbody = document.getElementById('tabela-caixa-mapa');
-            if (!dataInicial || !dataFinal || !tbody) return;
-
-            tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando Mapa Resumo salvo...</td></tr>';
-
-            try {
-                const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/mapa-resumo-salvo?dataInicial=${encodeURIComponent(dataInicial)}&dataFinal=${encodeURIComponent(dataFinal)}`);
-                const resultado = await resposta.json();
-                if (!resposta.ok || !resultado.sucesso) throw new Error(resultado.erro || `Erro HTTP ${resposta.status}`);
-
-                mapaResumoDados = Array.isArray(resultado.dados) ? resultado.dados : [];
-                preencherFiltrosMapaResumo();
-
-                if (!mapaResumoDados.length) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum Mapa Resumo salvo para o período selecionado. Clique em Executar para consultar o VR.</td></tr>';
-                    return;
-                }
-
-                renderizarMapaResumo();
-            } catch (erro) {
-                console.error('Erro ao carregar Mapa Resumo salvo:', erro);
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">${escapeHtml(erro.message)}</td></tr>`;
-            }
-        }
-
         function aplicarFiltrosMapaResumo() {
             if (!mapaResumoDados.length) {
                 alert('Execute o Mapa Resumo primeiro para carregar os dados.');
@@ -1617,7 +1657,7 @@
                     const resposta = await fetch(`${URL_MAPA_RESUMO}/executar-mapa-resumo`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ dataInicial, dataFinal, forcarAtualizacao: true })
+                        body: JSON.stringify({ dataInicial, dataFinal })
                     });
 
                     const textoResposta = await resposta.text();
@@ -1637,10 +1677,6 @@
 
                     mapaResumoDados = Array.isArray(resultado.dados) ? resultado.dados : [];
                     preencherFiltrosMapaResumo();
-                    try {
-                        localStorage.setItem('mapa_resumo_data_inicial', dataInicial);
-                        localStorage.setItem('mapa_resumo_data_final', dataFinal);
-                    } catch (e) {}
 
                     if (!mapaResumoDados.length) {
                         tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Nenhum registro encontrado no intervalo selecionado.</td></tr>';
@@ -1719,9 +1755,6 @@
             if (subTabId === 'financeiro') {
                 carregarDivergenciasFornecedores();
             }
-            if (subTabId === 'caixa') {
-                carregarMapaResumoSalvo();
-            }
         }
 
         function escapeHtml(valor) {
@@ -1729,6 +1762,155 @@
             return String(valor).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
     
+
+        /* ===================== NOVOS CADASTROS / FOLHA ===================== */
+        const CHAVES_CADASTROS = {
+            plano: 'unisuper_plano_contas',
+            rubricas: 'unisuper_rubricas',
+            historicos: 'unisuper_historicos',
+            depara: 'unisuper_depara_folha'
+        };
+
+        function lerListaCadastro(tipo) {
+            try { return JSON.parse(localStorage.getItem(CHAVES_CADASTROS[tipo]) || '[]'); } catch (e) { return []; }
+        }
+        function salvarListaCadastro(tipo, lista) {
+            localStorage.setItem(CHAVES_CADASTROS[tipo], JSON.stringify(lista));
+        }
+        function switchCadastroTab(id) {
+            document.querySelectorAll('.cadtab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.cadtab-btn').forEach(btn => {
+                btn.classList.remove('border-unisuperBlue','text-unisuperBlue');
+                btn.classList.add('border-transparent','text-slate-500');
+            });
+            const alvo = document.getElementById('cadtab-' + id);
+            const btn = document.getElementById('cadtab-btn-' + id);
+            if (alvo) alvo.classList.remove('hidden');
+            if (btn) { btn.classList.remove('border-transparent','text-slate-500'); btn.classList.add('border-unisuperBlue','text-unisuperBlue'); }
+            localStorage.setItem('unisuper_cadastrotab_atual', id);
+        }
+        function switchFolhaTab(id) {
+            document.querySelectorAll('.folhatab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.folhatab-btn').forEach(btn => {
+                btn.classList.remove('border-unisuperBlue','text-unisuperBlue');
+                btn.classList.add('border-transparent','text-slate-500');
+            });
+            const alvo = document.getElementById('folhatab-' + id);
+            const btn = document.getElementById('folhatab-btn-' + id);
+            if (alvo) alvo.classList.remove('hidden');
+            if (btn) { btn.classList.remove('border-transparent','text-slate-500'); btn.classList.add('border-unisuperBlue','text-unisuperBlue'); }
+            localStorage.setItem('unisuper_folhatab_atual', id);
+            if (id === 'depara') atualizarOpcoesDePara();
+        }
+        function adicionarCadastro(tipo) {
+            let item = null;
+            if (tipo === 'plano') item = { numero: document.getElementById('plano-numero').value.trim(), descricao: document.getElementById('plano-descricao').value.trim() };
+            if (tipo === 'rubricas') item = { loja: document.getElementById('rubrica-loja').value.trim(), numero: document.getElementById('rubrica-numero').value.trim(), descricao: document.getElementById('rubrica-descricao').value.trim(), tipo: document.getElementById('rubrica-tipo').value };
+            if (tipo === 'rubricas' && !['Provento','Desconto','Imposto','Totalizador'].includes(item.tipo)) return alert('Selecione o tipo da rubrica: Provento, Desconto, Imposto ou Totalizador.');
+            if (tipo === 'historicos') item = { numero: document.getElementById('historico-numero').value.trim(), descricao: document.getElementById('historico-descricao').value.trim() };
+            if (!item) return;
+            const lista = lerListaCadastro(tipo);
+            lista.push(item); salvarListaCadastro(tipo, lista); renderCadastros();
+            const form = tipo === 'plano' ? 'plano-numero' : tipo === 'rubricas' ? 'rubrica-loja' : 'historico-numero';
+            document.getElementById(form)?.focus();
+            if (tipo === 'plano') { document.getElementById('plano-numero').value=''; document.getElementById('plano-descricao').value=''; }
+            if (tipo === 'rubricas') { document.getElementById('rubrica-loja').value=''; document.getElementById('rubrica-numero').value=''; document.getElementById('rubrica-descricao').value=''; document.getElementById('rubrica-tipo').value=''; }
+            if (tipo === 'historicos') { document.getElementById('historico-numero').value=''; document.getElementById('historico-descricao').value=''; }
+        }
+        function excluirCadastro(tipo, indice) {
+            const lista = lerListaCadastro(tipo); lista.splice(indice,1); salvarListaCadastro(tipo,lista); renderCadastros();
+        }
+        function renderCadastros() {
+            const plano = lerListaCadastro('plano');
+            const tiposRubrica = ['Provento','Desconto','Imposto','Totalizador'];
+            const rubricas = lerListaCadastro('rubricas').map(x => ({...x, tipo: tiposRubrica.includes(x.tipo) ? x.tipo : ''}));
+            const historicos = lerListaCadastro('historicos');
+                        const filtroCodigo = (document.getElementById('filtro-plano-codigo')?.value || '').trim().toLowerCase();
+            const filtroNome = (document.getElementById('filtro-plano-nome')?.value || '').trim().toLowerCase();
+            const planoFiltrado = plano.map((x,i)=>({...x, indiceOriginal:i})).filter(x => (!filtroCodigo || String(x.numero || '').toLowerCase().includes(filtroCodigo)) && (!filtroNome || String(x.descricao || '').toLowerCase().includes(filtroNome)));
+            document.getElementById('lista-plano').innerHTML = planoFiltrado.length ? planoFiltrado.map(x=>`<tr><td class="p-3 text-center"><input type="checkbox" class="plano-check rounded" data-indice="${x.indiceOriginal}" onchange="atualizarContagemPlano()"></td><td class="p-3 font-medium">${escapeHtml(x.numero)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('plano',${x.indiceOriginal})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>';
+            atualizarContagemPlano();
+            const filtroRubrica = document.getElementById('filtro-rubricas-tipo')?.value || '';
+            const rubricasFiltradas = rubricas.map((x, indiceOriginal) => ({...x, indiceOriginal})).filter(x => !filtroRubrica || x.tipo === filtroRubrica);
+            document.getElementById('lista-rubricas').innerHTML = rubricasFiltradas.length ? rubricasFiltradas.map(x=>`<tr><td class="p-3">${escapeHtml(x.loja)}</td><td class="p-3 font-medium">${escapeHtml(x.numero)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3"><span class="inline-flex px-2 py-1 rounded-full text-[10px] font-bold ${x.tipo === 'Desconto' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${escapeHtml(x.tipo || 'Não classificada')}</span></td><td class="p-3 text-center"><button onclick="excluirCadastro('rubricas',${x.indiceOriginal})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhuma rubrica cadastrada para o filtro selecionado.</td></tr>';
+            document.getElementById('lista-historicos').innerHTML = historicos.length ? historicos.map((x,i)=>`<tr><td class="p-3 font-medium">${escapeHtml(x.numero)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('historicos',${i})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhum histórico cadastrado.</td></tr>';
+            atualizarOpcoesDePara(); renderDeParaFolha();
+        }
+        function atualizarContagemPlano() {
+            const n = document.querySelectorAll('.plano-check:checked').length;
+            const el = document.getElementById('plano-contagem-selecionadas');
+            if (el) el.textContent = `${n} selecionada(s)`;
+        }
+        function selecionarContasVisiveis(marcar) {
+            document.querySelectorAll('.plano-check').forEach(cb => cb.checked = marcar);
+            atualizarContagemPlano();
+        }
+        function selecionarTodasContasPlano() {
+            const checks = document.querySelectorAll('.plano-check');
+            const marcar = checks.length > 0 && [...checks].some(cb => !cb.checked);
+            selecionarContasVisiveis(marcar);
+        }
+        function excluirContasPlanoSelecionadas() {
+            const indices = [...document.querySelectorAll('.plano-check:checked')].map(cb => Number(cb.dataset.indice)).filter(Number.isInteger);
+            if (!indices.length) return alert('Selecione pelo menos uma conta para excluir.');
+            if (!confirm(`Deseja excluir ${indices.length} conta(s) selecionada(s)?`)) return;
+            const lista = lerListaCadastro('plano');
+            const conjunto = new Set(indices);
+            salvarListaCadastro('plano', lista.filter((_,i) => !conjunto.has(i)));
+            renderCadastros();
+        }
+        function excluirTodasContasPlano() {
+            const lista = lerListaCadastro('plano');
+            if (!lista.length) return alert('Não há contas cadastradas para excluir.');
+            if (!confirm(`Deseja excluir TODAS as ${lista.length} conta(s) do Plano de Contas? Esta ação não pode ser desfeita.`)) return;
+            salvarListaCadastro('plano', []);
+            renderCadastros();
+        }
+
+        async function importarCadastroTXT(input, tipo) {
+            const file = input.files?.[0]; if (!file) return;
+            try {
+                const texto = await file.text();
+                const linhas = texto.replace(/^\uFEFF/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+                if (!linhas.length) throw new Error('Arquivo vazio.');
+                const lista = lerListaCadastro(tipo); let incluidos=0, ignorados=0;
+                linhas.forEach((linha, idx) => {
+                    let partes = linha.includes(';') ? linha.split(';') : linha.split(',');
+                    partes = partes.map(x=>x.trim().replace(/^"|"$/g,''));
+                    const primeira = partes[0]?.toLowerCase() || '';
+                    const cabecalho = (tipo==='plano' && primeira.includes('número') && primeira.includes('conta')) || (tipo==='rubricas' && primeira.includes('loja') && partes.length>=4) || (tipo==='historicos' && primeira.includes('histórico'));
+                    if (idx===0 && cabecalho) return;
+                    if (tipo==='plano' && partes.length>=2 && partes[0] && partes[1]) { lista.push({numero:partes[0],descricao:partes.slice(1).join(';')}); incluidos++; }
+                    else if (tipo==='rubricas' && partes.length>=4 && partes[0] && partes[1] && partes[2] && (['Provento','Desconto','Imposto','Totalizador'].includes(partes[3]))) { lista.push({loja:partes[0],numero:partes[1],descricao:partes.slice(2,-1).join(';'),tipo:partes[3]}); incluidos++; }
+                    else if (tipo==='rubricas' && partes.length>=3 && partes[0] && partes[1] && partes[2]) { ignorados++; }
+                    else if (tipo==='historicos' && partes.length>=2 && partes[0] && partes[1]) { lista.push({numero:partes[0],descricao:partes.slice(1).join(';')}); incluidos++; }
+                    else ignorados++;
+                });
+                salvarListaCadastro(tipo,lista); renderCadastros(); input.value='';
+                alert(`Importação concluída. ${incluidos} registro(s) incluído(s)${ignorados ? ` e ${ignorados} linha(s) ignorada(s).` : '.'}`);
+            } catch (e) { input.value=''; alert('Erro ao importar TXT: '+e.message); }
+        }
+        function atualizarOpcoesDePara() {
+            const loja = document.getElementById('depara-loja')?.value.trim();
+            const rubricas = lerListaCadastro('rubricas').filter(x=>!loja || x.loja===loja);
+            const contas = lerListaCadastro('plano');
+            const sr = document.getElementById('depara-rubrica'), sc = document.getElementById('depara-conta');
+            if (!sr || !sc) return;
+            const vr=sr.value, vc=sc.value;
+            sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(x.numero)}">${escapeHtml(x.numero)} - ${escapeHtml(x.descricao)}</option>`).join('');
+            sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(x.numero)}">${escapeHtml(x.numero)} - ${escapeHtml(x.descricao)}</option>`).join('');
+            if (rubricas.some(x=>x.numero===vr)) sr.value=vr; if (contas.some(x=>x.numero===vc)) sc.value=vc;
+        }
+        function adicionarDeParaFolha() {
+            const loja=document.getElementById('depara-loja').value.trim(), rubrica=document.getElementById('depara-rubrica').value, conta=document.getElementById('depara-conta').value;
+            if(!loja||!rubrica||!conta) return alert('Informe a loja, a rubrica e a conta contábil.');
+            const r=lerListaCadastro('rubricas').find(x=>x.loja===loja&&x.numero===rubrica), c=lerListaCadastro('plano').find(x=>x.numero===conta);
+            const lista=lerListaCadastro('depara'); lista.push({loja,rubrica,rubricaDescricao:r?.descricao||'',conta,contaDescricao:c?.descricao||''}); salvarListaCadastro('depara',lista); renderDeParaFolha();
+        }
+        function excluirDeParaFolha(i){const l=lerListaCadastro('depara');l.splice(i,1);salvarListaCadastro('depara',l);renderDeParaFolha();}
+        function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map((x,i)=>`<tr><td class="p-3">${escapeHtml(x.loja)}</td><td class="p-3 font-medium">${escapeHtml(x.rubrica)}</td><td class="p-3">${escapeHtml(x.rubricaDescricao)}</td><td class="p-3 font-medium">${escapeHtml(x.conta)}</td><td class="p-3">${escapeHtml(x.contaDescricao)}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${i})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
+        function inicializarNovosCadastros(){renderCadastros();const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('input',atualizarOpcoesDePara);}
+        inicializarNovosCadastros();
 
         // Menu lateral recolhível
         function alternarMenu() {
