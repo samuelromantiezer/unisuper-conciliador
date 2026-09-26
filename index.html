@@ -195,9 +195,30 @@
             <p class="text-sm text-slate-500 mt-1">Cadastros básicos para utilização na contabilidade e na folha de pagamento.</p>
         </div>
         <div class="flex flex-wrap border-b border-slate-200 px-4 pt-3 gap-1">
-            <button onclick="switchCadastroTab('plano')" id="cadtab-btn-plano" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue"><i class="fa-solid fa-list-ol mr-2"></i>Plano de Contas</button>
+            <button onclick="switchCadastroTab('lojas')" id="cadtab-btn-lojas" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-store mr-2"></i>Lojas</button>
+            <button onclick="switchCadastroTab('plano')" id="cadtab-btn-plano" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-list-ol mr-2"></i>Plano de Contas</button>
             <button onclick="switchCadastroTab('rubricas')" id="cadtab-btn-rubricas" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-receipt mr-2"></i>Rubricas</button>
             <button onclick="switchCadastroTab('historicos')" id="cadtab-btn-historicos" class="cadtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Históricos</button>
+        </div>
+
+        <div id="cadtab-lojas" class="cadtab-content p-5 space-y-5 hidden">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div><h4 class="font-bold text-slate-800">Cadastro de Lojas</h4><p class="text-xs text-slate-500">Cadastre as lojas que poderão ser vinculadas às rubricas e ao DePara da folha.</p></div>
+                <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900">
+                    <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
+                    <input type="file" accept=".txt,text/plain" class="hidden" onchange="importarCadastroTXT(this,'lojas')">
+                </label>
+            </div>
+            <form onsubmit="event.preventDefault(); adicionarCadastro('lojas')" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input id="loja-codigo" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Código da Loja" required>
+                <input id="loja-nome" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Nome da Loja" required>
+                <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-plus mr-2"></i>Adicionar Loja</button>
+            </form>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="relative"><i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i><input id="filtro-lojas-codigo" oninput="renderCadastros()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 pl-9" placeholder="Pesquisar pelo código da loja"></div>
+                <div class="relative"><i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i><input id="filtro-lojas-nome" oninput="renderCadastros()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 pl-9" placeholder="Pesquisar pelo nome da loja"></div>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Código</th><th class="p-3">Nome da Loja</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-lojas" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
 
         <div id="cadtab-plano" class="cadtab-content p-5 space-y-5">
@@ -238,7 +259,7 @@
                 </label>
             </div>
             <form onsubmit="event.preventDefault(); adicionarCadastro('rubricas')" class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                <input id="rubrica-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Loja" required>
+                <select id="rubrica-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required><option value="">Selecione a Loja</option></select>
                 <input id="rubrica-numero" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Número da Rubrica" required>
                 <input id="rubrica-descricao" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Descrição da Rubrica" required>
                 <select id="rubrica-tipo" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required>
@@ -606,7 +627,7 @@
         <div id="folhatab-depara" class="folhatab-content p-5 space-y-5">
             <div><h4 class="font-bold text-slate-800">DePara de Rubricas</h4><p class="text-xs text-slate-500">Vincule a rubrica à conta contábil por loja.</p></div>
             <form onsubmit="event.preventDefault(); adicionarDeParaFolha()" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <input id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" placeholder="Loja" required>
+                <select id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required><option value="">Selecione a Loja</option></select>
                 <select id="depara-rubrica" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" required><option value="">Selecione a Rubrica</option></select>
                 <select id="depara-conta" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" required><option value="">Selecione a Conta Contábil</option></select>
                 <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-link mr-2"></i>Vincular</button>
@@ -776,8 +797,7 @@
         }
 
         function atualizarStatusSupabase(conectado, mensagem) {
-            const dot = document.getElementById('db-status-dot');
-            const text = document.getElementById('db-status-text');
+            const dot = document.getElementById('db-status-dot');            const text = document.getElementById('db-status-text');
             if (text) text.innerText = mensagem;
             if (dot) dot.className = conectado ? "inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1 animate-pulse" : "inline-block h-2 w-2 rounded-full bg-orange-500 mr-1";
         }
@@ -1576,7 +1596,6 @@
                 const diferenca = Number(item.diferenca || 0);
                 const conciliado = Math.abs(diferenca) <= 0.009;
                 const grupo = obterGrupoEconomicoMapa(loja);
-
                 if (lojaSelecionada && loja !== lojaSelecionada) return false;
                 if (grupoSelecionado && grupo !== grupoSelecionado) return false;
                 if (statusConciliacao === 'conciliado' && !conciliado) return false;
@@ -1765,18 +1784,21 @@
 
         /* ===================== NOVOS CADASTROS / FOLHA ===================== */
         const CHAVES_CADASTROS = {
+            lojas: 'unisuper_lojas',
             plano: 'unisuper_plano_contas',
             rubricas: 'unisuper_rubricas',
             historicos: 'unisuper_historicos',
             depara: 'unisuper_depara_folha'
         };
 
-        function lerListaCadastro(tipo) {
-            try { return JSON.parse(localStorage.getItem(CHAVES_CADASTROS[tipo]) || '[]'); } catch (e) { return []; }
-        }
-        function salvarListaCadastro(tipo, lista) {
-            localStorage.setItem(CHAVES_CADASTROS[tipo], JSON.stringify(lista));
-        }
+        // Os dados dos cadastros ficam no Supabase. LocalStorage é usado apenas
+        // para lembrar abas/filtros da interface, nunca como banco de dados.
+        let cacheCadastros = { lojas: [], plano: [], rubricas: [], historicos: [], depara: [] };
+        let carregandoCadastros = false;
+
+        function lerListaCadastro(tipo) { return Array.isArray(cacheCadastros[tipo]) ? cacheCadastros[tipo] : []; }
+        function salvarListaCadastro(tipo, lista) { cacheCadastros[tipo] = Array.isArray(lista) ? lista : []; }
+
         function switchCadastroTab(id) {
             document.querySelectorAll('.cadtab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.cadtab-btn').forEach(btn => {
@@ -1802,114 +1824,156 @@
             localStorage.setItem('unisuper_folhatab_atual', id);
             if (id === 'depara') atualizarOpcoesDePara();
         }
-        function adicionarCadastro(tipo) {
+
+        async function consultarCadastrosSupabase() {
+            if (!supabaseClient) throw new Error('Supabase ainda não foi inicializado.');
+            const consultas = await Promise.all([
+                supabaseClient.from('cadastro_lojas').select('id,codigo,nome').order('codigo'),
+                supabaseClient.from('plano_contas').select('id,codigo,descricao').order('codigo'),
+                supabaseClient.from('rubricas').select('id,loja_id,codigo,descricao,tipo').order('loja_id').order('codigo'),
+                supabaseClient.from('historicos').select('id,codigo,descricao').order('codigo'),
+                supabaseClient.from('folha_depara').select('id,loja_id,rubrica_id,conta_contabil_id').order('id')
+            ]);
+            const nomes = ['lojas','plano','rubricas','historicos','depara'];
+            for (let i=0; i<consultas.length; i++) {
+                if (consultas[i].error) {
+                    throw new Error(`Tabela ${nomes[i]}: ${consultas[i].error.message}`);
+                }
+                cacheCadastros[nomes[i]] = consultas[i].data || [];
+            }
+            return cacheCadastros;
+        }
+
+        async function carregarCadastrosSupabase() {
+            if (carregandoCadastros || !supabaseClient) return;
+            carregandoCadastros = true;
+            try {
+                await consultarCadastrosSupabase();
+                renderCadastros();
+                renderDeParaFolha();
+            } catch (e) {
+                console.error('Erro ao carregar cadastros do Supabase:', e);
+                const msg = `Não foi possível carregar os cadastros do Supabase.\n\n${e.message}\n\nConfira se as tabelas do cadastro foram criadas e se as políticas RLS permitem acesso ao usuário logado.`;
+                console.warn(msg);
+            } finally {
+                carregandoCadastros = false;
+            }
+        }
+
+        async function adicionarCadastro(tipo) {
+            if (!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
             let item = null;
-            if (tipo === 'plano') item = { numero: document.getElementById('plano-numero').value.trim(), descricao: document.getElementById('plano-descricao').value.trim() };
-            if (tipo === 'rubricas') item = { loja: document.getElementById('rubrica-loja').value.trim(), numero: document.getElementById('rubrica-numero').value.trim(), descricao: document.getElementById('rubrica-descricao').value.trim(), tipo: document.getElementById('rubrica-tipo').value };
-            if (tipo === 'rubricas' && !['Provento','Desconto','Imposto','Totalizador'].includes(item.tipo)) return alert('Selecione o tipo da rubrica: Provento, Desconto, Imposto ou Totalizador.');
-            if (tipo === 'historicos') item = { numero: document.getElementById('historico-numero').value.trim(), descricao: document.getElementById('historico-descricao').value.trim() };
+            if (tipo === 'lojas') item = { codigo: document.getElementById('loja-codigo').value.trim(), nome: document.getElementById('loja-nome').value.trim() };
+            if (tipo === 'plano') item = { codigo: document.getElementById('plano-numero').value.trim(), descricao: document.getElementById('plano-descricao').value.trim() };
+            if (tipo === 'rubricas') {
+                const lojaCodigo = document.getElementById('rubrica-loja').value.trim();
+                const loja = lerListaCadastro('lojas').find(x => String(x.codigo) === lojaCodigo);
+                item = { loja_id: loja?.id, codigo: document.getElementById('rubrica-numero').value.trim(), descricao: document.getElementById('rubrica-descricao').value.trim(), tipo: document.getElementById('rubrica-tipo').value };
+                if (!loja) return alert('Selecione uma loja cadastrada.');
+            }
+            if (tipo === 'historicos') item = { codigo: document.getElementById('historico-numero').value.trim(), descricao: document.getElementById('historico-descricao').value.trim() };
             if (!item) return;
-            const lista = lerListaCadastro(tipo);
-            lista.push(item); salvarListaCadastro(tipo, lista); renderCadastros();
-            const form = tipo === 'plano' ? 'plano-numero' : tipo === 'rubricas' ? 'rubrica-loja' : 'historico-numero';
-            document.getElementById(form)?.focus();
-            if (tipo === 'plano') { document.getElementById('plano-numero').value=''; document.getElementById('plano-descricao').value=''; }
-            if (tipo === 'rubricas') { document.getElementById('rubrica-loja').value=''; document.getElementById('rubrica-numero').value=''; document.getElementById('rubrica-descricao').value=''; document.getElementById('rubrica-tipo').value=''; }
-            if (tipo === 'historicos') { document.getElementById('historico-numero').value=''; document.getElementById('historico-descricao').value=''; }
+            if (tipo === 'rubricas' && !['Provento','Desconto','Imposto','Totalizador'].includes(item.tipo)) return alert('Selecione o tipo da rubrica: Provento, Desconto, Imposto ou Totalizador.');
+            if (!item.codigo || !item.descricao) return alert('Preencha todos os campos obrigatórios.');
+
+            const tabelas = { lojas:'cadastro_lojas', plano:'plano_contas', rubricas:'rubricas', historicos:'historicos' };
+            try {
+                const { data, error } = await supabaseClient.from(tabelas[tipo]).insert([item]).select().single();
+                if (error) throw error;
+                cacheCadastros[tipo].push(data);
+                renderCadastros();
+                if (tipo === 'lojas') { document.getElementById('loja-codigo').value=''; document.getElementById('loja-nome').value=''; }
+                if (tipo === 'plano') { document.getElementById('plano-numero').value=''; document.getElementById('plano-descricao').value=''; }
+                if (tipo === 'rubricas') { document.getElementById('rubrica-loja').value=''; document.getElementById('rubrica-numero').value=''; document.getElementById('rubrica-descricao').value=''; document.getElementById('rubrica-tipo').value=''; }
+                if (tipo === 'historicos') { document.getElementById('historico-numero').value=''; document.getElementById('historico-descricao').value=''; }
+                document.getElementById(tipo === 'lojas' ? 'loja-codigo' : tipo === 'plano' ? 'plano-numero' : tipo === 'rubricas' ? 'rubrica-loja' : 'historico-numero')?.focus();
+                alert('Cadastro salvo no Supabase com sucesso.');
+            } catch (err) {
+                console.error(`Erro ao salvar ${tipo}:`, err);
+                alert(`Erro ao salvar no Supabase:\n${err.message}`);
+            }
         }
-        function excluirCadastro(tipo, indice) {
-            const lista = lerListaCadastro(tipo); lista.splice(indice,1); salvarListaCadastro(tipo,lista); renderCadastros();
+
+        async function excluirCadastro(tipo, id) {
+            if (!supabaseClient) return alert('Supabase não está conectado.');
+            const tabelas = { lojas:'cadastro_lojas', plano:'plano_contas', rubricas:'rubricas', historicos:'historicos' };
+            if (!tabelas[tipo]) return;
+            if (!confirm('Deseja excluir este cadastro?')) return;
+            try {
+                const { error } = await supabaseClient.from(tabelas[tipo]).delete().eq('id', id);
+                if (error) throw error;
+                cacheCadastros[tipo] = cacheCadastros[tipo].filter(x => x.id !== id);
+                renderCadastros();
+                alert('Cadastro excluído com sucesso.');
+            } catch (err) {
+                console.error(err);
+                alert(`Erro ao excluir no Supabase:\n${err.message}`);
+            }
         }
+
         function renderCadastros() {
             const plano = lerListaCadastro('plano');
             const tiposRubrica = ['Provento','Desconto','Imposto','Totalizador'];
             const rubricas = lerListaCadastro('rubricas').map(x => ({...x, tipo: tiposRubrica.includes(x.tipo) ? x.tipo : ''}));
             const historicos = lerListaCadastro('historicos');
-                        const filtroCodigo = (document.getElementById('filtro-plano-codigo')?.value || '').trim().toLowerCase();
+            const lojas = lerListaCadastro('lojas');
+            const filtroCodigo = (document.getElementById('filtro-plano-codigo')?.value || '').trim().toLowerCase();
             const filtroNome = (document.getElementById('filtro-plano-nome')?.value || '').trim().toLowerCase();
-            const planoFiltrado = plano.map((x,i)=>({...x, indiceOriginal:i})).filter(x => (!filtroCodigo || String(x.numero || '').toLowerCase().includes(filtroCodigo)) && (!filtroNome || String(x.descricao || '').toLowerCase().includes(filtroNome)));
-            document.getElementById('lista-plano').innerHTML = planoFiltrado.length ? planoFiltrado.map(x=>`<tr><td class="p-3 text-center"><input type="checkbox" class="plano-check rounded" data-indice="${x.indiceOriginal}" onchange="atualizarContagemPlano()"></td><td class="p-3 font-medium">${escapeHtml(x.numero)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('plano',${x.indiceOriginal})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>';
+            const filtroLojaCodigo = (document.getElementById('filtro-lojas-codigo')?.value || '').trim().toLowerCase();
+            const filtroLojaNome = (document.getElementById('filtro-lojas-nome')?.value || '').trim().toLowerCase();
+            const lojasFiltradas = lojas.filter(x => (!filtroLojaCodigo || String(x.codigo || '').toLowerCase().includes(filtroLojaCodigo)) && (!filtroLojaNome || String(x.nome || '').toLowerCase().includes(filtroLojaNome)));
+            const listaLojas = document.getElementById('lista-lojas');
+            if (listaLojas) listaLojas.innerHTML = lojasFiltradas.length ? lojasFiltradas.map(x=>`<tr><td class="p-3 font-medium">${escapeHtml(x.codigo)}</td><td class="p-3">${escapeHtml(x.nome)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('lojas',${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhuma loja cadastrada.</td></tr>';
+            atualizarOpcoesLojas();
+            const planoFiltrado = plano.filter(x => (!filtroCodigo || String(x.codigo || '').toLowerCase().includes(filtroCodigo)) && (!filtroNome || String(x.descricao || '').toLowerCase().includes(filtroNome)));
+            document.getElementById('lista-plano').innerHTML = planoFiltrado.length ? planoFiltrado.map(x=>`<tr><td class="p-3 text-center"><input type="checkbox" class="plano-check rounded" data-id="${x.id}" onchange="atualizarContagemPlano()"></td><td class="p-3 font-medium">${escapeHtml(x.codigo)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('plano',${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="4" class="p-6 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>';
             atualizarContagemPlano();
             const filtroRubrica = document.getElementById('filtro-rubricas-tipo')?.value || '';
-            const rubricasFiltradas = rubricas.map((x, indiceOriginal) => ({...x, indiceOriginal})).filter(x => !filtroRubrica || x.tipo === filtroRubrica);
-            document.getElementById('lista-rubricas').innerHTML = rubricasFiltradas.length ? rubricasFiltradas.map(x=>`<tr><td class="p-3">${escapeHtml(x.loja)}</td><td class="p-3 font-medium">${escapeHtml(x.numero)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3"><span class="inline-flex px-2 py-1 rounded-full text-[10px] font-bold ${x.tipo === 'Desconto' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${escapeHtml(x.tipo || 'Não classificada')}</span></td><td class="p-3 text-center"><button onclick="excluirCadastro('rubricas',${x.indiceOriginal})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhuma rubrica cadastrada para o filtro selecionado.</td></tr>';
-            document.getElementById('lista-historicos').innerHTML = historicos.length ? historicos.map((x,i)=>`<tr><td class="p-3 font-medium">${escapeHtml(x.numero)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('historicos',${i})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhum histórico cadastrado.</td></tr>';
+            const rubricasFiltradas = rubricas.filter(x => !filtroRubrica || x.tipo === filtroRubrica);
+            document.getElementById('lista-rubricas').innerHTML = rubricasFiltradas.length ? rubricasFiltradas.map(x=>{ const loja=lojas.find(l=>l.id===x.loja_id); return `<tr><td class="p-3">${escapeHtml(loja ? loja.codigo+' - '+loja.nome : 'Loja não encontrada')}</td><td class="p-3 font-medium">${escapeHtml(x.codigo)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3"><span class="inline-flex px-2 py-1 rounded-full text-[10px] font-bold ${x.tipo === 'Desconto' ? 'bg-red-100 text-red-700' : x.tipo === 'Imposto' ? 'bg-amber-100 text-amber-700' : x.tipo === 'Totalizador' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}">${escapeHtml(x.tipo || 'Não classificada')}</span></td><td class="p-3 text-center"><button onclick="excluirCadastro('rubricas',${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join('') : '<tr><td colspan="5" class="p-6 text-center text-slate-400">Nenhuma rubrica cadastrada para o filtro selecionado.</td></tr>';
+            document.getElementById('lista-historicos').innerHTML = historicos.length ? historicos.map(x=>`<tr><td class="p-3 font-medium">${escapeHtml(x.codigo)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('historicos',${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhum histórico cadastrado.</td></tr>';
             atualizarOpcoesDePara(); renderDeParaFolha();
         }
-        function atualizarContagemPlano() {
-            const n = document.querySelectorAll('.plano-check:checked').length;
-            const el = document.getElementById('plano-contagem-selecionadas');
-            if (el) el.textContent = `${n} selecionada(s)`;
+        function atualizarContagemPlano() { const n = document.querySelectorAll('.plano-check:checked').length; const el=document.getElementById('plano-contagem-selecionadas'); if(el) el.textContent=`${n} selecionada(s)`; }
+        function selecionarContasVisiveis(marcar) { document.querySelectorAll('.plano-check').forEach(cb=>cb.checked=marcar); atualizarContagemPlano(); }
+        function selecionarTodasContasPlano(){const checks=document.querySelectorAll('.plano-check');const marcar=checks.length>0&&[...checks].some(cb=>!cb.checked);selecionarContasVisiveis(marcar);}
+        async function excluirContasPlanoSelecionadas(){
+            const ids=[...document.querySelectorAll('.plano-check:checked')].map(cb=>Number(cb.dataset.id)).filter(Number.isInteger);
+            if(!ids.length)return alert('Selecione pelo menos uma conta para excluir.');
+            if(!confirm(`Deseja excluir ${ids.length} conta(s) selecionada(s)?`))return;
+            try { const {error}=await supabaseClient.from('plano_contas').delete().in('id',ids); if(error)throw error; cacheCadastros.plano=cacheCadastros.plano.filter(x=>!ids.includes(x.id)); renderCadastros(); alert('Contas excluídas com sucesso.'); } catch(e){alert('Erro ao excluir no Supabase:\n'+e.message);}
         }
-        function selecionarContasVisiveis(marcar) {
-            document.querySelectorAll('.plano-check').forEach(cb => cb.checked = marcar);
-            atualizarContagemPlano();
-        }
-        function selecionarTodasContasPlano() {
-            const checks = document.querySelectorAll('.plano-check');
-            const marcar = checks.length > 0 && [...checks].some(cb => !cb.checked);
-            selecionarContasVisiveis(marcar);
-        }
-        function excluirContasPlanoSelecionadas() {
-            const indices = [...document.querySelectorAll('.plano-check:checked')].map(cb => Number(cb.dataset.indice)).filter(Number.isInteger);
-            if (!indices.length) return alert('Selecione pelo menos uma conta para excluir.');
-            if (!confirm(`Deseja excluir ${indices.length} conta(s) selecionada(s)?`)) return;
-            const lista = lerListaCadastro('plano');
-            const conjunto = new Set(indices);
-            salvarListaCadastro('plano', lista.filter((_,i) => !conjunto.has(i)));
-            renderCadastros();
-        }
-        function excluirTodasContasPlano() {
-            const lista = lerListaCadastro('plano');
-            if (!lista.length) return alert('Não há contas cadastradas para excluir.');
-            if (!confirm(`Deseja excluir TODAS as ${lista.length} conta(s) do Plano de Contas? Esta ação não pode ser desfeita.`)) return;
-            salvarListaCadastro('plano', []);
-            renderCadastros();
+        async function excluirTodasContasPlano(){
+            const lista=lerListaCadastro('plano'); if(!lista.length)return alert('Não há contas cadastradas para excluir.');
+            if(!confirm(`Deseja excluir TODAS as ${lista.length} conta(s) do Plano de Contas? Esta ação não pode ser desfeita.`))return;
+            try { const {error}=await supabaseClient.from('plano_contas').delete().not('id','is',null); if(error)throw error; cacheCadastros.plano=[]; renderCadastros(); alert('Todas as contas foram excluídas com sucesso.'); } catch(e){alert('Erro ao excluir no Supabase:\n'+e.message);}
         }
 
         async function importarCadastroTXT(input, tipo) {
-            const file = input.files?.[0]; if (!file) return;
+            const file=input.files?.[0];if(!file)return;
             try {
-                const texto = await file.text();
-                const linhas = texto.replace(/^\uFEFF/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-                if (!linhas.length) throw new Error('Arquivo vazio.');
-                const lista = lerListaCadastro(tipo); let incluidos=0, ignorados=0;
-                linhas.forEach((linha, idx) => {
-                    let partes = linha.includes(';') ? linha.split(';') : linha.split(',');
-                    partes = partes.map(x=>x.trim().replace(/^"|"$/g,''));
-                    const primeira = partes[0]?.toLowerCase() || '';
-                    const cabecalho = (tipo==='plano' && primeira.includes('número') && primeira.includes('conta')) || (tipo==='rubricas' && primeira.includes('loja') && partes.length>=4) || (tipo==='historicos' && primeira.includes('histórico'));
-                    if (idx===0 && cabecalho) return;
-                    if (tipo==='plano' && partes.length>=2 && partes[0] && partes[1]) { lista.push({numero:partes[0],descricao:partes.slice(1).join(';')}); incluidos++; }
-                    else if (tipo==='rubricas' && partes.length>=4 && partes[0] && partes[1] && partes[2] && (['Provento','Desconto','Imposto','Totalizador'].includes(partes[3]))) { lista.push({loja:partes[0],numero:partes[1],descricao:partes.slice(2,-1).join(';'),tipo:partes[3]}); incluidos++; }
-                    else if (tipo==='rubricas' && partes.length>=3 && partes[0] && partes[1] && partes[2]) { ignorados++; }
-                    else if (tipo==='historicos' && partes.length>=2 && partes[0] && partes[1]) { lista.push({numero:partes[0],descricao:partes.slice(1).join(';')}); incluidos++; }
-                    else ignorados++;
-                });
-                salvarListaCadastro(tipo,lista); renderCadastros(); input.value='';
-                alert(`Importação concluída. ${incluidos} registro(s) incluído(s)${ignorados ? ` e ${ignorados} linha(s) ignorada(s).` : '.'}`);
-            } catch (e) { input.value=''; alert('Erro ao importar TXT: '+e.message); }
+                const texto=await file.text(); const linhas=texto.replace(/^\uFEFF/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(!linhas.length)throw new Error('Arquivo vazio.');
+                let incluidos=0,ignorados=0;
+                for(let idx=0;idx<linhas.length;idx++){
+                    let partes=linhas[idx].includes(';')?linhas[idx].split(';'):linhas[idx].split(','); partes=partes.map(x=>x.trim().replace(/^"|"$/g,'')); const primeira=partes[0]?.toLowerCase()||'';
+                    const cabecalho=(tipo==='lojas'&&(primeira.includes('loja')||primeira.includes('código')))||(tipo==='plano'&&primeira.includes('número')&&primeira.includes('conta'))||(tipo==='rubricas'&&primeira.includes('loja')&&partes.length>=4)||(tipo==='historicos'&&primeira.includes('histórico')); if(idx===0&&cabecalho)continue;
+                    let item=null;
+                    if(tipo==='lojas'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],nome:partes.slice(1).join(';')};
+                    else if(tipo==='plano'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],descricao:partes.slice(1).join(';')};
+                    else if(tipo==='rubricas'&&partes.length>=4&&partes[0]&&partes[1]&&partes[2]&&['Provento','Desconto','Imposto','Totalizador'].includes(partes[3])){const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===partes[0]);if(loja)item={loja_id:loja.id,codigo:partes[1],descricao:partes.slice(2,-1).join(';'),tipo:partes[3]};else{ignorados++;continue;}}
+                    else if(tipo==='historicos'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],descricao:partes.slice(1).join(';')};
+                    else{ignorados++;continue;}
+                    const tabela={lojas:'cadastro_lojas',plano:'plano_contas',rubricas:'rubricas',historicos:'historicos'}[tipo]; const {data,error}=await supabaseClient.from(tabela).insert([item]).select().single(); if(error){console.error('Linha ignorada:',error);ignorados++;}else{cacheCadastros[tipo].push(data);incluidos++;}
+                }
+                renderCadastros();input.value='';alert(`Importação concluída no Supabase. ${incluidos} registro(s) incluído(s)${ignorados?` e ${ignorados} linha(s) ignorada(s).`:'.'}`);
+            }catch(e){input.value='';alert('Erro ao importar TXT: '+e.message);}
         }
-        function atualizarOpcoesDePara() {
-            const loja = document.getElementById('depara-loja')?.value.trim();
-            const rubricas = lerListaCadastro('rubricas').filter(x=>!loja || x.loja===loja);
-            const contas = lerListaCadastro('plano');
-            const sr = document.getElementById('depara-rubrica'), sc = document.getElementById('depara-conta');
-            if (!sr || !sc) return;
-            const vr=sr.value, vc=sc.value;
-            sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(x.numero)}">${escapeHtml(x.numero)} - ${escapeHtml(x.descricao)}</option>`).join('');
-            sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(x.numero)}">${escapeHtml(x.numero)} - ${escapeHtml(x.descricao)}</option>`).join('');
-            if (rubricas.some(x=>x.numero===vr)) sr.value=vr; if (contas.some(x=>x.numero===vc)) sc.value=vc;
-        }
-        function adicionarDeParaFolha() {
-            const loja=document.getElementById('depara-loja').value.trim(), rubrica=document.getElementById('depara-rubrica').value, conta=document.getElementById('depara-conta').value;
-            if(!loja||!rubrica||!conta) return alert('Informe a loja, a rubrica e a conta contábil.');
-            const r=lerListaCadastro('rubricas').find(x=>x.loja===loja&&x.numero===rubrica), c=lerListaCadastro('plano').find(x=>x.numero===conta);
-            const lista=lerListaCadastro('depara'); lista.push({loja,rubrica,rubricaDescricao:r?.descricao||'',conta,contaDescricao:c?.descricao||''}); salvarListaCadastro('depara',lista); renderDeParaFolha();
-        }
-        function excluirDeParaFolha(i){const l=lerListaCadastro('depara');l.splice(i,1);salvarListaCadastro('depara',l);renderDeParaFolha();}
-        function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map((x,i)=>`<tr><td class="p-3">${escapeHtml(x.loja)}</td><td class="p-3 font-medium">${escapeHtml(x.rubrica)}</td><td class="p-3">${escapeHtml(x.rubricaDescricao)}</td><td class="p-3 font-medium">${escapeHtml(x.conta)}</td><td class="p-3">${escapeHtml(x.contaDescricao)}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${i})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
-        function inicializarNovosCadastros(){renderCadastros();const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('input',atualizarOpcoesDePara);}
+        function atualizarOpcoesLojas(){const lojas=lerListaCadastro('lojas');const selects=[document.getElementById('rubrica-loja'),document.getElementById('depara-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
+        function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas').filter(x=>!loja||x.loja_id===loja.id);const contas=lerListaCadastro('plano');const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
+        async function adicionarDeParaFolha(){const lojaCodigo=document.getElementById('depara-loja').value.trim(),rubricaId=Number(document.getElementById('depara-rubrica').value),contaId=Number(document.getElementById('depara-conta').value);const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);if(!loja||!rubricaId||!contaId)return alert('Informe a loja, a rubrica e a conta contábil.');try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
+        async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
+        function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
+        async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
 
         // Menu lateral recolhível
