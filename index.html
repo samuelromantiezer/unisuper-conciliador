@@ -2485,6 +2485,7 @@ function renderLancamentoFolha() {
 
             popup.classList.remove('hidden');
             busca.value = '';
+            busca.oninput = renderPopupConsultaCadastro;
             renderPopupConsultaCadastro();
             setTimeout(() => busca.focus(), 0);
         }
@@ -2554,7 +2555,8 @@ function renderLancamentoFolha() {
             fecharPopupConsultaCadastro();
         }
 
-        document.getElementById('popup-consulta-busca')?.addEventListener('input', renderPopupConsultaCadastro);
+        // O popup é criado depois deste script; o evento de busca é ligado ao abrir o popup.
+
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && !document.getElementById('popup-consulta-cadastros')?.classList.contains('hidden')) {
                 fecharPopupConsultaCadastro();
