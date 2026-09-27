@@ -197,6 +197,9 @@
             #menu-toggle { width: 2rem; height: 2rem; }
         }
     
+        #popup-folha-gerada.hidden { display: none !important; }
+        #popup-folha-gerada:not(.hidden) { display: flex !important; }
+
         /* POPUP DE CONSULTA DE RUBRICAS E CONTAS CONTÁBEIS */
         #popup-consulta-cadastros {
             position: fixed;
@@ -3059,7 +3062,8 @@ async function importarDeParaFolhaTXT(input){
 </script>
 
     <!-- POPUP DE VISUALIZAÇÃO DE FOLHA GERADA -->
-    <div id="popup-folha-gerada" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-folha-gerada-titulo" style="position:fixed;inset:0;z-index:75;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:1rem;">
+    <div id="popup-folha-gerada" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-folha-gerada-titulo" style="position:fixed;inset:0;z-index:75;background:rgba(15,23,42,.58);align-items:center;justify-content:center;padding:1rem;">
+
         <div style="width:min(1100px,100%);max-height:92vh;background:#fff;border-radius:1rem;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden;">
             <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
                 <div>
