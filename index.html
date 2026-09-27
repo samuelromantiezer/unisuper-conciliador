@@ -2450,6 +2450,60 @@ function renderLancamentoFolha() {
                     historico: loja.nome + ': DESPESA FOLHA - ' + rubrica.descricao + ' - ' + competencia
                 });
             }
+
+            // Totalizadores da folha:
+            // Proventos -> total no CRÉDITO.
+            // Descontos -> total no DÉBITO.
+            let totalProventos = 0;
+            let totalDescontos = 0;
+
+            lancamentos.forEach(item => {
+                const debito = Number(String(item.debito || '0,00').replace(/\./g, '').replace(',', '.'));
+                const credito = Number(String(item.credito || '0,00').replace(/\./g, '').replace(',', '.'));
+                if (Number.isFinite(debito) && Number.isFinite(credito)) {
+                    if (credito > 0) totalProventos += credito;
+                    if (debito > 0) totalDescontos += debito;
+                }
+            });
+
+            // Usa as contas do DePara das próprias rubricas totalizadoras, quando existirem.
+            const rubricaTotalProventos = lerListaCadastro('rubricas').find(r =>
+                String(r.tipo || '').trim().toLowerCase() === 'totalizador' &&
+                String(r.descricao || '').trim().toLowerCase().includes('provento')
+            );
+            const rubricaTotalDescontos = lerListaCadastro('rubricas').find(r =>
+                String(r.tipo || '').trim().toLowerCase() === 'totalizador' &&
+                String(r.descricao || '').trim().toLowerCase().includes('desconto')
+            );
+
+            if (totalProventos > 0 && rubricaTotalProventos) {
+                const contaTotal = localizarContaDeParaFolha(loja, rubricaTotalProventos);
+                if (contaTotal) {
+                    lancamentos.push({
+                        conta: contaTotal.codigo,
+                        debito: '0,00',
+                        credito: totalProventos.toFixed(2).replace('.', ','),
+                        historico: loja.nome + ' - PROVENTOS - ' + competencia
+                    });
+                } else {
+                    inconsistencias.push('Não existe DePara para o totalizador de Proventos na loja "' + loja.codigo + '".');
+                }
+            }
+
+            if (totalDescontos > 0 && rubricaTotalDescontos) {
+                const contaTotal = localizarContaDeParaFolha(loja, rubricaTotalDescontos);
+                if (contaTotal) {
+                    lancamentos.push({
+                        conta: contaTotal.codigo,
+                        debito: totalDescontos.toFixed(2).replace('.', ','),
+                        credito: '0,00',
+                        historico: loja.nome + ' - DESCONTOS - ' + competencia
+                    });
+                } else {
+                    inconsistencias.push('Não existe DePara para o totalizador de Descontos na loja "' + loja.codigo + '".');
+                }
+            }
+
             linhasLancamentoFolha = lancamentos;
             renderLancamentoFolha();
             if (inconsistencias.length) alert('Lançamento gerado com '+lancamentos.length+' linha(s).\n\nInconsistências:\n'+inconsistencias.slice(0,20).join('\n')+(inconsistencias.length>20?'\n...':'')); 
