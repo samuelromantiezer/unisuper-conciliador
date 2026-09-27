@@ -2475,11 +2475,11 @@ function renderLancamentoFolha() {
 
             if (tipo === 'rubricas') {
                 titulo.textContent = 'Consultar Rubricas';
-                subtitulo.textContent = 'Pesquise por número, descrição ou tipo e clique na rubrica para selecioná-la.';
+                subtitulo.textContent = 'Digite e refine a busca; dê dois cliques na rubrica para selecioná-la.';
                 busca.placeholder = 'Pesquisar por número, descrição ou tipo';
             } else {
                 titulo.textContent = 'Consultar Contas Contábeis';
-                subtitulo.textContent = 'Pesquise por número ou descrição e clique na conta para selecioná-la.';
+                subtitulo.textContent = 'Digite e refine a busca; dê dois cliques na conta para selecioná-la.';
                 busca.placeholder = 'Pesquisar por número ou descrição';
             }
 
@@ -2528,7 +2528,7 @@ function renderLancamentoFolha() {
                 const codigo = escapeHtml(String(item.codigo ?? ''));
                 const descricao = escapeHtml(String(item.descricao ?? ''));
                 const tipo = escapeHtml(String(item.tipo ?? ''));
-                return '<button type="button" class="p-4 hover:bg-blue-50 transition flex items-center justify-between gap-4" onclick="selecionarItemPopupConsulta(' + JSON.stringify(id) + ')">' +
+                return '<button type="button" class="p-4 hover:bg-blue-50 transition flex items-center justify-between gap-4" ondblclick="selecionarItemPopupConsulta(' + JSON.stringify(id) + ')" title="Dê dois cliques para selecionar">' +
                     '<span class="min-w-0">' +
                         '<span class="block text-sm font-bold text-slate-800 truncate">' + (codigo || 'Sem número') + '</span>' +
                         '<span class="block text-xs text-slate-500 mt-1">' + descricao + '</span>' +
