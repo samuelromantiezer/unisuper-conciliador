@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -697,13 +698,13 @@
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div>
                             <h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-lines text-unisuperBlue mr-2"></i>Gerador de Folha de Pagamento</h4>
-                            <p class="text-sm text-slate-600 mt-1">Monte o lançamento contábil da folha em formato de planilha, com as colunas Conta VR, Débito, Crédito e Histórico.</p>
+                            <p class="text-sm text-slate-600 mt-1">Importe a planilha da folha, escolha a competência e gere o lançamento contábil nas colunas Conta VR, Débito, Crédito e Histórico.</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2.5 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900 shadow-sm">
                                 <i class="fa-solid fa-file-arrow-up"></i>
-                                Arquivo TXT Folha de Pagamento
-                                <input id="arquivo-txt-folha-pagamento" type="file" accept=".txt,text/plain" class="hidden" onchange="carregarArquivoFolhaPagamento(this)">
+                                Arquivo Excel Folha de Pagamento
+                                <input id="arquivo-excel-folha-pagamento" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" onchange="carregarArquivoFolhaPagamento(this)">
                             </label>
                             <button type="button" onclick="gerarLancamentoFolha()" class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-900 shadow-sm">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -713,6 +714,13 @@
                     </div>
                 </div>
                 <div class="p-5 space-y-4">
+                    <div class="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Competência</label>
+                            <input id="folha-competencia" type="month" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div class="text-xs text-slate-500 pb-2">A competência será usada no Histórico: <b>LOJA: DESPESA LOJA - RUBRICA - COMPETÊNCIA</b>.</div>
+                    </div>
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h5 class="font-bold text-slate-700 text-sm">Lançamento Contábil</h5>
@@ -2207,12 +2215,46 @@
             }
         }
         let linhasLancamentoFolha = [];
+        let dadosFolhaImportados = [];
+
         function escapeHtmlFolha(valor) { return String(valor ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+        function obterCompetenciaFolha() {
+            const valor = document.getElementById('folha-competencia')?.value || '';
+            if (!/^\d{4}-\d{2}$/.test(valor)) return '';
+            const [ano, mes] = valor.split('-');
+            return mes + '/' + ano;
+        }
+
+        function localizarRubricaFolha(codigo) {
+            const alvo = String(codigo ?? '').trim();
+            return lerListaCadastro('rubricas').find(x => String(x.codigo ?? '').trim() === alvo);
+        }
+
+        function localizarLojaFolha(valor) {
+            const alvo = String(valor ?? '').trim();
+            return lerListaCadastro('lojas').find(x => String(x.codigo ?? '').trim() === alvo)
+                || lerListaCadastro('lojas').find(x => String(x.nome ?? '').trim().toLowerCase() === alvo.toLowerCase());
+        }
+
+        function localizarContaDeParaFolha(loja, rubrica) {
+            if (!loja || !rubrica) return null;
+            const vinculo = lerListaCadastro('depara').find(x =>
+                Number(x.loja_id) === Number(loja.id) && Number(x.rubrica_id) === Number(rubrica.id)
+            );
+            if (!vinculo) return null;
+            return lerListaCadastro('plano').find(x => Number(x.id) === Number(vinculo.conta_contabil_id)) || null;
+        }
+
         function renderLancamentoFolha() {
-            const tbody = document.getElementById('tabela-lancamentos-folha'), contador = document.getElementById('folha-lancamento-contagem');
+            const tbody = document.getElementById('tabela-lancamentos-folha');
+            const contador = document.getElementById('folha-lancamento-contagem');
             if (!tbody) return;
             if (contador) contador.textContent = linhasLancamentoFolha.length === 1 ? '1 lançamento' : linhasLancamentoFolha.length + ' lançamentos';
-            if (!linhasLancamentoFolha.length) { tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400">Nenhum lançamento na planilha.</td></tr>'; return; }
+            if (!linhasLancamentoFolha.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400">Nenhum lançamento na planilha.</td></tr>';
+                return;
+            }
             tbody.innerHTML = linhasLancamentoFolha.map((item,i)=>`
                 <tr class="bg-white hover:bg-slate-50">
                     <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.conta)}" onchange="editarLinhaLancamentoFolha(${i},'conta',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
@@ -2221,20 +2263,75 @@
                     <td class="p-1"><input value="${escapeHtmlFolha(item.historico)}" onchange="editarLinhaLancamentoFolha(${i},'historico',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
                 </tr>`).join('');
         }
+
         function editarLinhaLancamentoFolha(indice,campo,valor){ if(linhasLancamentoFolha[indice]) linhasLancamentoFolha[indice][campo]=valor; }
         function adicionarLinhaLancamentoFolha(){ linhasLancamentoFolha.push({conta:'',debito:'',credito:'',historico:''}); renderLancamentoFolha(); document.getElementById('tabela-lancamentos-folha')?.lastElementChild?.querySelector('input')?.focus(); }
-        function carregarArquivoFolhaPagamento(input){
-            const file=input.files?.[0]; if(!file)return;
-            const reader=new FileReader();
-            reader.onload=()=>{ const texto=String(reader.result||'').replace(/^\uFEFF/,''); const linhas=texto.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-                if(!linhas.length){alert('O arquivo TXT está vazio.');input.value='';return;}
-                alert('Arquivo TXT Folha de Pagamento carregado. A estrutura do TXT ainda precisa ser definida para transformar automaticamente os dados em lançamentos.');
-                input.value='';
+
+        function carregarArquivoFolhaPagamento(input) {
+            const file = input.files?.[0];
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                alert('A biblioteca de leitura do Excel não foi carregada.');
+                input.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const workbook = XLSX.read(reader.result, {type:'array', cellDates:false});
+                    const primeiraAba = workbook.SheetNames[0];
+                    const planilha = workbook.Sheets[primeiraAba];
+                    dadosFolhaImportados = XLSX.utils.sheet_to_json(planilha, {header:1, defval:''});
+                    if (!dadosFolhaImportados.length) throw new Error('A planilha está vazia.');
+                    alert('Planilha da Folha de Pagamento carregada. Escolha a competência e clique em Gerar Lançamento.');
+                } catch (e) {
+                    alert('Erro ao ler a planilha da folha de pagamento: ' + (e.message || e));
+                }
+                input.value = '';
             };
-            reader.onerror=()=>{alert('Não foi possível ler o arquivo TXT da folha de pagamento.');input.value='';};
-            reader.readAsText(file);
+            reader.onerror = () => alert('Não foi possível ler a planilha da folha de pagamento.');
+            reader.readAsArrayBuffer(file);
         }
-        function gerarLancamentoFolha(){ if(!linhasLancamentoFolha.length){linhasLancamentoFolha.push({conta:'',debito:'',credito:'',historico:''});renderLancamentoFolha();} }
+
+        function gerarLancamentoFolha() {
+            const competencia = obterCompetenciaFolha();
+            if (!competencia) return alert('Selecione a competência antes de gerar o lançamento.');
+            if (!dadosFolhaImportados.length) return alert('Importe primeiro a planilha Excel da Folha de Pagamento.');
+
+            const lancamentos = [];
+            const inconsistencias = [];
+            for (let i = 1; i < dadosFolhaImportados.length; i++) {
+                const linha = dadosFolhaImportados[i] || [];
+                const rubricaCodigo = String(linha[0] ?? '').trim();
+                const valorBruto = linha[32];
+                const lojaValor = String(linha[2] ?? '').trim();
+                if (!rubricaCodigo && !lojaValor && (valorBruto === '' || valorBruto == null)) continue;
+
+                const rubrica = localizarRubricaFolha(rubricaCodigo);
+                const loja = localizarLojaFolha(lojaValor);
+                const conta = localizarContaDeParaFolha(loja, rubrica);
+
+                if (!rubrica) { inconsistencias.push('Linha '+(i+1)+': rubrica "'+rubricaCodigo+'" não cadastrada.'); continue; }
+                if (!loja) { inconsistencias.push('Linha '+(i+1)+': loja "'+lojaValor+'" não cadastrada.'); continue; }
+                if (!conta) { inconsistencias.push('Linha '+(i+1)+': não existe DePara para loja "'+lojaValor+'" e rubrica "'+rubricaCodigo+'".'); continue; }
+
+                const numero = Number(String(valorBruto).replace(/\./g,'').replace(',','.'));
+                const valor = Number.isFinite(numero) ? numero : Number(valorBruto);
+                if (!Number.isFinite(valor)) { inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".'); continue; }
+
+                lancamentos.push({
+                    conta: conta.codigo,
+                    debito: valor.toFixed(2).replace('.', ','),
+                    credito: '',
+                    historico: lojaValor + ': DESPESA LOJA - ' + rubrica.descricao + ' - ' + competencia
+                });
+            }
+            linhasLancamentoFolha = lancamentos;
+            renderLancamentoFolha();
+            if (inconsistencias.length) alert('Lançamento gerado com '+lancamentos.length+' linha(s).\n\nInconsistências:\n'+inconsistencias.slice(0,20).join('\n')+(inconsistencias.length>20?'\n...':'')); 
+            else alert('Lançamento gerado com '+lancamentos.length+' linha(s).');
+        }
+
         function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('depara-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
         function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas');const contas=ordenarCadastroNatural(lerListaCadastro('plano'));const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
         async function adicionarDeParaFolha(){const lojaCodigo=document.getElementById('depara-loja').value.trim(),rubricaId=Number(document.getElementById('depara-rubrica').value),contaId=Number(document.getElementById('depara-conta').value);const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);if(!loja||!rubricaId||!contaId)return alert('Informe a loja, a rubrica e a conta contábil.');try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
