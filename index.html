@@ -2433,7 +2433,10 @@
                     '<td class="p-3 font-semibold">' + escapeHtml(formatarCompetenciaFolhaISO(item.competencia)) + '</td>' +
                     '<td class="p-3 text-center">' + linhas.length + '</td>' +
                     '<td class="p-3 text-slate-500">' + escapeHtml(dataTexto) + '</td>' +
-                    '<td class="p-3 text-center"><button type="button" onclick="visualizarFolhaGerada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-eye"></i> Visualizar</button></td>' +
+                    '<td class="p-3 text-center"><div class="flex flex-wrap items-center justify-center gap-2">' +
+                        '<button type="button" onclick="visualizarFolhaGerada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-eye"></i> Visualizar</button>' +
+                        '<button type="button" onclick="exportarFolhaGeradaPorId(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700"><i class="fa-solid fa-file-excel"></i> Excel 97-2003</button>' +
+                    '</div></td>' +
                 '</tr>';
             }).join('');
         }
@@ -2474,16 +2477,20 @@
             popup.classList.remove('hidden');
         }
 
-        function exportarFolhaGeradaVisualizacao() {
-            if (!folhaGeradaVisualizando || !Array.isArray(folhaGeradaVisualizando.linhas) || !folhaGeradaVisualizando.linhas.length) {
-                alert('Nenhum lançamento salvo para exportar.');
-                return;
+        function exportarFolhaGeradaPorId(id) {
+            const item = localizarFolhaGerada(id);
+            if (!item) return alert('Folha gerada não encontrada.');
+            exportarFolhaGeradaComoExcel(item);
+        }
+
+        function exportarFolhaGeradaComoExcel(folha) {
+            if (!folha || !Array.isArray(folha.linhas) || !folha.linhas.length) {
+                return alert('Nenhum lançamento salvo para exportar.');
             }
             if (typeof XLSX === 'undefined') {
-                alert('A biblioteca Excel não foi carregada.');
-                return;
+                return alert('A biblioteca Excel não foi carregada.');
             }
-            const dados = folhaGeradaVisualizando.linhas.map(item => ({
+            const dados = folha.linhas.map(item => ({
                 'Conta VR': item.conta || '',
                 'Valor Débito': String(item.debito || '0,00').replace(',', '.'),
                 'Valor Crédito': String(item.credito || '0,00').replace(',', '.'),
@@ -2492,8 +2499,12 @@
             const ws = XLSX.utils.json_to_sheet(dados);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Lançamento');
-            const competencia = String(folhaGeradaVisualizando.competencia || '').slice(0, 7).replace('-', '_');
+            const competencia = String(folha.competencia || '').slice(0, 7).replace('-', '_');
             XLSX.writeFile(wb, 'Lancamento_Folha_Pagamento_' + competencia + '.xls', { bookType: 'xls' });
+        }
+
+        function exportarFolhaGeradaVisualizacao() {
+            exportarFolhaGeradaComoExcel(folhaGeradaVisualizando);
         }
 
         function fecharFolhaGerada() {
