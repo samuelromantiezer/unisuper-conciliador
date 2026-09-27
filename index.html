@@ -828,8 +828,16 @@
                                 </tr>
                             </thead>
                             <tbody id="tabela-lancamentos-folha">
-                                <tr><td colspan="4" class="p-8 text-center text-slate-400">Carregue o arquivo TXT da folha ou gere um lançamento para preencher a planilha.</td></tr>
+                                <tr><td colspan="4" class="p-8 text-center text-slate-400">Carregue o arquivo Excel da folha ou gere um lançamento para preencher a planilha.</td></tr>
                             </tbody>
+                            <tfoot id="rodape-totais-lancamento-folha" class="border-t-2 border-slate-400">
+                                <tr class="bg-slate-100 font-bold text-slate-800">
+                                    <td class="p-3 text-right border-r border-slate-200">TOTAIS / DIFERENÇA</td>
+                                    <td id="total-debito-lancamento-folha" class="p-3 text-right border-r border-slate-200">0,00</td>
+                                    <td id="total-credito-lancamento-folha" class="p-3 text-right border-r border-slate-200">0,00</td>
+                                    <td id="diferenca-lancamento-folha" class="p-3 text-right">Diferença: 0,00</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                     <div class="flex flex-wrap justify-end gap-2">
@@ -2348,13 +2356,44 @@
   XLSX.writeFile(wb, 'Lancamento_Folha_Pagamento.xlsx');
 }
 
-function renderLancamentoFolha() {
+function converterValorLancamentoFolha(valor) {
+            const texto = String(valor ?? '').trim();
+            if (!texto) return 0;
+            const normalizado = texto.replace(/\\s/g, '').replace(/\\./g, '').replace(',', '.');
+            const numero = Number(normalizado);
+            return Number.isFinite(numero) ? numero : 0;
+        }
+
+        function formatarValorLancamentoFolha(valor) {
+            const numero = Number(valor) || 0;
+            return numero.toFixed(2).replace('.', ',');
+        }
+
+        function atualizarTotaisLancamentoFolha() {
+            const totalDebitoEl = document.getElementById('total-debito-lancamento-folha');
+            const totalCreditoEl = document.getElementById('total-credito-lancamento-folha');
+            const diferencaEl = document.getElementById('diferenca-lancamento-folha');
+            if (!totalDebitoEl || !totalCreditoEl || !diferencaEl) return;
+
+            const totalDebito = linhasLancamentoFolha.reduce((total, item) => total + converterValorLancamentoFolha(item.debito), 0);
+            const totalCredito = linhasLancamentoFolha.reduce((total, item) => total + converterValorLancamentoFolha(item.credito), 0);
+            const diferenca = totalDebito - totalCredito;
+
+            totalDebitoEl.textContent = formatarValorLancamentoFolha(totalDebito);
+            totalCreditoEl.textContent = formatarValorLancamentoFolha(totalCredito);
+            diferencaEl.textContent = 'Diferença: ' + formatarValorLancamentoFolha(diferenca);
+            diferencaEl.classList.toggle('text-emerald-700', Math.abs(diferenca) < 0.005);
+            diferencaEl.classList.toggle('text-red-600', Math.abs(diferenca) >= 0.005);
+        }
+
+        function renderLancamentoFolha() {
             const tbody = document.getElementById('tabela-lancamentos-folha');
             const contador = document.getElementById('folha-lancamento-contagem');
             if (!tbody) return;
             if (contador) contador.textContent = linhasLancamentoFolha.length === 1 ? '1 lançamento' : linhasLancamentoFolha.length + ' lançamentos';
             if (!linhasLancamentoFolha.length) {
                 tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400">Nenhum lançamento na planilha.</td></tr>';
+                atualizarTotaisLancamentoFolha();
                 return;
             }
             tbody.innerHTML = linhasLancamentoFolha.map((item,i)=>`
@@ -2364,10 +2403,21 @@ function renderLancamentoFolha() {
                     <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.credito)}" onchange="editarLinhaLancamentoFolha(${i},'credito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
                     <td class="p-1"><input value="${escapeHtmlFolha(item.historico)}" onchange="editarLinhaLancamentoFolha(${i},'historico',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
                 </tr>`).join('');
+            atualizarTotaisLancamentoFolha();
         }
 
-        function editarLinhaLancamentoFolha(indice,campo,valor){ if(linhasLancamentoFolha[indice]) linhasLancamentoFolha[indice][campo]=valor; }
-        function adicionarLinhaLancamentoFolha(){ linhasLancamentoFolha.push({conta:'',debito:'',credito:'',historico:''}); renderLancamentoFolha(); document.getElementById('tabela-lancamentos-folha')?.lastElementChild?.querySelector('input')?.focus(); }
+        function editarLinhaLancamentoFolha(indice,campo,valor){
+            if(linhasLancamentoFolha[indice]) {
+                linhasLancamentoFolha[indice][campo]=valor;
+                atualizarTotaisLancamentoFolha();
+            }
+        }
+
+        function adicionarLinhaLancamentoFolha(){
+            linhasLancamentoFolha.push({conta:'',debito:'0,00',credito:'0,00',historico:''});
+            renderLancamentoFolha();
+            document.getElementById('tabela-lancamentos-folha')?.lastElementChild?.querySelector('input')?.focus();
+        }
 
         function carregarArquivoFolhaPagamento(input) {
             const file = input.files?.[0];
