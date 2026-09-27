@@ -2335,9 +2335,10 @@
                 if (!conta) { inconsistencias.push('Linha '+(i+1)+': não existe DePara para loja "'+loja.codigo+'" e rubrica "'+rubricaCodigo+'".'); continue; }
 
                 const numero = Number(String(valorBruto).replace(/\./g,'').replace(',','.'));
-                const valor = Number.isFinite(numero) ? numero : Number(valorBruto);
-                if (!Number.isFinite(valor)) { inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".'); continue; }
-
+                const valorBrutoNumerico = Number.isFinite(numero) ? numero : Number(valorBruto);
+                if (!Number.isFinite(valorBrutoNumerico)) { inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".'); continue; }
+                // O valor da folha vem em centavos; converte para reais antes de gerar o lançamento.
+                const valor = valorBrutoNumerico / 100;
                 lancamentos.push({
                     conta: conta.codigo,
                     debito: valor.toFixed(2).replace('.', ','),
