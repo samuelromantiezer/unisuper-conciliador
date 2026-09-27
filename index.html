@@ -2057,23 +2057,70 @@
         }
 
         async function importarCadastroTXT(input, tipo) {
-            const file=input.files?.[0];if(!file)return;
+            const file=input.files?.[0]; if(!file)return;
             try {
-                const texto=await file.text(); const linhas=texto.replace(/^\uFEFF/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean); if(!linhas.length)throw new Error('Arquivo vazio.');
-                let incluidos=0,ignorados=0;
+                const texto=await file.text();
+                const linhas=texto.replace(/^\uFEFF/,'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+                if(!linhas.length)throw new Error('Arquivo vazio.');
+
+                let incluidos=0, ignorados=0, duplicados=0;
+                const registros=[];
                 for(let idx=0;idx<linhas.length;idx++){
-                    let partes=linhas[idx].includes(';')?linhas[idx].split(';'):linhas[idx].split(','); partes=partes.map(x=>x.trim().replace(/^"|"$/g,'')); const primeira=partes[0]?.toLowerCase()||'';
-                    const cabecalho=(tipo==='lojas'&&(primeira.includes('loja')||primeira.includes('código')))||(tipo==='plano'&&primeira.includes('número')&&primeira.includes('conta'))||(tipo==='rubricas'&&primeira.includes('loja')&&partes.length>=4)||(tipo==='historicos'&&primeira.includes('histórico')); if(idx===0&&cabecalho)continue;
+                    let partes=linhas[idx].includes(';')?linhas[idx].split(';'):linhas[idx].split(',');
+                    partes=partes.map(x=>x.trim().replace(/^"|"$/g,''));
+                    const primeira=partes[0]?.toLowerCase()||'';
+                    const cabecalho=(tipo==='lojas'&&(primeira.includes('loja')||primeira.includes('código')))||(tipo==='plano'&&primeira.includes('número')&&primeira.includes('conta'))||(tipo==='rubricas'&&primeira.includes('loja')&&partes.length>=4)||(tipo==='historicos'&&primeira.includes('histórico'));
+                    if(idx===0&&cabecalho)continue;
+
                     let item=null;
                     if(tipo==='lojas'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],nome:partes.slice(1).join(';')};
                     else if(tipo==='plano'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],descricao:partes.slice(1).join(';')};
-                    else if(tipo==='rubricas'&&partes.length>=4&&partes[0]&&partes[1]&&partes[2]&&['Provento','Desconto','Imposto','Totalizador'].includes(partes[3])){const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===partes[0]);if(loja)item={loja_id:loja.id,codigo:partes[1],descricao:partes.slice(2,-1).join(';'),tipo:partes[3]};else{ignorados++;continue;}}
-                    else if(tipo==='historicos'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],descricao:partes.slice(1).join(';')};
+                    else if(tipo==='rubricas'&&partes.length>=4&&partes[0]&&partes[1]&&partes[2]&&['Provento','Desconto','Imposto','Totalizador'].includes(partes[3])){
+                        const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===partes[0]);
+                        if(loja)item={loja_id:loja.id,codigo:partes[1],descricao:partes.slice(2,-1).join(';'),tipo:partes[3]};
+                        else{ignorados++;continue;}
+                    } else if(tipo==='historicos'&&partes.length>=2&&partes[0]&&partes[1])item={codigo:partes[0],descricao:partes.slice(1).join(';')};
                     else{ignorados++;continue;}
-                    const tabela={lojas:'cadastro_lojas',plano:'plano_contas',rubricas:'rubricas',historicos:'historicos'}[tipo]; const {data,error}=await supabaseClient.from(tabela).insert([item]).select().single(); if(error){console.error('Linha ignorada:',error);ignorados++;}else{cacheCadastros[tipo].push(data);incluidos++;}
+                    registros.push(item);
                 }
-                renderCadastros();input.value='';alert(`Importação concluída no Supabase. ${incluidos} registro(s) incluído(s)${ignorados?` e ${ignorados} linha(s) ignorada(s).`:'.'}`);
-            }catch(e){input.value='';alert('Erro ao importar TXT: '+e.message);}
+
+                const tabela={lojas:'cadastro_lojas',plano:'plano_contas',rubricas:'rubricas',historicos:'historicos'}[tipo];
+                if(!tabela)throw new Error('Tipo de cadastro inválido.');
+
+                // Envia em lotes para não estourar o limite de uma única requisição.
+                // Isso permite importar arquivos grandes (milhares de linhas) sem parar no meio.
+                const TAMANHO_LOTE=500;
+                for(let inicio=0;inicio<registros.length;inicio+=TAMANHO_LOTE){
+                    const lote=registros.slice(inicio,inicio+TAMANHO_LOTE);
+                    const {data,error}=await supabaseClient.from(tabela).insert(lote).select();
+                    if(error){
+                        console.error('Erro no lote',inicio+1,'até',inicio+lote.length,error);
+                        // Se um lote falhar, tenta linha a linha para identificar e preservar as demais.
+                        for(const item of lote){
+                            const resposta=await supabaseClient.from(tabela).insert([item]).select().single();
+                            if(resposta.error){
+                                console.error('Linha ignorada:',item,resposta.error);
+                                ignorados++;
+                                if(resposta.error.code==='23505'||resposta.error.status===409)duplicados++;
+                            }else{
+                                cacheCadastros[tipo].push(resposta.data);
+                                incluidos++;
+                            }
+                        }
+                    }else{
+                        cacheCadastros[tipo].push(...(data||[]));
+                        incluidos+=(data||[]).length;
+                    }
+                    // Mantém a interface responsiva e permite que o navegador processe lotes grandes.
+                    await new Promise(resolve=>setTimeout(resolve,0));
+                }
+
+                renderCadastros(); input.value='';
+                alert(`Importação concluída no Supabase. ${incluidos} registro(s) incluído(s)${ignorados?` e ${ignorados} linha(s) ignorada(s)`:'.'}${duplicados?` ${duplicados} duplicada(s)`:''}`);
+            }catch(e){
+                input.value='';
+                alert('Erro ao importar TXT: '+(e.message||e));
+            }
         }
         function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('rubrica-loja'),document.getElementById('depara-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
         function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas').filter(x=>!loja||x.loja_id===loja.id);const contas=ordenarCadastroNatural(lerListaCadastro('plano'));const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
