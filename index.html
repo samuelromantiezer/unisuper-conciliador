@@ -1882,21 +1882,37 @@
             if (id === 'depara') atualizarOpcoesDePara();
         }
 
+        async function consultarTabelaCompleta(tabela, colunas, ordem) {
+            const TAMANHO_PAGINA = 1000;
+            const todos = [];
+            let inicio = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from(tabela)
+                    .select(colunas)
+                    .order(ordem)
+                    .range(inicio, inicio + TAMANHO_PAGINA - 1);
+                if (error) throw error;
+                const pagina = data || [];
+                todos.push(...pagina);
+                if (pagina.length < TAMANHO_PAGINA) break;
+                inicio += TAMANHO_PAGINA;
+            }
+            return todos;
+        }
+
         async function consultarCadastrosSupabase() {
             if (!supabaseClient) throw new Error('Supabase ainda não foi inicializado.');
             const consultas = await Promise.all([
-                supabaseClient.from('cadastro_lojas').select('id,codigo,nome').order('codigo'),
-                supabaseClient.from('plano_contas').select('id,codigo,descricao').order('codigo'),
-                supabaseClient.from('rubricas').select('id,codigo,descricao,tipo').order('codigo'),
-                supabaseClient.from('historicos').select('id,codigo,descricao').order('codigo'),
-                supabaseClient.from('folha_depara').select('id,loja_id,rubrica_id,conta_contabil_id').order('id')
+                consultarTabelaCompleta('cadastro_lojas','id,codigo,nome','codigo'),
+                consultarTabelaCompleta('plano_contas','id,codigo,descricao','codigo'),
+                consultarTabelaCompleta('rubricas','id,codigo,descricao,tipo','codigo'),
+                consultarTabelaCompleta('historicos','id,codigo,descricao','codigo'),
+                consultarTabelaCompleta('folha_depara','id,loja_id,rubrica_id,conta_contabil_id','id')
             ]);
             const nomes = ['lojas','plano','rubricas','historicos','depara'];
             for (let i=0; i<consultas.length; i++) {
-                if (consultas[i].error) {
-                    throw new Error(`Tabela ${nomes[i]}: ${consultas[i].error.message}`);
-                }
-                cacheCadastros[nomes[i]] = consultas[i].data || [];
+                cacheCadastros[nomes[i]] = consultas[i] || [];
             }
             return cacheCadastros;
         }
