@@ -2528,7 +2528,8 @@
                     alert('Competência salva com sucesso em Folhas Geradas.');
                 }
                 renderFolhasGeradas();
-                switchFolhaTab('geradas');
+                // Mantém o Gerador aberto e preserva o lançamento na tela após salvar.
+                // A competência salva também fica disponível na aba "Folhas Geradas".
             } catch (e) {
                 console.error('Erro ao salvar folha gerada:', e);
                 alert('Erro ao salvar a folha gerada no Supabase: ' + (e.message || e));
