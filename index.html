@@ -689,6 +689,10 @@
                     <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
                     <input id="arquivo-txt-depara-folha" type="file" accept=".txt,text/plain" class="hidden" onchange="importarDeParaFolhaTXT(this)">
                 </label>
+                <label class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-emerald-700 shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i> Importar Excel
+                    <input id="arquivo-excel-depara-folha" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" onchange="importarDeParaFolhaExcel(this)">
+                </label>
             </div>
             <form onsubmit="event.preventDefault(); adicionarDeParaFolha()" class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <select id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required><option value="">Selecione a Loja</option></select>
@@ -2379,7 +2383,57 @@ function renderLancamentoFolha() {
 
         function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('depara-loja'),document.getElementById('folha-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
         function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas');const contas=ordenarCadastroNatural(lerListaCadastro('plano'));const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
-        async function importarDeParaFolhaTXT(input){
+        async function importarDeParaFolhaExcel(input){
+  const file=input.files?.[0]; if(!file)return;
+  try{
+    if(typeof XLSX==='undefined') throw new Error('A biblioteca Excel não foi carregada.');
+    const buffer=await file.arrayBuffer();
+    const workbook=XLSX.read(buffer,{type:'array',cellDates:false});
+    const primeiraAba=workbook.SheetNames[0];
+    const planilha=workbook.Sheets[primeiraAba];
+    const linhas=XLSX.utils.sheet_to_json(planilha,{header:1,defval:''});
+    if(!linhas.length) throw new Error('A planilha está vazia.');
+
+    let incluidos=0,ignorados=0,duplicados=0;
+    for(let i=0;i<linhas.length;i++){
+      const partes=(linhas[i]||[]).map(x=>String(x??'').trim());
+      const primeira=(partes[0]||'').toLowerCase();
+      const cabecalho=primeira.includes('loja') || (partes[1]||'').toLowerCase().includes('rubrica');
+      if(i===0&&cabecalho)continue;
+      if(partes.length<3||!partes[0]||!partes[1]||!partes[2]){ignorados++;continue;}
+
+      const loja=lerListaCadastro('lojas').find(x=>String(x.codigo??'').trim()===partes[0])
+        ||lerListaCadastro('lojas').find(x=>String(x.nome??'').trim().toLowerCase()===partes[0].toLowerCase());
+      const rubrica=lerListaCadastro('rubricas').find(x=>String(x.codigo??'').trim()===partes[1])
+        ||lerListaCadastro('rubricas').find(x=>String(x.descricao??'').trim().toLowerCase()===partes[1].toLowerCase());
+      const conta=lerListaCadastro('plano').find(x=>String(x.codigo??'').trim()===partes[2])
+        ||lerListaCadastro('plano').find(x=>String(x.descricao??'').trim().toLowerCase()===partes[2].toLowerCase());
+
+      if(!loja||!rubrica||!conta){ignorados++;continue;}
+
+      const existente=lerListaCadastro('depara').find(x=>
+        Number(x.loja_id)===Number(loja.id)&&Number(x.rubrica_id)===Number(rubrica.id)
+      );
+      if(existente){duplicados++;continue;}
+
+      const {data,error}=await supabaseClient.from('folha_depara').insert([{
+        loja_id:loja.id,rubrica_id:rubrica.id,conta_contabil_id:conta.id
+      }]).select().single();
+      if(error){console.error('Erro ao importar DePara Excel:',partes,error);ignorados++;}
+      else{cacheCadastros.depara.push(data);incluidos++;}
+    }
+    renderDeParaFolha();
+    input.value='';
+    alert('Importação Excel de DePara concluída. '+incluidos+' vínculo(s) incluído(s)'+
+      (ignorados?' e '+ignorados+' linha(s) ignorada(s)':'')+
+      (duplicados?' '+duplicados+' duplicado(s)':'')+'.');
+  }catch(e){
+    input.value='';
+    alert('Erro ao importar DePara Excel: '+(e.message||e));
+  }
+}
+
+async function importarDeParaFolhaTXT(input){
             const file=input.files?.[0]; if(!file)return;
             try{
                 const texto=await file.text();
