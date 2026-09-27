@@ -2277,8 +2277,8 @@
   }
   const dados = linhasLancamentoFolha.map(item => ({
     'Conta VR': item.conta || '',
-    'Valor Débito': item.debito || '',
-    'Valor Crédito': item.credito || '',
+    'Valor Débito': String(item.debito || '0,00').replace(',', '.'),
+    'Valor Crédito': String(item.credito || '0,00').replace(',', '.'),
     'Histórico': item.historico || ''
   }));
   const ws = XLSX.utils.json_to_sheet(dados);
@@ -2368,10 +2368,24 @@ function renderLancamentoFolha() {
                 if (!Number.isFinite(valorBrutoNumerico)) { inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".'); continue; }
                 // O valor da folha vem em centavos; converte para reais antes de gerar o lançamento.
                 const valor = valorBrutoNumerico / 100;
+                const valorFormatadoTela = valor.toFixed(2).replace('.', ',');
+                const tipoRubrica = String(rubrica.tipo || '').trim().toLowerCase();
+                let debito = '0,00';
+                let credito = '0,00';
+
+                if (tipoRubrica === 'provento') {
+                    debito = valorFormatadoTela;
+                } else if (tipoRubrica === 'desconto') {
+                    credito = valorFormatadoTela;
+                } else {
+                    // Imposto e Totalizador mantêm o comportamento anterior: valor no débito.
+                    debito = valorFormatadoTela;
+                }
+
                 lancamentos.push({
                     conta: conta.codigo,
-                    debito: valor.toFixed(2).replace('.', ','),
-                    credito: '',
+                    debito,
+                    credito,
                     historico: loja.nome + ': DESPESA FOLHA - ' + rubrica.descricao + ' - ' + competencia
                 });
             }
