@@ -260,7 +260,7 @@
     </style>
 
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col" onclick="fecharDropdownsFora(event)">
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
 
     <!-- TELA DE LOGIN -->
     <div id="auth-screen" class="fixed inset-0 bg-unisuperDark z-50 flex items-center justify-center p-4">
@@ -1013,12 +1013,6 @@
                 if (d.id !== id) d.classList.add('hidden');
             });
             el.classList.toggle('hidden');
-        }
-
-        function fecharDropdownsFora(event) {
-            if (!event.target.closest('.relative')) {
-                document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
-            }
         }
 
         // --- SELECIONAR TODAS / TODOS ---
@@ -2495,10 +2489,6 @@ function renderLancamentoFolha() {
             tipoPopupConsultaCadastro = '';
         }
 
-        function fecharPopupConsultaCadastroFora(event) {
-            if (event.target?.id === 'popup-consulta-cadastros') fecharPopupConsultaCadastro();
-        }
-
         function renderPopupConsultaCadastro() {
             const listaEl = document.getElementById('popup-consulta-lista');
             const contadorEl = document.getElementById('popup-consulta-contador');
@@ -2719,8 +2709,8 @@ async function importarDeParaFolhaTXT(input){
 </script>
 
     <!-- POPUP DE CONSULTA DE RUBRICAS / CONTAS CONTÁBEIS -->
-    <div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo" onclick="fecharPopupConsultaCadastroFora(event)">
-        <div class="popup-card" onclick="event.stopPropagation()">
+    <div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo">
+        <div class="popup-card">
             <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
                 <div>
                     <h3 id="popup-consulta-titulo" class="text-base font-bold text-slate-800">Consultar</h3>
