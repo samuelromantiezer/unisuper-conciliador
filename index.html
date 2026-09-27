@@ -2353,7 +2353,7 @@
   const ws = XLSX.utils.json_to_sheet(dados);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Lançamento');
-  XLSX.writeFile(wb, 'Lancamento_Folha_Pagamento.xlsx');
+  XLSX.writeFile(wb, 'Lancamento_Folha_Pagamento.xls', { bookType: 'xls' });
 }
 
 function converterValorLancamentoFolha(valor) {
@@ -2399,8 +2399,8 @@ function converterValorLancamentoFolha(valor) {
             tbody.innerHTML = linhasLancamentoFolha.map((item,i)=>`
                 <tr class="bg-white hover:bg-slate-50">
                     <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.conta)}" onchange="editarLinhaLancamentoFolha(${i},'conta',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
-                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.debito)}" onchange="editarLinhaLancamentoFolha(${i},'debito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
-                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.credito)}" onchange="editarLinhaLancamentoFolha(${i},'credito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
+                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(formatarValorLancamentoFolha(converterValorLancamentoFolha(item.debito)))}" onchange="editarLinhaLancamentoFolha(${i},'debito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
+                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(formatarValorLancamentoFolha(converterValorLancamentoFolha(item.credito)))}" onchange="editarLinhaLancamentoFolha(${i},'credito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
                     <td class="p-1"><input value="${escapeHtmlFolha(item.historico)}" onchange="editarLinhaLancamentoFolha(${i},'historico',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
                 </tr>`).join('');
             atualizarTotaisLancamentoFolha();
@@ -2693,7 +2693,7 @@ function converterValorLancamentoFolha(valor) {
         });
 
         function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('depara-loja'),document.getElementById('folha-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
-        function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas');const contas=ordenarCadastroNatural(lerListaCadastro('plano'));const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
+        function atualizarOpcoesDePara(){const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;}
         async function importarDeParaFolhaExcel(input){
   const file=input.files?.[0]; if(!file)return;
   try{
