@@ -742,6 +742,7 @@
         <div class="flex flex-wrap border-b border-slate-200 px-4 pt-3 gap-1">
             <button onclick="switchFolhaTab('depara')" id="folhatab-btn-depara" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue"><i class="fa-solid fa-link mr-2"></i>DePara</button>
             <button onclick="switchFolhaTab('gerador')" id="folhatab-btn-gerador" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-file-export mr-2"></i>Gerador de Folha de Pagamento</button>
+            <button onclick="switchFolhaTab('geradas')" id="folhatab-btn-geradas" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-folder-open mr-2"></i>Folhas Geradas</button>
         </div>
         <div id="folhatab-depara" class="folhatab-content p-5 space-y-5">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -769,6 +770,38 @@
             </form>
             <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Loja</th><th class="p-3">Rubrica</th><th class="p-3">Descrição da Rubrica</th><th class="p-3">Conta Contábil</th><th class="p-3">Descrição da Conta</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-depara-folha" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
+        <div id="folhatab-geradas" class="folhatab-content hidden p-5 space-y-5">
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div class="p-5 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <h4 class="font-bold text-slate-800"><i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i>Folhas Geradas</h4>
+                        <p class="text-sm text-slate-600 mt-1">Competências salvas para consulta. Os lançamentos ficam bloqueados para edição.</p>
+                    </div>
+                    <button type="button" onclick="carregarFolhasGeradas(true)" class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-900">
+                        <i class="fa-solid fa-rotate"></i> Atualizar
+                    </button>
+                </div>
+                <div class="p-5">
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full min-w-[760px] text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-300">
+                                    <th class="p-3 text-left">Loja</th>
+                                    <th class="p-3 text-left">Competência</th>
+                                    <th class="p-3 text-center">Lançamentos</th>
+                                    <th class="p-3 text-left">Salvo em</th>
+                                    <th class="p-3 text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-folhas-geradas">
+                                <tr><td colspan="5" class="p-8 text-center text-slate-400">Carregando folhas geradas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="folhatab-gerador" class="folhatab-content hidden p-5 space-y-5">
             <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
                 <div class="p-5 border-b border-slate-200 bg-slate-50">
@@ -787,9 +820,13 @@
                                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                                 Gerar Lançamento
                             </button>
+                            <button type="button" onclick="salvarFolhaGerada()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-blue-700 shadow-sm">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                Salvar Competência
+                            </button>
                             <button type="button" onclick="exportarLancamentoFolhaExcel()" class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 shadow-sm">
                                 <i class="fa-solid fa-file-excel"></i>
-                                Exportar Excel
+                                Exportar Excel 97-2003
                             </button>
                         </div>
                     </div>
@@ -2028,6 +2065,7 @@
             if (btn) { btn.classList.remove('border-transparent','text-slate-500'); btn.classList.add('border-unisuperBlue','text-unisuperBlue'); }
             localStorage.setItem('unisuper_folhatab_atual', id);
             if (id === 'depara') atualizarOpcoesDePara();
+            if (id === 'geradas') carregarFolhasGeradas();
         }
 
         async function consultarTabelaCompleta(tabela, colunas, ordem) {
@@ -2305,6 +2343,8 @@
         }
         let linhasLancamentoFolha = [];
         let dadosFolhaImportados = [];
+        let folhasGeradas = [];
+        let folhaGeradaVisualizando = null;
 
         function escapeHtmlFolha(valor) { return String(valor ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
@@ -2333,6 +2373,163 @@
             );
             if (!vinculo) return null;
             return lerListaCadastro('plano').find(x => Number(x.id) === Number(vinculo.conta_contabil_id)) || null;
+        }
+
+        function obterCompetenciaFolhaISO() {
+            const valor = document.getElementById('folha-competencia')?.value || '';
+            return /^\\d{4}-\\d{2}$/.test(valor) ? valor + '-01' : '';
+        }
+
+        function formatarCompetenciaFolhaISO(valor) {
+            const texto = String(valor || '');
+            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(texto)) return texto;
+            const [ano, mes] = texto.split('-');
+            return mes + '/' + ano;
+        }
+
+        function localizarFolhaGerada(id) {
+            return folhasGeradas.find(x => Number(x.id) === Number(id)) || null;
+        }
+
+        async function carregarFolhasGeradas(mostrarMensagem = false) {
+            const tabela = document.getElementById('tabela-folhas-geradas');
+            if (!supabaseClient) {
+                if (tabela) tabela.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Supabase não está conectado.</td></tr>';
+                return;
+            }
+            if (tabela) tabela.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400">Carregando folhas geradas...</td></tr>';
+            try {
+                folhasGeradas = await consultarTabelaCompleta(
+                    'folhas_geradas',
+                    'id,loja_id,competencia,linhas,created_at,updated_at',
+                    'competencia'
+                );
+                folhasGeradas.sort((a,b) => String(b.competencia).localeCompare(String(a.competencia)) || Number(b.id) - Number(a.id));
+                renderFolhasGeradas();
+                if (mostrarMensagem) alert('Lista de folhas geradas atualizada.');
+            } catch (e) {
+                console.error('Erro ao carregar folhas geradas:', e);
+                if (tabela) tabela.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Erro ao carregar folhas geradas: ' + escapeHtml(e.message || e) + '</td></tr>';
+            }
+        }
+
+        function renderFolhasGeradas() {
+            const tabela = document.getElementById('tabela-folhas-geradas');
+            if (!tabela) return;
+            if (!folhasGeradas.length) {
+                tabela.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400">Nenhuma folha gerada foi salva ainda.</td></tr>';
+                return;
+            }
+            tabela.innerHTML = folhasGeradas.map(item => {
+                const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
+                const linhas = Array.isArray(item.linhas) ? item.linhas : [];
+                const salvoEm = item.updated_at || item.created_at;
+                const dataTexto = salvoEm ? new Date(salvoEm).toLocaleString('pt-BR') : '';
+                return '<tr class="bg-white hover:bg-slate-50 border-b border-slate-100">' +
+                    '<td class="p-3 font-medium">' + escapeHtml(loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada') + '</td>' +
+                    '<td class="p-3 font-semibold">' + escapeHtml(formatarCompetenciaFolhaISO(item.competencia)) + '</td>' +
+                    '<td class="p-3 text-center">' + linhas.length + '</td>' +
+                    '<td class="p-3 text-slate-500">' + escapeHtml(dataTexto) + '</td>' +
+                    '<td class="p-3 text-center"><button type="button" onclick="visualizarFolhaGerada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-eye"></i> Visualizar</button></td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        function visualizarFolhaGerada(id) {
+            const item = localizarFolhaGerada(id);
+            if (!item) return alert('Folha gerada não encontrada.');
+            folhaGeradaVisualizando = item;
+            const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
+            const competencia = formatarCompetenciaFolhaISO(item.competencia);
+            const linhas = Array.isArray(item.linhas) ? item.linhas : [];
+            const titulo = document.getElementById('popup-folha-gerada-titulo');
+            const subtitulo = document.getElementById('popup-folha-gerada-subtitulo');
+            const tbody = document.getElementById('tabela-popup-folha-gerada');
+            const totalDebito = document.getElementById('popup-total-debito-folha-gerada');
+            const totalCredito = document.getElementById('popup-total-credito-folha-gerada');
+            const diferenca = document.getElementById('popup-diferenca-folha-gerada');
+            const popup = document.getElementById('popup-folha-gerada');
+            if (!titulo || !subtitulo || !tbody || !popup) return;
+            titulo.textContent = 'Folha Gerada - ' + competencia;
+            subtitulo.textContent = (loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada') + ' • lançamento somente para consulta';
+            tbody.innerHTML = linhas.length ? linhas.map(itemLinha => '<tr class="bg-white border-b border-slate-100">' +
+                '<td class="p-3">' + escapeHtml(itemLinha.conta || '') + '</td>' +
+                '<td class="p-3 text-right">' + escapeHtml(formatarValorLancamentoFolha(converterValorLancamentoFolha(itemLinha.debito))) + '</td>' +
+                '<td class="p-3 text-right">' + escapeHtml(formatarValorLancamentoFolha(converterValorLancamentoFolha(itemLinha.credito))) + '</td>' +
+                '<td class="p-3">' + escapeHtml(itemLinha.historico || '') + '</td>' +
+                '</tr>').join('') : '<tr><td colspan="4" class="p-8 text-center text-slate-400">Nenhum lançamento salvo.</td></tr>';
+            const td = linhas.reduce((s,x) => s + converterValorLancamentoFolha(x.debito), 0);
+            const tc = linhas.reduce((s,x) => s + converterValorLancamentoFolha(x.credito), 0);
+            const dif = td - tc;
+            if (totalDebito) totalDebito.textContent = formatarValorLancamentoFolha(td);
+            if (totalCredito) totalCredito.textContent = formatarValorLancamentoFolha(tc);
+            if (diferenca) {
+                diferenca.textContent = 'Diferença: ' + formatarValorLancamentoFolha(dif);
+                diferenca.classList.toggle('text-emerald-700', Math.abs(dif) < 0.005);
+                diferenca.classList.toggle('text-red-600', Math.abs(dif) >= 0.005);
+            }
+            popup.classList.remove('hidden');
+        }
+
+        function fecharFolhaGerada() {
+            document.getElementById('popup-folha-gerada')?.classList.add('hidden');
+            folhaGeradaVisualizando = null;
+        }
+
+        async function salvarFolhaGerada() {
+            if (!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
+            if (!linhasLancamentoFolha.length) return alert('Gere o lançamento antes de salvar a competência.');
+            const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
+            const competencia = obterCompetenciaFolhaISO();
+            const loja = localizarLojaFolha(lojaCodigo);
+            if (!loja) return alert('Selecione a Loja antes de salvar a competência.');
+            if (!competencia) return alert('Selecione a Competência antes de salvar a competência.');
+
+            try {
+                const { data: existente, error: erroBusca } = await supabaseClient
+                    .from('folhas_geradas')
+                    .select('id,loja_id,competencia,linhas,created_at,updated_at')
+                    .eq('loja_id', loja.id)
+                    .eq('competencia', competencia)
+                    .maybeSingle();
+                if (erroBusca) throw erroBusca;
+
+                if (existente) {
+                    const substituir = confirm('PERÍODO JÁ EXPORTADO, DESEJA SUBSTITUIR O LANÇAMENTO?');
+                    if (!substituir) return;
+                    const { data, error } = await supabaseClient
+                        .from('folhas_geradas')
+                        .update({
+                            linhas: linhasLancamentoFolha,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', existente.id)
+                        .select('id,loja_id,competencia,linhas,created_at,updated_at')
+                        .single();
+                    if (error) throw error;
+                    folhasGeradas = folhasGeradas.map(x => Number(x.id) === Number(data.id) ? data : x);
+                    alert('Lançamento da competência substituído com sucesso.');
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('folhas_geradas')
+                        .insert([{
+                            loja_id: loja.id,
+                            competencia,
+                            linhas: linhasLancamentoFolha,
+                            updated_at: new Date().toISOString()
+                        }])
+                        .select('id,loja_id,competencia,linhas,created_at,updated_at')
+                        .single();
+                    if (error) throw error;
+                    folhasGeradas.push(data);
+                    alert('Competência salva com sucesso em Folhas Geradas.');
+                }
+                renderFolhasGeradas();
+                switchFolhaTab('geradas');
+            } catch (e) {
+                console.error('Erro ao salvar folha gerada:', e);
+                alert('Erro ao salvar a folha gerada no Supabase: ' + (e.message || e));
+            }
         }
 
         function exportarLancamentoFolhaExcel() {
@@ -2860,6 +3057,46 @@ async function importarDeParaFolhaTXT(input){
 
         inicializarMenuResponsivo();
 </script>
+
+    <!-- POPUP DE VISUALIZAÇÃO DE FOLHA GERADA -->
+    <div id="popup-folha-gerada" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-folha-gerada-titulo" style="position:fixed;inset:0;z-index:75;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:1rem;">
+        <div style="width:min(1100px,100%);max-height:92vh;background:#fff;border-radius:1rem;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden;">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
+                <div>
+                    <h3 id="popup-folha-gerada-titulo" class="text-base font-bold text-slate-800">Folha Gerada</h3>
+                    <p id="popup-folha-gerada-subtitulo" class="text-xs text-slate-500 mt-1">Somente consulta.</p>
+                </div>
+                <button type="button" onclick="fecharFolhaGerada()" class="w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Fechar" aria-label="Fechar">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 border-b border-slate-200 bg-slate-50 text-xs text-slate-500">Este lançamento foi salvo e está bloqueado para edição.</div>
+            <div class="overflow-auto" style="max-height:60vh;">
+                <table class="w-full min-w-[900px] text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-300">
+                            <th class="p-3 text-left border-r border-slate-200">Conta VR</th>
+                            <th class="p-3 text-right border-r border-slate-200">Valor Débito</th>
+                            <th class="p-3 text-right border-r border-slate-200">Valor Crédito</th>
+                            <th class="p-3 text-left">Histórico</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-popup-folha-gerada"></tbody>
+                    <tfoot class="border-t-2 border-slate-400">
+                        <tr class="bg-slate-100 font-bold text-slate-800">
+                            <td class="p-3 text-right border-r border-slate-200">TOTAL</td>
+                            <td id="popup-total-debito-folha-gerada" class="p-3 text-right border-r border-slate-200">0,00</td>
+                            <td id="popup-total-credito-folha-gerada" class="p-3 text-right border-r border-slate-200">0,00</td>
+                            <td id="popup-diferenca-folha-gerada" class="p-3 text-right">Diferença: 0,00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button type="button" onclick="fecharFolhaGerada()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-700 text-white hover:bg-slate-800">Fechar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- POPUP DE CONSULTA DE RUBRICAS / CONTAS CONTÁBEIS -->
     <div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo">
