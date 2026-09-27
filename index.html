@@ -716,10 +716,16 @@
                 <div class="p-5 space-y-4">
                     <div class="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Loja</label>
+                            <select id="folha-loja" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[220px]">
+                                <option value="">Selecione a Loja</option>
+                            </select>
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Competência</label>
                             <input id="folha-competencia" type="month" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
                         </div>
-                        <div class="text-xs text-slate-500 pb-2">A competência será usada no Histórico: <b>LOJA: DESPESA LOJA - RUBRICA - COMPETÊNCIA</b>.</div>
+                        <div class="text-xs text-slate-500 pb-2">O Histórico será gerado no formato: <b>LOJA: DESPESA FOLHA - RUBRICA - COMPETÊNCIA</b>.</div>
                     </div>
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
@@ -2295,6 +2301,9 @@
 
         function gerarLancamentoFolha() {
             const competencia = obterCompetenciaFolha();
+            const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
+            const loja = lerListaCadastro('lojas').find(x => String(x.codigo ?? '').trim() === lojaCodigo);
+            if (!loja) return alert('Selecione a loja antes de gerar o lançamento.');
             if (!competencia) return alert('Selecione a competência antes de gerar o lançamento.');
             if (!dadosFolhaImportados.length) return alert('Importe primeiro a planilha Excel da Folha de Pagamento.');
 
@@ -2312,15 +2321,12 @@
                 if (!rubricaCodigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(rubricaCodigo)) continue;
 
                 const valorBruto = linha[32];
-                const lojaValor = String(linha[2] ?? '').trim();
 
                 const rubrica = localizarRubricaFolha(rubricaCodigo);
-                const loja = localizarLojaFolha(lojaValor);
                 const conta = localizarContaDeParaFolha(loja, rubrica);
 
                 if (!rubrica) { inconsistencias.push('Linha '+(i+1)+': rubrica "'+rubricaCodigo+'" não cadastrada.'); continue; }
-                if (!loja) { inconsistencias.push('Linha '+(i+1)+': loja "'+lojaValor+'" não cadastrada.'); continue; }
-                if (!conta) { inconsistencias.push('Linha '+(i+1)+': não existe DePara para loja "'+lojaValor+'" e rubrica "'+rubricaCodigo+'".'); continue; }
+                if (!conta) { inconsistencias.push('Linha '+(i+1)+': não existe DePara para loja "'+loja.codigo+'" e rubrica "'+rubricaCodigo+'".'); continue; }
 
                 const numero = Number(String(valorBruto).replace(/\./g,'').replace(',','.'));
                 const valor = Number.isFinite(numero) ? numero : Number(valorBruto);
@@ -2330,7 +2336,7 @@
                     conta: conta.codigo,
                     debito: valor.toFixed(2).replace('.', ','),
                     credito: '',
-                    historico: lojaValor + ': DESPESA LOJA - ' + rubrica.descricao + ' - ' + competencia
+                    historico: loja.codigo + ': DESPESA FOLHA - ' + rubrica.descricao + ' - ' + competencia
                 });
             }
             linhasLancamentoFolha = lancamentos;
@@ -2339,13 +2345,14 @@
             else alert('Lançamento gerado com '+lancamentos.length+' linha(s).');
         }
 
-        function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('depara-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
+        function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('depara-loja'),document.getElementById('folha-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
         function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas');const contas=ordenarCadastroNatural(lerListaCadastro('plano'));const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
         async function adicionarDeParaFolha(){const lojaCodigo=document.getElementById('depara-loja').value.trim(),rubricaId=Number(document.getElementById('depara-rubrica').value),contaId=Number(document.getElementById('depara-conta').value);const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);if(!loja||!rubricaId||!contaId)return alert('Informe a loja, a rubrica e a conta contábil.');try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
         async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
         function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
         async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
+        setTimeout(() => atualizarOpcoesLojas(), 0);
 
         // Menu lateral recolhível
         function alternarMenu() {
