@@ -832,7 +832,7 @@
                             </tbody>
                             <tfoot id="rodape-totais-lancamento-folha" class="border-t-2 border-slate-400">
                                 <tr class="bg-slate-100 font-bold text-slate-800">
-                                    <td class="p-3 text-right border-r border-slate-200">TOTAIS / DIFERENÇA</td>
+                                    <td class="p-3 text-right border-r border-slate-200">TOTAL</td>
                                     <td id="total-debito-lancamento-folha" class="p-3 text-right border-r border-slate-200">0,00</td>
                                     <td id="total-credito-lancamento-folha" class="p-3 text-right border-r border-slate-200">0,00</td>
                                     <td id="diferenca-lancamento-folha" class="p-3 text-right">Diferença: 0,00</td>
@@ -2366,7 +2366,7 @@ function converterValorLancamentoFolha(valor) {
 
         function formatarValorLancamentoFolha(valor) {
             const numero = Number(valor) || 0;
-            return numero.toFixed(2).replace('.', ',');
+            return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function atualizarTotaisLancamentoFolha() {
