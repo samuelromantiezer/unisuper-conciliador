@@ -2405,6 +2405,8 @@ function renderLancamentoFolha() {
 
             const lancamentos = [];
             const inconsistencias = [];
+            let totalProventos = 0;
+            let totalDescontos = 0;
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
                 const rubricaBruta = linha[0];
@@ -2436,8 +2438,10 @@ function renderLancamentoFolha() {
 
                 if (tipoRubrica === 'provento') {
                     debito = valorFormatadoTela;
+                    totalProventos += valor;
                 } else if (tipoRubrica === 'desconto') {
                     credito = valorFormatadoTela;
+                    totalDescontos += valor;
                 } else {
                     // Imposto e Totalizador mantêm o comportamento anterior: valor no débito.
                     debito = valorFormatadoTela;
@@ -2452,29 +2456,22 @@ function renderLancamentoFolha() {
             }
 
             // Totalizadores da folha:
+            // Os totais são calculados diretamente pelo TIPO de cada rubrica,
+            // independentemente de qual coluna (débito/crédito) o lançamento individual usa.
             // Proventos -> total no CRÉDITO.
             // Descontos -> total no DÉBITO.
-            let totalProventos = 0;
-            let totalDescontos = 0;
 
-            lancamentos.forEach(item => {
-                const debito = Number(String(item.debito || '0,00').replace(/\./g, '').replace(',', '.'));
-                const credito = Number(String(item.credito || '0,00').replace(/\./g, '').replace(',', '.'));
-                if (Number.isFinite(debito) && Number.isFinite(credito)) {
-                    if (credito > 0) totalProventos += credito;
-                    if (debito > 0) totalDescontos += debito;
-                }
+            // Usa as contas do DePara das próprias rubricas totalizadoras.
+            const rubricasTotalizadoras = lerListaCadastro('rubricas').filter(r =>
+                String(r.tipo || '').trim().toLowerCase() === 'totalizador'
+            );
+            const encontrarTotalizador = palavra => rubricasTotalizadoras.find(r => {
+                const descricao = String(r.descricao || '').trim().toLowerCase();
+                return descricao === palavra || descricao === palavra + 's' || descricao.includes(palavra);
             });
 
-            // Usa as contas do DePara das próprias rubricas totalizadoras, quando existirem.
-            const rubricaTotalProventos = lerListaCadastro('rubricas').find(r =>
-                String(r.tipo || '').trim().toLowerCase() === 'totalizador' &&
-                String(r.descricao || '').trim().toLowerCase().includes('provento')
-            );
-            const rubricaTotalDescontos = lerListaCadastro('rubricas').find(r =>
-                String(r.tipo || '').trim().toLowerCase() === 'totalizador' &&
-                String(r.descricao || '').trim().toLowerCase().includes('desconto')
-            );
+            const rubricaTotalProventos = encontrarTotalizador('provento');
+            const rubricaTotalDescontos = encontrarTotalizador('desconto');
 
             if (totalProventos > 0 && rubricaTotalProventos) {
                 const contaTotal = localizarContaDeParaFolha(loja, rubricaTotalProventos);
