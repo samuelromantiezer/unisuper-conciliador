@@ -692,7 +692,58 @@
             <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Loja</th><th class="p-3">Rubrica</th><th class="p-3">Descrição da Rubrica</th><th class="p-3">Conta Contábil</th><th class="p-3">Descrição da Conta</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-depara-folha" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
         <div id="folhatab-gerador" class="folhatab-content hidden p-5 space-y-5">
-            <div class="bg-slate-50 border border-slate-200 rounded-lg p-5"><h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-lines text-unisuperBlue mr-2"></i>Gerador de Folha de Pagamento</h4><p class="text-sm text-slate-600 mt-2">Tela preparada para a futura geração dos arquivos da folha.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5"><div class="border border-slate-200 bg-white rounded-lg p-4"><div class="font-semibold text-sm text-slate-700">Arquivo TXT</div><div class="text-xs text-slate-500 mt-1">Geração será implementada posteriormente.</div></div><div class="border border-slate-200 bg-white rounded-lg p-4"><div class="font-semibold text-sm text-slate-700">Planilha Excel 97–2003 (.xls)</div><div class="text-xs text-slate-500 mt-1">Geração será implementada posteriormente.</div></div></div></div>
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div class="p-5 border-b border-slate-200 bg-slate-50">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div>
+                            <h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-lines text-unisuperBlue mr-2"></i>Gerador de Folha de Pagamento</h4>
+                            <p class="text-sm text-slate-600 mt-1">Monte o lançamento contábil da folha em formato de planilha, com as colunas Conta VR, Débito, Crédito e Histórico.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2.5 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900 shadow-sm">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                                Arquivo TXT Folha de Pagamento
+                                <input id="arquivo-txt-folha-pagamento" type="file" accept=".txt,text/plain" class="hidden" onchange="carregarArquivoFolhaPagamento(this)">
+                            </label>
+                            <button type="button" onclick="gerarLancamentoFolha()" class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-900 shadow-sm">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                Gerar Lançamento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h5 class="font-bold text-slate-700 text-sm">Lançamento Contábil</h5>
+                            <p class="text-xs text-slate-500 mt-1">Planilha editável para conferência e ajustes antes da futura exportação para Excel 97–2003.</p>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <span id="folha-lancamento-contagem" class="bg-slate-100 border border-slate-200 rounded-full px-3 py-1">0 lançamentos</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-300 rounded-lg shadow-sm">
+                        <table class="w-full min-w-[900px] text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-300">
+                                    <th class="p-3 text-left border-r border-slate-200 w-[30%]">Conta VR</th>
+                                    <th class="p-3 text-right border-r border-slate-200 w-[20%]">Valor Débito</th>
+                                    <th class="p-3 text-right border-r border-slate-200 w-[20%]">Valor Crédito</th>
+                                    <th class="p-3 text-left w-[30%]">Histórico</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-lancamentos-folha">
+                                <tr><td colspan="4" class="p-8 text-center text-slate-400">Carregue o arquivo TXT da folha ou gere um lançamento para preencher a planilha.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        <button type="button" onclick="adicionarLinhaLancamentoFolha()" class="inline-flex items-center gap-2 bg-white text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-50">
+                            <i class="fa-solid fa-plus"></i> Adicionar linha
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -2155,6 +2206,35 @@
                 alert('Erro ao importar TXT: '+(e.message||e));
             }
         }
+        let linhasLancamentoFolha = [];
+        function escapeHtmlFolha(valor) { return String(valor ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+        function renderLancamentoFolha() {
+            const tbody = document.getElementById('tabela-lancamentos-folha'), contador = document.getElementById('folha-lancamento-contagem');
+            if (!tbody) return;
+            if (contador) contador.textContent = linhasLancamentoFolha.length === 1 ? '1 lançamento' : linhasLancamentoFolha.length + ' lançamentos';
+            if (!linhasLancamentoFolha.length) { tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400">Nenhum lançamento na planilha.</td></tr>'; return; }
+            tbody.innerHTML = linhasLancamentoFolha.map((item,i)=>`
+                <tr class="bg-white hover:bg-slate-50">
+                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.conta)}" onchange="editarLinhaLancamentoFolha(${i},'conta',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
+                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.debito)}" onchange="editarLinhaLancamentoFolha(${i},'debito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
+                    <td class="p-1 border-r border-slate-200"><input value="${escapeHtmlFolha(item.credito)}" onchange="editarLinhaLancamentoFolha(${i},'credito',this.value)" inputmode="decimal" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
+                    <td class="p-1"><input value="${escapeHtmlFolha(item.historico)}" onchange="editarLinhaLancamentoFolha(${i},'historico',this.value)" class="w-full min-h-[40px] border border-transparent hover:border-slate-300 focus:border-unisuperBlue rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-unisuperBlue"></td>
+                </tr>`).join('');
+        }
+        function editarLinhaLancamentoFolha(indice,campo,valor){ if(linhasLancamentoFolha[indice]) linhasLancamentoFolha[indice][campo]=valor; }
+        function adicionarLinhaLancamentoFolha(){ linhasLancamentoFolha.push({conta:'',debito:'',credito:'',historico:''}); renderLancamentoFolha(); document.getElementById('tabela-lancamentos-folha')?.lastElementChild?.querySelector('input')?.focus(); }
+        function carregarArquivoFolhaPagamento(input){
+            const file=input.files?.[0]; if(!file)return;
+            const reader=new FileReader();
+            reader.onload=()=>{ const texto=String(reader.result||'').replace(/^\uFEFF/,''); const linhas=texto.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+                if(!linhas.length){alert('O arquivo TXT está vazio.');input.value='';return;}
+                alert('Arquivo TXT Folha de Pagamento carregado. A estrutura do TXT ainda precisa ser definida para transformar automaticamente os dados em lançamentos.');
+                input.value='';
+            };
+            reader.onerror=()=>{alert('Não foi possível ler o arquivo TXT da folha de pagamento.');input.value='';};
+            reader.readAsText(file);
+        }
+        function gerarLancamentoFolha(){ if(!linhasLancamentoFolha.length){linhasLancamentoFolha.push({conta:'',debito:'',credito:'',historico:''});renderLancamentoFolha();} }
         function atualizarOpcoesLojas(){const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));const selects=[document.getElementById('depara-loja')].filter(Boolean);selects.forEach(select=>{const valor=select.value;select.innerHTML='<option value="">Selecione a Loja</option>'+lojas.map(x=>`<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.codigo)} - ${escapeHtml(x.nome)}</option>`).join('');if(lojas.some(x=>String(x.codigo)===valor))select.value=valor;});}
         function atualizarOpcoesDePara(){const lojaCodigo=document.getElementById('depara-loja')?.value.trim();const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);const rubricas=lerListaCadastro('rubricas');const contas=ordenarCadastroNatural(lerListaCadastro('plano'));const sr=document.getElementById('depara-rubrica'),sc=document.getElementById('depara-conta');if(!sr||!sc)return;const vr=sr.value,vc=sc.value;sr.innerHTML='<option value="">Selecione a Rubrica</option>'+rubricas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');sc.innerHTML='<option value="">Selecione a Conta Contábil</option>'+contas.map(x=>`<option value="${escapeHtml(String(x.id))}">${escapeHtml(x.codigo)} - ${escapeHtml(x.descricao)}</option>`).join('');if(rubricas.some(x=>String(x.id)===vr))sr.value=vr;if(contas.some(x=>String(x.id)===vc))sc.value=vc;}
         async function adicionarDeParaFolha(){const lojaCodigo=document.getElementById('depara-loja').value.trim(),rubricaId=Number(document.getElementById('depara-rubrica').value),contaId=Number(document.getElementById('depara-conta').value);const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);if(!loja||!rubricaId||!contaId)return alert('Informe a loja, a rubrica e a conta contábil.');try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
