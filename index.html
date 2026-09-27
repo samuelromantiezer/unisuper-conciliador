@@ -2474,6 +2474,28 @@
             popup.classList.remove('hidden');
         }
 
+        function exportarFolhaGeradaVisualizacao() {
+            if (!folhaGeradaVisualizando || !Array.isArray(folhaGeradaVisualizando.linhas) || !folhaGeradaVisualizando.linhas.length) {
+                alert('Nenhum lançamento salvo para exportar.');
+                return;
+            }
+            if (typeof XLSX === 'undefined') {
+                alert('A biblioteca Excel não foi carregada.');
+                return;
+            }
+            const dados = folhaGeradaVisualizando.linhas.map(item => ({
+                'Conta VR': item.conta || '',
+                'Valor Débito': String(item.debito || '0,00').replace(',', '.'),
+                'Valor Crédito': String(item.credito || '0,00').replace(',', '.'),
+                'Histórico': item.historico || ''
+            }));
+            const ws = XLSX.utils.json_to_sheet(dados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Lançamento');
+            const competencia = String(folhaGeradaVisualizando.competencia || '').slice(0, 7).replace('-', '_');
+            XLSX.writeFile(wb, 'Lancamento_Folha_Pagamento_' + competencia + '.xls', { bookType: 'xls' });
+        }
+
         function fecharFolhaGerada() {
             document.getElementById('popup-folha-gerada')?.classList.add('hidden');
             folhaGeradaVisualizando = null;
@@ -3098,7 +3120,10 @@ async function importarDeParaFolhaTXT(input){
                 </table>
             </div>
             <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-                <button type="button" onclick="fecharFolhaGerada()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-700 text-white hover:bg-slate-800">Fechar</button>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <button type="button" onclick="exportarFolhaGeradaVisualizacao()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700"><i class="fa-solid fa-file-excel"></i> Exportar Excel 97-2003</button>
+                    <button type="button" onclick="fecharFolhaGerada()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-700 text-white hover:bg-slate-800">Fechar</button>
+                </div>
             </div>
         </div>
     </div>
