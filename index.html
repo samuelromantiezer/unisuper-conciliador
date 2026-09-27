@@ -1909,9 +1909,37 @@
                     return;
                 }
 
-                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Consultando Mapa Resumo e Caixa no ERP...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Consultando Mapa Resumo salvo...</td></tr>';
 
                 try {
+                    // Primeiro consulta o histórico salvo no Supabase.
+                    // Assim, a mesma consulta pode ser visualizada em qualquer computador/local.
+                    if (supabaseClient) {
+                        const { data: dadosSalvos, error: erroSupabase } = await supabaseClient
+                            .from('relatorio_mapa_resumo')
+                            .select('id_loja,data,valor_venda,venda_liquida,diferenca')
+                            .gte('data', dataInicial)
+                            .lte('data', dataFinal)
+                            .order('data', { ascending: true })
+                            .order('id_loja', { ascending: true });
+
+                        if (erroSupabase) {
+                            console.warn('Não foi possível consultar o histórico do Mapa Resumo no Supabase:', erroSupabase);
+                        } else if (Array.isArray(dadosSalvos) && dadosSalvos.length > 0) {
+                            mapaResumoDados = dadosSalvos;
+                            preencherFiltrosMapaResumo();
+                            renderizarMapaResumo();
+
+                            const dataInicialBR = dataInicial.split('-').reverse().join('/');
+                            const dataFinalBR = dataFinal.split('-').reverse().join('/');
+                            alert(`Mapa Resumo consultado do histórico de ${dataInicialBR} até ${dataFinalBR} com ${mapaResumoDados.length} registro(s).`);
+                            return;
+                        }
+                    }
+
+                    // Se ainda não houver dados salvos para o período, mantém a consulta local atual.
+                    tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Nenhum histórico salvo. Consultando Mapa Resumo no ERP...</td></tr>';
+
                     const resposta = await fetch(`${URL_MAPA_RESUMO}/executar-mapa-resumo`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
