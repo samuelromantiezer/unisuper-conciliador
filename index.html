@@ -758,11 +758,11 @@
             <form onsubmit="event.preventDefault(); adicionarDeParaFolha()" class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <select id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required><option value="">Selecione a Loja</option></select>
                 <div class="campo-consulta-lupa">
-                    <select id="depara-rubrica" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" required><option value="">Selecione a Rubrica</option></select>
+                    <input id="depara-rubrica" type="text" inputmode="text" autocomplete="off" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da Rubrica (ou use a lupa)" aria-label="Código da Rubrica">
                     <button type="button" class="btn-lupa-cadastro" onclick="abrirPopupConsultaCadastro('rubricas')" title="Consultar Rubricas" aria-label="Consultar Rubricas"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
                 <div class="campo-consulta-lupa">
-                    <select id="depara-conta" class="w-full text-sm border border-slate-300 rounded-lg p-2.5" required><option value="">Selecione a Conta Contábil</option></select>
+                    <input id="depara-conta" type="text" inputmode="text" autocomplete="off" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da Conta Contábil (ou use a lupa)" aria-label="Código da Conta Contábil">
                     <button type="button" class="btn-lupa-cadastro" onclick="abrirPopupConsultaCadastro('plano')" title="Consultar Contas Contábeis" aria-label="Consultar Contas Contábeis"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
                 <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-link mr-2"></i>Vincular</button>
@@ -2586,9 +2586,9 @@ function renderLancamentoFolha() {
 
         function selecionarItemPopupConsulta(id) {
             const idTexto = String(id);
-            const selectId = tipoPopupConsultaCadastro === 'rubricas' ? 'depara-rubrica' : 'depara-conta';
-            const select = document.getElementById(selectId);
-            if (!select) return;
+            const inputId = tipoPopupConsultaCadastro === 'rubricas' ? 'depara-rubrica' : 'depara-conta';
+            const input = document.getElementById(inputId);
+            if (!input) return;
 
             const lista = tipoPopupConsultaCadastro === 'rubricas'
                 ? lerListaCadastro('rubricas')
@@ -2596,15 +2596,8 @@ function renderLancamentoFolha() {
             const item = lista.find(x => String(x.id) === idTexto);
 
             if (item) {
-                let option = [...select.options].find(o => String(o.value) === idTexto);
-                if (!option) {
-                    option = document.createElement('option');
-                    option.value = idTexto;
-                    option.textContent = String(item.codigo ?? '') + ' - ' + String(item.descricao ?? '');
-                    select.appendChild(option);
-                }
-                select.value = idTexto;
-                select.dispatchEvent(new Event('change', { bubbles: true }));
+                input.value = String(item.codigo ?? '');
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
             fecharPopupConsultaCadastro();
         }
@@ -2731,7 +2724,21 @@ async function importarDeParaFolhaTXT(input){
             }
         }
 
-        async function adicionarDeParaFolha(){const lojaCodigo=document.getElementById('depara-loja').value.trim(),rubricaId=Number(document.getElementById('depara-rubrica').value),contaId=Number(document.getElementById('depara-conta').value);const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);if(!loja||!rubricaId||!contaId)return alert('Informe a loja, a rubrica e a conta contábil.');try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();document.getElementById('depara-loja').value='';document.getElementById('depara-rubrica').value='';document.getElementById('depara-conta').value='';alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
+        async function adicionarDeParaFolha(){
+  const lojaCodigo=document.getElementById('depara-loja').value.trim();
+  const rubricaCodigo=document.getElementById('depara-rubrica').value.trim();
+  const contaCodigo=document.getElementById('depara-conta').value.trim();
+  const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);
+  const rubrica=lerListaCadastro('rubricas').find(x=>String(x.codigo??'').trim()===rubricaCodigo);
+  const conta=lerListaCadastro('plano').find(x=>String(x.codigo??'').trim()===contaCodigo);
+  if(!loja||!rubrica||!conta){
+    const faltas=[];
+    if(!loja)faltas.push('loja');
+    if(!rubrica)faltas.push('rubrica');
+    if(!conta)faltas.push('conta contábil');
+    return alert('Informe códigos válidos para: '+faltas.join(', ')+'.');
+  }
+  const rubricaId=Number(rubrica.id),contaId=Number(conta.id);try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();document.getElementById('depara-loja').value='';document.getElementById('depara-rubrica').value='';document.getElementById('depara-conta').value='';alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
         async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
         function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
         async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
