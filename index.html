@@ -317,7 +317,7 @@
                 <div><h4 class="font-bold text-slate-800">Plano de Contas</h4><p class="text-xs text-slate-500">Número da conta e descrição da conta. Você pode selecionar várias contas para exclusão.</p></div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <button type="button" onclick="selecionarTodasContasPlano()" class="inline-flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-800"><i class="fa-solid fa-check-double"></i> Selecionar várias</button>
-                    <button type="button" onclick="excluirContasPlanoSelecionadas()" class="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700"><i class="fa-solid fa-trash"></i> Excluir selecionadas</button>
+                    <button type="button" onclick="excluirContasPlanoSelecionadas()" class="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700"><i class="fa-solid fa-trash"></i> Excluir selecionadas <span id="plano-contagem-botao" class="min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center rounded-full bg-white/20 text-white font-bold">0</span></button>
                     <button type="button" onclick="excluirTodasContasPlano()" class="inline-flex items-center gap-2 bg-red-800 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-900"><i class="fa-solid fa-trash-can"></i> Excluir todas</button>
                     <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900">
                         <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
@@ -336,7 +336,7 @@
             </div>
             <div class="flex items-center justify-between gap-3 flex-wrap bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
                 <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer"><input id="plano-selecionar-visiveis" type="checkbox" onchange="selecionarContasVisiveis(this.checked)" class="rounded"> Selecionar todas as contas exibidas</label>
-                <span id="plano-contagem-selecionadas" class="text-xs text-slate-500">0 selecionada(s)</span>
+                <span id="plano-contagem-selecionadas" class="inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-full px-3 py-1.5"><i class="fa-solid fa-list-check text-unisuperBlue"></i> <span id="plano-contagem-texto">0 contas selecionadas</span></span>
             </div>
             <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3 w-12 text-center">Sel.</th><th class="p-3">Número da Conta</th><th class="p-3">Descrição</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-plano" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
@@ -2035,7 +2035,13 @@
             document.getElementById('lista-historicos').innerHTML = historicos.length ? historicos.map(x=>`<tr><td class="p-3 font-medium">${escapeHtml(x.codigo)}</td><td class="p-3">${escapeHtml(x.descricao)}</td><td class="p-3 text-center"><button onclick="excluirCadastro('historicos',${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3" class="p-6 text-center text-slate-400">Nenhum histórico cadastrado.</td></tr>';
             atualizarOpcoesDePara(); renderDeParaFolha();
         }
-        function atualizarContagemPlano() { const n = document.querySelectorAll('.plano-check:checked').length; const el=document.getElementById('plano-contagem-selecionadas'); if(el) el.textContent=`${n} selecionada(s)`; }
+        function atualizarContagemPlano() {
+            const n = document.querySelectorAll('.plano-check:checked').length;
+            const texto = document.getElementById('plano-contagem-texto');
+            const botao = document.getElementById('plano-contagem-botao');
+            if (texto) texto.textContent = n === 1 ? '1 conta selecionada' : n + ' contas selecionadas';
+            if (botao) botao.textContent = String(n);
+        }
         function selecionarContasVisiveis(marcar) { document.querySelectorAll('.plano-check').forEach(cb=>cb.checked=marcar); atualizarContagemPlano(); }
         function selecionarTodasContasPlano(){const checks=document.querySelectorAll('.plano-check');const marcar=checks.length>0&&[...checks].some(cb=>!cb.checked);selecionarContasVisiveis(marcar);}
         async function excluirContasPlanoSelecionadas(){
