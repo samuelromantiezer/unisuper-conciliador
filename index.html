@@ -2436,9 +2436,51 @@
                     '<td class="p-3 text-center"><div class="flex flex-wrap items-center justify-center gap-2">' +
                         '<button type="button" onclick="visualizarFolhaGerada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-eye"></i> Visualizar</button>' +
                         '<button type="button" onclick="exportarFolhaGeradaPorId(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700"><i class="fa-solid fa-file-excel"></i> Excel 97-2003</button>' +
+                        '<button type="button" onclick="excluirFolhaGerada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-700"><i class="fa-solid fa-trash"></i> Excluir</button>' +
                     '</div></td>' +
                 '</tr>';
             }).join('');
+        }
+
+        async function excluirFolhaGerada(id) {
+            const item = localizarFolhaGerada(id);
+            if (!item) {
+                alert('Folha gerada não encontrada.');
+                return;
+            }
+
+            const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
+            const competencia = formatarCompetenciaFolhaISO(item.competencia);
+            const identificacao = (loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada') + ' / ' + competencia;
+
+            const confirmar = confirm('Deseja excluir a folha gerada de ' + identificacao + '?\n\nApós a exclusão, será possível gerar e salvar novamente essa competência.');
+            if (!confirmar) return;
+
+            if (!supabaseClient) {
+                alert('Supabase não está conectado. Faça login e tente novamente.');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('folhas_geradas')
+                    .delete()
+                    .eq('id', item.id);
+
+                if (error) throw error;
+
+                folhasGeradas = folhasGeradas.filter(x => Number(x.id) !== Number(item.id));
+
+                if (folhaGeradaVisualizando && Number(folhaGeradaVisualizando.id) === Number(item.id)) {
+                    fecharFolhaGerada();
+                }
+
+                renderFolhasGeradas();
+                alert('Folha gerada excluída com sucesso. A competência poderá ser gerada novamente.');
+            } catch (e) {
+                console.error('Erro ao excluir folha gerada:', e);
+                alert('Erro ao excluir a folha gerada: ' + (e.message || e));
+            }
         }
 
         function visualizarFolhaGerada(id) {
