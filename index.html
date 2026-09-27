@@ -2405,6 +2405,9 @@ function renderLancamentoFolha() {
 
             const lancamentos = [];
             const inconsistencias = [];
+            const lancamentosProventos = [];
+            const lancamentosDescontos = [];
+            const lancamentosOutros = [];
             let totalProventos = 0;
             let totalDescontos = 0;
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
@@ -2447,12 +2450,20 @@ function renderLancamentoFolha() {
                     debito = valorFormatadoTela;
                 }
 
-                lancamentos.push({
+                const lancamento = {
                     conta: conta.codigo,
                     debito,
                     credito,
                     historico: loja.nome + ': DESPESA FOLHA - ' + rubrica.descricao + ' - ' + competencia
-                });
+                };
+
+                if (tipoRubrica === 'provento') {
+                    lancamentosProventos.push(lancamento);
+                } else if (tipoRubrica === 'desconto') {
+                    lancamentosDescontos.push(lancamento);
+                } else {
+                    lancamentosOutros.push(lancamento);
+                }
             }
 
             // Totalizadores da folha:
@@ -2473,6 +2484,14 @@ function renderLancamentoFolha() {
             const rubricaTotalProventos = encontrarTotalizador('provento');
             const rubricaTotalDescontos = encontrarTotalizador('desconto');
 
+            // A ordem da tela é obrigatória:
+            // 1) todos os proventos
+            // 2) totalizador de proventos
+            // 3) todos os descontos
+            // 4) totalizador de descontos
+            // 5) demais tipos da folha
+            lancamentos.push(...lancamentosProventos);
+
             if (totalProventos > 0 && rubricaTotalProventos) {
                 const contaTotal = localizarContaDeParaFolha(loja, rubricaTotalProventos);
                 if (contaTotal) {
@@ -2487,6 +2506,8 @@ function renderLancamentoFolha() {
                 }
             }
 
+            lancamentos.push(...lancamentosDescontos);
+
             if (totalDescontos > 0 && rubricaTotalDescontos) {
                 const contaTotal = localizarContaDeParaFolha(loja, rubricaTotalDescontos);
                 if (contaTotal) {
@@ -2500,6 +2521,8 @@ function renderLancamentoFolha() {
                     inconsistencias.push('Não existe DePara para o totalizador de Descontos na loja "' + loja.codigo + '".');
                 }
             }
+
+            lancamentos.push(...lancamentosOutros);
 
             linhasLancamentoFolha = lancamentos;
             renderLancamentoFolha();
