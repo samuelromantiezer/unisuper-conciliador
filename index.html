@@ -716,6 +716,10 @@
                                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                                 Gerar Lançamento
                             </button>
+                            <button type="button" onclick="exportarLancamentoFolhaExcel()" class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 shadow-sm">
+                                <i class="fa-solid fa-file-excel"></i>
+                                Exportar Excel
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2258,7 +2262,28 @@
             return lerListaCadastro('plano').find(x => Number(x.id) === Number(vinculo.conta_contabil_id)) || null;
         }
 
-        function renderLancamentoFolha() {
+        function exportarLancamentoFolhaExcel() {
+  if (!linhasLancamentoFolha || !linhasLancamentoFolha.length) {
+    alert('Gere o lançamento antes de exportar para Excel.');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    alert('A biblioteca Excel não foi carregada.');
+    return;
+  }
+  const dados = linhasLancamentoFolha.map(item => ({
+    'Conta VR': item.conta || '',
+    'Valor Débito': item.debito || '',
+    'Valor Crédito': item.credito || '',
+    'Histórico': item.historico || ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(dados);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lançamento');
+  XLSX.writeFile(wb, 'Lancamento_Folha_Pagamento.xlsx');
+}
+
+function renderLancamentoFolha() {
             const tbody = document.getElementById('tabela-lancamentos-folha');
             const contador = document.getElementById('folha-lancamento-contagem');
             if (!tbody) return;
