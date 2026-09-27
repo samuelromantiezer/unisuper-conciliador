@@ -2300,12 +2300,19 @@
 
             const lancamentos = [];
             const inconsistencias = [];
-            for (let i = 1; i < dadosFolhaImportados.length; i++) {
+            for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
-                const rubricaCodigo = String(linha[0] ?? '').trim();
+                const rubricaBruta = linha[0];
+
+                // A coluna A define se a linha é uma rubrica válida.
+                // Cabeçalhos, títulos e textos são ignorados automaticamente.
+                const textoRubrica = String(rubricaBruta ?? '').trim();
+                const rubricaCodigo = textoRubrica.replace(/^["']|["']$/g, '').trim();
+                const somenteNumeros = rubricaCodigo.replace(/\D/g, '');
+                if (!rubricaCodigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(rubricaCodigo)) continue;
+
                 const valorBruto = linha[32];
                 const lojaValor = String(linha[2] ?? '').trim();
-                if (!rubricaCodigo && !lojaValor && (valorBruto === '' || valorBruto == null)) continue;
 
                 const rubrica = localizarRubricaFolha(rubricaCodigo);
                 const loja = localizarLojaFolha(lojaValor);
