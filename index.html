@@ -2481,6 +2481,7 @@ function renderLancamentoFolha() {
             busca.value = '';
             busca.oninput = renderPopupConsultaCadastro;
             renderPopupConsultaCadastro();
+            ativarDuploCliquePopupConsulta();
             setTimeout(() => busca.focus(), 0);
         }
 
@@ -2519,7 +2520,7 @@ function renderLancamentoFolha() {
                 const codigo = escapeHtml(String(item.codigo ?? ''));
                 const descricao = escapeHtml(String(item.descricao ?? ''));
                 const tipo = escapeHtml(String(item.tipo ?? ''));
-                return '<button type="button" class="p-4 hover:bg-blue-50 transition flex items-center justify-between gap-4" ondblclick="selecionarItemPopupConsulta(' + JSON.stringify(id) + ')" title="Dê dois cliques para selecionar">' +
+                return '<button type="button" data-popup-id="' + escapeHtml(id) + '" class="popup-item-consulta p-4 hover:bg-blue-50 transition flex items-center justify-between gap-4" title="Dê dois cliques para selecionar">' +
                     '<span class="min-w-0">' +
                         '<span class="block text-sm font-bold text-slate-800 truncate">' + (codigo || 'Sem número') + '</span>' +
                         '<span class="block text-xs text-slate-500 mt-1">' + descricao + '</span>' +
@@ -2536,16 +2537,37 @@ function renderLancamentoFolha() {
             const idTexto = String(id);
             const selectId = tipoPopupConsultaCadastro === 'rubricas' ? 'depara-rubrica' : 'depara-conta';
             const select = document.getElementById(selectId);
-            if (!select) return fecharPopupConsultaCadastro();
+            if (!select) return;
 
-            if ([...select.options].some(option => String(option.value) === idTexto)) {
+            const lista = tipoPopupConsultaCadastro === 'rubricas'
+                ? lerListaCadastro('rubricas')
+                : lerListaCadastro('plano');
+            const item = lista.find(x => String(x.id) === idTexto);
+
+            if (item) {
+                let option = [...select.options].find(o => String(o.value) === idTexto);
+                if (!option) {
+                    option = document.createElement('option');
+                    option.value = idTexto;
+                    option.textContent = String(item.codigo ?? '') + ' - ' + String(item.descricao ?? '');
+                    select.appendChild(option);
+                }
                 select.value = idTexto;
                 select.dispatchEvent(new Event('change', { bubbles: true }));
             }
             fecharPopupConsultaCadastro();
         }
 
-        // O popup é criado depois deste script; o evento de busca é ligado ao abrir o popup.
+        // O popup é criado depois deste script; a busca e o duplo clique são ligados ao abrir/usar a lista.
+        function ativarDuploCliquePopupConsulta() {
+            const lista = document.getElementById('popup-consulta-lista');
+            if (!lista || lista.dataset.dblclickAtivo === '1') return;
+            lista.dataset.dblclickAtivo = '1';
+            lista.addEventListener('dblclick', event => {
+                const item = event.target.closest('.popup-item-consulta');
+                if (item) selecionarItemPopupConsulta(item.getAttribute('data-popup-id'));
+            });
+        }
 
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && !document.getElementById('popup-consulta-cadastros')?.classList.contains('hidden')) {
