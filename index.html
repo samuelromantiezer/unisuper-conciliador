@@ -70,6 +70,15 @@
         #menu-lateral.menu-recolhido #menu-toggle { right: -.85rem; }
         #menu-lateral.menu-recolhido #menu-toggle i { transform: rotate(180deg); }
         #menu-lateral .menu-item { min-height: 44px; }
+        #menu-lateral .menu-subitem { min-height: 38px; }
+        #submenu-conciliacoes { overflow: hidden; transition: max-height .22s ease, opacity .22s ease; }
+        #submenu-conciliacoes.submenu-fechado { max-height: 0; opacity: 0; pointer-events: none; margin-top: 0; }
+        #submenu-conciliacoes:not(.submenu-fechado) { max-height: 220px; opacity: 1; }
+        #icone-submenu-conciliacoes.submenu-aberto { transform: rotate(180deg); }
+        #menu-lateral.menu-recolhido #submenu-conciliacoes { display: none; }
+        #menu-lateral.menu-recolhido #btn-tab-conciliacoes { justify-content: center; }
+        #menu-lateral .menu-subitem.bg-slate-800 { background: rgba(30,58,138,.35); color: #fff; }
+        #menu-lateral .menu-subitem i { font-size: .75rem; }
         #menu-lateral .logout-btn { min-height: 42px; }
         #conteudo-principal { min-width: 0; }
 
@@ -312,6 +321,11 @@
             #popup-consulta-cadastros .popup-lista { max-height: 58vh; }
         }
 
+        /* ABAS INTERNAS DOS MÓDULOS DE CONCILIAÇÃO */
+        .conciliacao-tab-btn { transition: all .15s ease; border-radius: .45rem .45rem 0 0; }
+        .conciliacao-tab-btn:not(.border-unisuperBlue) { color: #64748b; border-color: transparent; }
+        .conciliacao-tab-btn:not(.border-unisuperBlue):hover { color: #1e3a8a; background: #f8fafc; }
+
     </style>
 
 </head>
@@ -356,9 +370,23 @@
                     <button onclick="switchTab('cadastro')" id="btn-tab-cadastro" title="Cadastro" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-folder-plus w-5"></i><span class="menu-label">Cadastro</span>
                     </button>
-                    <button onclick="switchTab('conciliacoes')" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-scale-balanced w-5"></i><span class="menu-label">Conciliações</span>
-                    </button>
+                    <div class="menu-group">
+                        <button onclick="alternarSubmenuConciliacoes()" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                            <span class="flex items-center space-x-3 min-w-0"><i class="fa-solid fa-scale-balanced w-5"></i><span class="menu-label">Conciliações</span></span>
+                            <i id="icone-submenu-conciliacoes" class="menu-label fa-solid fa-chevron-down text-[10px] transition-transform"></i>
+                        </button>
+                        <div id="submenu-conciliacoes" class="pl-3 mt-1 space-y-1 submenu-fechado">
+                            <button onclick="abrirModuloConciliacao('caixa')" id="btn-submenu-caixa" title="Módulo Caixa" class="menu-subitem menu-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                                <i class="fa-solid fa-cash-register w-5"></i><span class="menu-label">Caixa</span>
+                            </button>
+                            <button onclick="abrirModuloConciliacao('fiscal')" id="btn-submenu-fiscal" title="Módulo Fiscal" class="menu-subitem menu-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                                <i class="fa-solid fa-receipt w-5"></i><span class="menu-label">Fiscal</span>
+                            </button>
+                            <button onclick="abrirModuloConciliacao('financeiro')" id="btn-submenu-financeiro" title="Módulo Financeiro" class="menu-subitem menu-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                                <i class="fa-solid fa-wallet w-5"></i><span class="menu-label">Financeiro</span>
+                            </button>
+                        </div>
+                    </div>
                     <button onclick="switchTab('folha')" id="btn-tab-folha" title="Folha de Pagamento" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-users-rectangle w-5"></i><span class="menu-label">Folha de Pagamento</span>
                     </button>
@@ -495,6 +523,12 @@
 
                         <!-- SUB-ABA CAIXA -->
                         <div id="subtab-caixa" class="subtab-content space-y-4">
+                            <div class="flex items-center gap-2 border-b border-slate-200 mb-4" role="tablist" aria-label="Abas do módulo Caixa">
+                                <button type="button" id="conciliacao-tab-btn-caixa-mapa-resumo" onclick="switchConciliacaoAba('caixa','mapa-resumo')" class="conciliacao-tab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue">
+                                    <i class="fa-solid fa-map text-unisuperBlue mr-2"></i>Mapa Resumo
+                                </button>
+                            </div>
+                            <div id="conciliacao-aba-caixa-mapa-resumo" class="conciliacao-aba-caixa space-y-4">
                             <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
                                 <div class="flex items-center justify-between gap-3">
                                     <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">
@@ -570,10 +604,18 @@
                                     </tbody>
                                 </table>
                             </div>
+                            </div>
+                        </div>
                         </div>
 
                         <!-- SUB-ABA FISCAL -->
                         <div id="subtab-fiscal" class="subtab-content hidden space-y-6">
+                            <div class="flex items-center gap-2 border-b border-slate-200 mb-4" role="tablist" aria-label="Abas do módulo Fiscal">
+                                <button type="button" id="conciliacao-tab-btn-fiscal-icms" onclick="switchConciliacaoAba('fiscal','icms')" class="conciliacao-tab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue">
+                                    <i class="fa-solid fa-receipt text-unisuperBlue mr-2"></i>ICMS
+                                </button>
+                            </div>
+                            <div id="conciliacao-aba-fiscal-icms" class="conciliacao-aba-fiscal space-y-6">
                             <div class="space-y-3">
                                 <div class="flex justify-between items-center bg-slate-50 p-4 rounded-lg border border-slate-200">
                                     <div>
@@ -602,15 +644,19 @@
                                     </table>
                                 </div>
                             </div>
+                            </div>
+                        </div>
                         </div>
 
                         <!-- SUB-ABA FINANCEIRO (FORNECEDORES) -->
                         <div id="subtab-financeiro" class="subtab-content hidden space-y-6">
-                            
+                            <div class="flex items-center gap-2 border-b border-slate-200 mb-4" role="tablist" aria-label="Abas do módulo Financeiro">
+                                <button type="button" id="conciliacao-tab-btn-financeiro-fornecedores" onclick="switchConciliacaoAba('financeiro','fornecedores')" class="conciliacao-tab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue">
+                                    <i class="fa-solid fa-truck-field text-unisuperBlue mr-2"></i>Fornecedores
+                                </button>
+                            </div>
+                            <div id="conciliacao-aba-financeiro-fornecedores" class="conciliacao-aba-financeiro space-y-6">
                             <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 font-semibold text-slate-700 text-sm flex flex-col md:flex-row justify-between items-center gap-3">
-                                <span>
-                                    <i class="fa-solid fa-folder-open text-unisuperBlue mr-2"></i> Módulo: Contas a Pagar e Receber (Fornecedores)
-                                </span>
                                 <div class="flex items-center gap-2">
                                     <button id="btn-extracao-servidor" onclick="dispararExtracaoServidor()" class="bg-unisuperBlue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-900 transition shadow flex items-center gap-1">
                                         <i class="fa-solid fa-bolt"></i><span>Executar Extração no Servidor</span>
@@ -780,6 +826,8 @@
                                     </table>
                                 </div>
                             </div>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -2099,9 +2147,74 @@
                 btnSubAlvo.classList.add('border-unisuperBlue', 'text-unisuperBlue');
             }
             if (salvar) localStorage.setItem('unisuper_subaba_atual', subTabId);
+            marcarModuloConciliacaoAtivo(subTabId);
+            alternarSubmenuConciliacoes(true);
             if (subTabId === 'financeiro') {
                 carregarDivergenciasFornecedores();
             }
+        }
+
+
+        function alternarSubmenuConciliacoes(forcarEstado = null) {
+            const submenu = document.getElementById('submenu-conciliacoes');
+            const icone = document.getElementById('icone-submenu-conciliacoes');
+            if (!submenu) return;
+            const fechadoAtual = submenu.classList.contains('submenu-fechado');
+            const abrir = forcarEstado === null ? fechadoAtual : Boolean(forcarEstado);
+            submenu.classList.toggle('submenu-fechado', !abrir);
+            if (icone) icone.classList.toggle('submenu-aberto', abrir);
+            try { localStorage.setItem('unisuper_submenu_conciliacoes_aberto', abrir ? '1' : '0'); } catch (e) {}
+        }
+
+        function marcarModuloConciliacaoAtivo(subTabId) {
+            document.querySelectorAll('.menu-subitem').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            const btn = document.getElementById('btn-submenu-' + subTabId);
+            if (btn) {
+                btn.classList.remove('text-slate-400');
+                btn.classList.add('bg-slate-800', 'text-white');
+            }
+        }
+
+        function abrirModuloConciliacao(modulo) {
+            switchTab('conciliacoes');
+            switchSubTab(modulo);
+            alternarSubmenuConciliacoes(true);
+            marcarModuloConciliacaoAtivo(modulo);
+        }
+
+        function switchConciliacaoAba(modulo, aba, salvar = true) {
+            const prefixo = 'conciliacao-aba-' + modulo;
+            document.querySelectorAll('.conciliacao-aba-' + modulo).forEach(el => el.classList.add('hidden'));
+            const alvo = document.getElementById(prefixo + '-' + aba);
+            if (alvo) alvo.classList.remove('hidden');
+
+            document.querySelectorAll('#subtab-' + modulo + ' .conciliacao-tab-btn').forEach(btn => {
+                btn.classList.remove('border-unisuperBlue', 'text-unisuperBlue');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+            const botao = document.getElementById('conciliacao-tab-btn-' + modulo + '-' + aba);
+            if (botao) {
+                botao.classList.remove('border-transparent', 'text-slate-500');
+                botao.classList.add('border-unisuperBlue', 'text-unisuperBlue');
+            }
+            if (salvar) {
+                try { localStorage.setItem('unisuper_conciliacao_aba_' + modulo, aba); } catch (e) {}
+            }
+        }
+
+        function inicializarAbasInternasConciliacao() {
+            const padroes = { caixa: 'mapa-resumo', fiscal: 'icms', financeiro: 'fornecedores' };
+            Object.keys(padroes).forEach(modulo => {
+                let aba = padroes[modulo];
+                try {
+                    const salvo = localStorage.getItem('unisuper_conciliacao_aba_' + modulo);
+                    if (salvo) aba = salvo;
+                } catch (e) {}
+                switchConciliacaoAba(modulo, aba, false);
+            });
         }
 
         function escapeHtml(valor) {
@@ -3464,6 +3577,20 @@ async function importarDeParaFolhaTXT(input){
         });
 
         inicializarMenuResponsivo();
+
+        (function inicializarSubmenuConciliacoes() {
+            let aberto = false;
+            let modulo = 'caixa';
+            try {
+                const salvo = localStorage.getItem('unisuper_submenu_conciliacoes_aberto');
+                if (salvo !== null) aberto = salvo === '1';
+                const salvoModulo = localStorage.getItem('unisuper_subaba_atual');
+                if (['caixa','fiscal','financeiro'].includes(salvoModulo)) modulo = salvoModulo;
+            } catch (e) {}
+            alternarSubmenuConciliacoes(aberto);
+            marcarModuloConciliacaoAtivo(modulo);
+        })();
+        inicializarAbasInternasConciliacao();
 </script>
 
     <div id="modal-copiar-depara" class="hidden fixed inset-0 z-[80] bg-slate-900/50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-copiar-depara">
