@@ -2137,7 +2137,8 @@
                 btnAlvo.classList.remove('text-slate-300');
                 btnAlvo.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
             }
-            if (salvar) localStorage.setItem('unisuper_aba_atual', tabId);
+            if (tabId === 'folha') { setTimeout(() => switchFolhaTab('depara'), 0); }
+    if (salvar) localStorage.setItem('unisuper_aba_atual', tabId);
         }
 
         function switchConciliacaoAba(modulo, aba, salvar = true) {
