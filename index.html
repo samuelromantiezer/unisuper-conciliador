@@ -811,6 +811,7 @@
                 </div>
             </div>
             <form onsubmit="event.preventDefault(); adicionarDeParaFolha()" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input id="depara-edicao-id" type="hidden" value="">
                 <select id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required><option value="">Selecione a Loja</option></select>
                 <div class="campo-consulta-lupa">
                     <input id="depara-rubrica" type="text" inputmode="text" autocomplete="off" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da Rubrica (ou use a lupa)" aria-label="Código da Rubrica">
@@ -820,7 +821,10 @@
                     <input id="depara-conta" type="text" inputmode="text" autocomplete="off" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da Conta Contábil (ou use a lupa)" aria-label="Código da Conta Contábil">
                     <button type="button" class="btn-lupa-cadastro" onclick="abrirPopupConsultaCadastro('plano')" title="Consultar Contas Contábeis" aria-label="Consultar Contas Contábeis"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </div>
-                <button class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-link mr-2"></i>Vincular</button>
+                <div class="flex gap-2">
+                    <button id="btn-salvar-depara" type="submit" class="flex-1 bg-slate-800 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-slate-900"><i class="fa-solid fa-link mr-2"></i>Vincular</button>
+                    <button id="btn-cancelar-edicao-depara" type="button" onclick="cancelarEdicaoDeParaFolha()" class="hidden px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" title="Cancelar edição"><i class="fa-solid fa-xmark"></i></button>
+                </div>
             </form>
             <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Loja</th><th class="p-3">Rubrica</th><th class="p-3">Descrição da Rubrica</th><th class="p-3">Conta Contábil</th><th class="p-3">Descrição da Conta</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-depara-folha" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
@@ -3294,10 +3298,37 @@ async function importarDeParaFolhaTXT(input){
             }
         }
 
+        function cancelarEdicaoDeParaFolha(){
+            document.getElementById('depara-edicao-id').value='';
+            document.getElementById('depara-loja').value='';
+            document.getElementById('depara-rubrica').value='';
+            document.getElementById('depara-conta').value='';
+            document.getElementById('btn-salvar-depara').innerHTML='<i class="fa-solid fa-link mr-2"></i>Vincular';
+            document.getElementById('btn-cancelar-edicao-depara').classList.add('hidden');
+        }
+
+        function editarDeParaFolha(id){
+            const item=lerListaCadastro('depara').find(x=>Number(x.id)===Number(id));
+            if(!item) return alert('Não foi possível localizar este vínculo de DePara.');
+            const loja=lerListaCadastro('lojas').find(x=>Number(x.id)===Number(item.loja_id));
+            const rubrica=lerListaCadastro('rubricas').find(x=>Number(x.id)===Number(item.rubrica_id));
+            const conta=lerListaCadastro('plano').find(x=>Number(x.id)===Number(item.conta_contabil_id));
+            if(!loja||!rubrica) return alert('Não foi possível localizar a loja ou a rubrica deste vínculo.');
+            document.getElementById('depara-edicao-id').value=String(item.id);
+            document.getElementById('depara-loja').value=String(loja.codigo||'');
+            document.getElementById('depara-rubrica').value=String(rubrica.codigo||'');
+            document.getElementById('depara-conta').value=String(conta?.codigo||'');
+            document.getElementById('btn-salvar-depara').innerHTML='<i class="fa-solid fa-floppy-disk mr-2"></i>Salvar alteração';
+            document.getElementById('btn-cancelar-edicao-depara').classList.remove('hidden');
+            document.getElementById('depara-conta').focus();
+            document.getElementById('depara-conta').select();
+        }
+
         async function adicionarDeParaFolha(){
   const lojaCodigo=document.getElementById('depara-loja').value.trim();
   const rubricaCodigo=document.getElementById('depara-rubrica').value.trim();
   const contaCodigo=document.getElementById('depara-conta').value.trim();
+  const edicaoId=Number(document.getElementById('depara-edicao-id')?.value||0);
   const loja=lerListaCadastro('lojas').find(x=>String(x.codigo)===lojaCodigo);
   const rubrica=lerListaCadastro('rubricas').find(x=>String(x.codigo??'').trim()===rubricaCodigo);
   const conta=lerListaCadastro('plano').find(x=>String(x.codigo??'').trim()===contaCodigo);
@@ -3308,7 +3339,31 @@ async function importarDeParaFolhaTXT(input){
     if(!conta)faltas.push('conta contábil');
     return alert('Informe códigos válidos para: '+faltas.join(', ')+'.');
   }
-  const rubricaId=Number(rubrica.id),contaId=Number(conta.id);try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();document.getElementById('depara-loja').value='';document.getElementById('depara-rubrica').value='';document.getElementById('depara-conta').value='';alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
+  try{
+    if(edicaoId){
+      const {data,error}=await supabaseClient.from('folha_depara')
+        .update({conta_contabil_id:Number(conta.id)})
+        .eq('id',edicaoId)
+        .select().single();
+      if(error)throw error;
+      cacheCadastros.depara=cacheCadastros.depara.map(x=>Number(x.id)===edicaoId?data:x);
+      renderDeParaFolha();
+      cancelarEdicaoDeParaFolha();
+      alert('Conta contábil do DePara atualizada com sucesso.');
+    }else{
+      const {data,error}=await supabaseClient.from('folha_depara')
+        .insert([{loja_id:loja.id,rubrica_id:Number(rubrica.id),conta_contabil_id:Number(conta.id)}])
+        .select().single();
+      if(error)throw error;
+      cacheCadastros.depara.push(data);
+      renderDeParaFolha();
+      cancelarEdicaoDeParaFolha();
+      alert('DePara salvo no Supabase com sucesso.');
+    }
+  }catch(e){
+    alert((edicaoId?'Erro ao atualizar DePara no Supabase:\n':'Erro ao salvar DePara no Supabase:\n')+e.message);
+  }
+}
         async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
         function abrirCopiarDeParaFolha(){
             if(!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
@@ -3360,7 +3415,10 @@ async function importarDeParaFolhaTXT(input){
                 alert('Erro ao copiar o DePara:\n'+e.message);
             }
         }
-        function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
+        function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><div class="inline-flex items-center gap-2">
+                            <button type="button" onclick="editarDeParaFolha(${x.id})" class="text-blue-600 hover:text-blue-800" title="Editar conta contábil" aria-label="Editar conta contábil"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button type="button" onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700" title="Excluir vínculo" aria-label="Excluir vínculo"><i class="fa-solid fa-trash"></i></button>
+                        </div></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
         async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
         setTimeout(() => atualizarOpcoesLojas(), 0);
