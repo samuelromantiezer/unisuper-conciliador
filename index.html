@@ -2774,6 +2774,57 @@ function converterValorLancamentoFolha(valor) {
             document.getElementById('tabela-lancamentos-folha')?.lastElementChild?.querySelector('input')?.focus();
         }
 
+        function conferirRubricasFolhaImportada() {
+            if (!dadosFolhaImportados.length) return;
+
+            const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
+            const loja = lerListaCadastro('lojas').find(x => String(x.codigo ?? '').trim() === lojaCodigo);
+            if (!loja) {
+                alert('A planilha foi importada, mas selecione a Loja para conferir os vínculos das rubricas.');
+                return;
+            }
+
+            const conferenciaRubricas = [];
+            const conferenciaPorCodigo = new Map();
+
+            for (let i = 0; i < dadosFolhaImportados.length; i++) {
+                const linha = dadosFolhaImportados[i] || [];
+                const rubricaBruta = linha[0];
+                const textoRubrica = String(rubricaBruta ?? '').trim();
+                const rubricaCodigo = textoRubrica.replace(/^["']|["']$/g, '').trim();
+                const somenteNumeros = rubricaCodigo.replace(/\\D/g, '');
+
+                // A coluna A define as rubricas. Cabeçalhos e textos são ignorados.
+                if (!rubricaCodigo || !somenteNumeros || !/^\\d+(?:[.,]\\d+)?$/.test(rubricaCodigo)) continue;
+
+                const rubrica = localizarRubricaFolha(rubricaCodigo);
+                const conta = localizarContaDeParaFolha(loja, rubrica);
+
+                let conferencia = conferenciaPorCodigo.get(rubricaCodigo);
+                if (!conferencia) {
+                    conferencia = {
+                        codigo: rubricaCodigo,
+                        descricao: rubrica ? String(rubrica.descricao || '') : '',
+                        tipo: rubrica ? String(rubrica.tipo || '') : '',
+                        conta: conta ? String(conta.codigo || '') : '',
+                        descricaoConta: conta ? String(conta.descricao || '') : '',
+                        status: !rubrica ? 'erro' : (!conta ? 'alerta' : 'ok'),
+                        ocorrencias: 0,
+                        linhaPrimeira: i + 1
+                    };
+                    conferenciaPorCodigo.set(rubricaCodigo, conferencia);
+                    conferenciaRubricas.push(conferencia);
+                }
+                conferencia.ocorrencias++;
+            }
+
+            const competencia = typeof obterCompetenciaFolha === 'function'
+                ? (obterCompetenciaFolha() || 'não informada')
+                : 'não informada';
+
+            abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, []);
+        }
+
         function carregarArquivoFolhaPagamento(input) {
             const file = input.files?.[0];
             if (!file) return;
@@ -2790,7 +2841,7 @@ function converterValorLancamentoFolha(valor) {
                     const planilha = workbook.Sheets[primeiraAba];
                     dadosFolhaImportados = XLSX.utils.sheet_to_json(planilha, {header:1, defval:''});
                     if (!dadosFolhaImportados.length) throw new Error('A planilha está vazia.');
-                    alert('Planilha da Folha de Pagamento carregada. Escolha a competência e clique em Gerar Lançamento.');
+                    conferirRubricasFolhaImportada();
                 } catch (e) {
                     alert('Erro ao ler a planilha da folha de pagamento: ' + (e.message || e));
                 }
