@@ -70,6 +70,15 @@
         #menu-lateral.menu-recolhido #menu-toggle { right: -.85rem; }
         #menu-lateral.menu-recolhido #menu-toggle i { transform: rotate(180deg); }
         #menu-lateral .menu-item { min-height: 44px; }
+        #menu-lateral .menu-subitem { min-height: 38px; }
+        #submenu-conciliacoes { overflow: hidden; transition: max-height .22s ease, opacity .22s ease; }
+        #submenu-conciliacoes.submenu-fechado { max-height: 0; opacity: 0; pointer-events: none; margin-top: 0; }
+        #submenu-conciliacoes:not(.submenu-fechado) { max-height: 220px; opacity: 1; }
+        #icone-submenu-conciliacoes.submenu-aberto { transform: rotate(180deg); }
+        #menu-lateral.menu-recolhido #submenu-conciliacoes { display: none; }
+        #menu-lateral.menu-recolhido #btn-tab-conciliacoes { justify-content: center; }
+        #menu-lateral .menu-subitem.bg-slate-800 { background: rgba(30,58,138,.35); color: #fff; }
+        #menu-lateral .menu-subitem i { font-size: .75rem; }
         #menu-lateral .logout-btn { min-height: 42px; }
         #conteudo-principal { min-width: 0; }
 
@@ -356,9 +365,23 @@
                     <button onclick="switchTab('cadastro')" id="btn-tab-cadastro" title="Cadastro" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-folder-plus w-5"></i><span class="menu-label">Cadastro</span>
                     </button>
-                    <button onclick="switchTab('conciliacoes')" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                        <i class="fa-solid fa-scale-balanced w-5"></i><span class="menu-label">Conciliações</span>
-                    </button>
+                    <div class="menu-group">
+                        <button onclick="alternarSubmenuConciliacoes()" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                            <span class="flex items-center space-x-3 min-w-0"><i class="fa-solid fa-scale-balanced w-5"></i><span class="menu-label">Conciliações</span></span>
+                            <i id="icone-submenu-conciliacoes" class="menu-label fa-solid fa-chevron-down text-[10px] transition-transform"></i>
+                        </button>
+                        <div id="submenu-conciliacoes" class="pl-3 mt-1 space-y-1">
+                            <button onclick="abrirModuloConciliacao('caixa')" id="btn-submenu-caixa" title="Módulo Caixa" class="menu-subitem menu-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                                <i class="fa-solid fa-cash-register w-5"></i><span class="menu-label">Módulo Caixa</span>
+                            </button>
+                            <button onclick="abrirModuloConciliacao('fiscal')" id="btn-submenu-fiscal" title="Módulo Fiscal" class="menu-subitem menu-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                                <i class="fa-solid fa-receipt w-5"></i><span class="menu-label">Módulo Fiscal</span>
+                            </button>
+                            <button onclick="abrirModuloConciliacao('financeiro')" id="btn-submenu-financeiro" title="Módulo Financeiro" class="menu-subitem menu-item w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition">
+                                <i class="fa-solid fa-wallet w-5"></i><span class="menu-label">Módulo Financeiro</span>
+                            </button>
+                        </div>
+                    </div>
                     <button onclick="switchTab('folha')" id="btn-tab-folha" title="Folha de Pagamento" class="tab-btn menu-item w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <i class="fa-solid fa-users-rectangle w-5"></i><span class="menu-label">Folha de Pagamento</span>
                     </button>
@@ -2099,9 +2122,41 @@
                 btnSubAlvo.classList.add('border-unisuperBlue', 'text-unisuperBlue');
             }
             if (salvar) localStorage.setItem('unisuper_subaba_atual', subTabId);
+            marcarModuloConciliacaoAtivo(subTabId);
+            alternarSubmenuConciliacoes(true);
             if (subTabId === 'financeiro') {
                 carregarDivergenciasFornecedores();
             }
+        }
+
+        function alternarSubmenuConciliacoes(forcarEstado = null) {
+            const submenu = document.getElementById('submenu-conciliacoes');
+            const icone = document.getElementById('icone-submenu-conciliacoes');
+            if (!submenu) return;
+            const fechadoAtual = submenu.classList.contains('submenu-fechado');
+            const abrir = forcarEstado === null ? fechadoAtual : Boolean(forcarEstado);
+            submenu.classList.toggle('submenu-fechado', !abrir);
+            if (icone) icone.classList.toggle('submenu-aberto', abrir);
+            try { localStorage.setItem('unisuper_submenu_conciliacoes_aberto', abrir ? '1' : '0'); } catch (e) {}
+        }
+
+        function marcarModuloConciliacaoAtivo(subTabId) {
+            document.querySelectorAll('.menu-subitem').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+            const btn = document.getElementById('btn-submenu-' + subTabId);
+            if (btn) {
+                btn.classList.remove('text-slate-400');
+                btn.classList.add('bg-slate-800', 'text-white');
+            }
+        }
+
+        function abrirModuloConciliacao(modulo) {
+            switchTab('conciliacoes');
+            switchSubTab(modulo);
+            alternarSubmenuConciliacoes(true);
+            marcarModuloConciliacaoAtivo(modulo);
         }
 
         function escapeHtml(valor) {
@@ -3464,6 +3519,20 @@ async function importarDeParaFolhaTXT(input){
         });
 
         inicializarMenuResponsivo();
+
+        // Inicializa o submenu de Conciliações e mantém o último módulo selecionado.
+        (function inicializarSubmenuConciliacoes() {
+            let aberto = true;
+            let modulo = 'caixa';
+            try {
+                const salvo = localStorage.getItem('unisuper_submenu_conciliacoes_aberto');
+                if (salvo !== null) aberto = salvo === '1';
+                const salvoModulo = localStorage.getItem('unisuper_subaba_atual');
+                if (['caixa','fiscal','financeiro'].includes(salvoModulo)) modulo = salvoModulo;
+            } catch (e) {}
+            alternarSubmenuConciliacoes(aberto);
+            marcarModuloConciliacaoAtivo(modulo);
+        })();
 </script>
 
     <div id="modal-copiar-depara" class="hidden fixed inset-0 z-[80] bg-slate-900/50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-copiar-depara">
