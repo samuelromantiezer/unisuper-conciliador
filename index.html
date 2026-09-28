@@ -80,6 +80,11 @@
         #menu-lateral .menu-subitem.bg-slate-800 { background: rgba(30,58,138,.35); color: #fff; }
         #menu-lateral .menu-subitem i { font-size: .75rem; }
         #menu-lateral .logout-btn { min-height: 42px; }
+        #menu-lateral .menu-nav {
+            overflow-y: auto;
+            min-height: 0;
+            scrollbar-width: thin;
+        }
         #conteudo-principal { min-width: 0; }
 
         /* ABAS INTERNAS DOS MÓDULOS DE CONCILIAÇÃO */
@@ -3549,10 +3554,12 @@ async function importarDeParaFolhaTXT(input){
         function inicializarMenuResponsivo() {
             const menu = document.getElementById('menu-lateral');
             if (!menu) return;
-            let recolhido = window.innerWidth < 768;
+            // No celular, mantém o menu principal aberto para que Folha e Relatórios
+            // fiquem visíveis sem exigir que o usuário descubra o menu recolhido.
+            let recolhido = false;
             try {
                 const salvo = localStorage.getItem('menuRecolhido');
-                if (salvo !== null && window.innerWidth >= 768) recolhido = salvo === '1';
+                if (window.innerWidth >= 768 && salvo !== null) recolhido = salvo === '1';
             } catch (e) {}
             menu.classList.toggle('menu-recolhido', recolhido);
             const botao = document.getElementById('menu-toggle');
@@ -3578,7 +3585,9 @@ async function importarDeParaFolhaTXT(input){
 
         // Inicializa o submenu de Conciliações e mantém o último módulo selecionado.
         (function inicializarSubmenuConciliacoes() {
-            let aberto = true;
+            // No celular, começa fechado para deixar Folha de Pagamento e Relatórios
+            // imediatamente visíveis no menu principal.
+            let aberto = window.innerWidth >= 768;
             let modulo = 'caixa';
             try {
                 const salvo = localStorage.getItem('unisuper_submenu_conciliacoes_aberto');
