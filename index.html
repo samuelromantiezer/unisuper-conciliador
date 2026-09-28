@@ -2792,10 +2792,10 @@ function converterValorLancamentoFolha(valor) {
                 const rubricaBruta = linha[0];
                 const textoRubrica = String(rubricaBruta ?? '').trim();
                 const rubricaCodigo = textoRubrica.replace(/^["']|["']$/g, '').trim();
-                const somenteNumeros = rubricaCodigo.replace(/\\D/g, '');
+                const somenteNumeros = rubricaCodigo.replace(/\D/g, '');
 
                 // A coluna A define as rubricas. Cabeçalhos e textos são ignorados.
-                if (!rubricaCodigo || !somenteNumeros || !/^\\d+(?:[.,]\\d+)?$/.test(rubricaCodigo)) continue;
+                if (!rubricaCodigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(rubricaCodigo)) continue;
 
                 const rubrica = localizarRubricaFolha(rubricaCodigo);
                 const conta = localizarContaDeParaFolha(loja, rubrica);
