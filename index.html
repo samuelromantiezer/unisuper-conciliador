@@ -744,14 +744,19 @@
         <div id="folhatab-depara" class="folhatab-content p-5 space-y-5">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div><h4 class="font-bold text-slate-800">DePara de Rubricas</h4><p class="text-xs text-slate-500">Vincule a rubrica à conta contábil por loja.</p></div>
-                <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900 shadow-sm">
-                    <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
-                    <input id="arquivo-txt-depara-folha" type="file" accept=".txt,text/plain" class="hidden" onchange="importarDeParaFolhaTXT(this)">
-                </label>
-                <label class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-emerald-700 shadow-sm">
-                    <i class="fa-solid fa-file-excel"></i> Importar Excel
-                    <input id="arquivo-excel-depara-folha" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" onchange="importarDeParaFolhaExcel(this)">
-                </label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="abrirCopiarDeParaFolha()" class="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-indigo-700 shadow-sm">
+                        <i class="fa-solid fa-copy"></i> Copiar DePara
+                    </button>
+                    <label class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-blue-900 shadow-sm">
+                        <i class="fa-solid fa-file-arrow-up"></i> Importar TXT
+                        <input id="arquivo-txt-depara-folha" type="file" accept=".txt,text/plain" class="hidden" onchange="importarDeParaFolhaTXT(this)">
+                    </label>
+                    <label class="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer hover:bg-emerald-700 shadow-sm">
+                        <i class="fa-solid fa-file-excel"></i> Importar Excel
+                        <input id="arquivo-excel-depara-folha" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" onchange="importarDeParaFolhaExcel(this)">
+                    </label>
+                </div>
             </div>
             <form onsubmit="event.preventDefault(); adicionarDeParaFolha()" class="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <select id="depara-loja" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" required><option value="">Selecione a Loja</option></select>
@@ -3111,6 +3116,56 @@ async function importarDeParaFolhaTXT(input){
   }
   const rubricaId=Number(rubrica.id),contaId=Number(conta.id);try{const{data,error}=await supabaseClient.from('folha_depara').insert([{loja_id:loja.id,rubrica_id:rubricaId,conta_contabil_id:contaId}]).select().single();if(error)throw error;cacheCadastros.depara.push(data);renderDeParaFolha();document.getElementById('depara-loja').value='';document.getElementById('depara-rubrica').value='';document.getElementById('depara-conta').value='';alert('DePara salvo no Supabase com sucesso.');}catch(e){alert('Erro ao salvar DePara no Supabase:\n'+e.message);}}
         async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
+        function abrirCopiarDeParaFolha(){
+            if(!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
+            const lojas=lerListaCadastro('lojas');
+            if(lojas.length<2) return alert('É necessário ter pelo menos duas lojas cadastradas para copiar o DePara.');
+            const origem=document.getElementById('copiar-depara-origem');
+            const destino=document.getElementById('copiar-depara-destino');
+            const options='<option value="">Selecione a loja</option>'+lojas.map(l=>'<option value="'+escapeHtml(String(l.id))+'">'+escapeHtml(String(l.codigo))+' - '+escapeHtml(String(l.nome))+'</option>').join('');
+            origem.innerHTML=options; destino.innerHTML=options;
+            origem.value=''; destino.value='';
+            const modal=document.getElementById('modal-copiar-depara');
+            if(modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        }
+        function fecharCopiarDeParaFolha(){
+            const modal=document.getElementById('modal-copiar-depara');
+            if(modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        }
+        async function copiarDeParaFolha(){
+            const origemId=Number(document.getElementById('copiar-depara-origem')?.value);
+            const destinoId=Number(document.getElementById('copiar-depara-destino')?.value);
+            if(!origemId||!destinoId) return alert('Selecione a loja de origem e a loja de destino.');
+            if(origemId===destinoId) return alert('A loja de origem e a loja de destino devem ser diferentes.');
+            const origem=lerListaCadastro('lojas').find(x=>Number(x.id)===origemId);
+            const destino=lerListaCadastro('lojas').find(x=>Number(x.id)===destinoId);
+            if(!origem||!destino) return alert('Não foi possível localizar as lojas selecionadas.');
+            try{
+                const {data:deParaOrigem,error:erroOrigem}=await supabaseClient
+                    .from('folha_depara')
+                    .select('rubrica_id,conta_contabil_id')
+                    .eq('loja_id',origemId);
+                if(erroOrigem) throw erroOrigem;
+                const itens=Array.isArray(deParaOrigem)?deParaOrigem:[];
+                if(!itens.length) return alert('A loja de origem não possui vínculos de DePara para copiar.');
+                const confirmar=confirm('Copiar '+itens.length+' vínculo(s) de '+origem.codigo+' - '+origem.nome+' para '+destino.codigo+' - '+destino.nome+'?\n\nSe a loja de destino já tiver a mesma rubrica configurada, a conta será atualizada pela configuração da loja de origem.');
+                if(!confirmar) return;
+                const registros=itens.map(x=>({loja_id:destinoId,rubrica_id:Number(x.rubrica_id),conta_contabil_id:Number(x.conta_contabil_id)}));
+                const {data:salvos,error:erroSalvar}=await supabaseClient
+                    .from('folha_depara')
+                    .upsert(registros,{onConflict:'loja_id,rubrica_id'})
+                    .select('id,loja_id,rubrica_id,conta_contabil_id');
+                if(erroSalvar) throw erroSalvar;
+                cacheCadastros.depara=cacheCadastros.depara.filter(x=>Number(x.loja_id)!==destinoId);
+                if(Array.isArray(salvos)) cacheCadastros.depara.push(...salvos);
+                renderDeParaFolha();
+                fecharCopiarDeParaFolha();
+                alert('DePara copiado com sucesso. '+itens.length+' vínculo(s) foram configurados na loja '+destino.codigo+'.');
+            }catch(e){
+                console.error('Erro ao copiar DePara:',e);
+                alert('Erro ao copiar o DePara:\n'+e.message);
+            }
+        }
         function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><button onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
         async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
@@ -3158,6 +3213,35 @@ async function importarDeParaFolhaTXT(input){
 
         inicializarMenuResponsivo();
 </script>
+
+    <div id="modal-copiar-depara" class="hidden fixed inset-0 z-[80] bg-slate-900/50 items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-copiar-depara">
+        <div class="w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
+                <div>
+                    <h3 id="titulo-modal-copiar-depara" class="font-bold text-slate-800"><i class="fa-solid fa-copy text-indigo-600 mr-2"></i>Copiar DePara da Folha</h3>
+                    <p class="text-xs text-slate-500 mt-1">Copie as configurações de uma loja pronta para outra loja.</p>
+                </div>
+                <button type="button" onclick="fecharCopiarDeParaFolha()" class="w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100" title="Fechar" aria-label="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label for="copiar-depara-origem" class="block text-xs font-bold text-slate-600 mb-1">Loja de origem</label>
+                    <select id="copiar-depara-origem" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white"></select>
+                </div>
+                <div>
+                    <label for="copiar-depara-destino" class="block text-xs font-bold text-slate-600 mb-1">Loja de destino</label>
+                    <select id="copiar-depara-destino" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white"></select>
+                </div>
+                <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                    As rubricas da loja de origem serão copiadas para a loja de destino. Se uma rubrica já existir na loja de destino, a conta contábil dela será substituída pela configuração da origem.
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button type="button" onclick="fecharCopiarDeParaFolha()" class="px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100">Cancelar</button>
+                <button type="button" onclick="copiarDeParaFolha()" class="px-4 py-2.5 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700"><i class="fa-solid fa-copy mr-2"></i>Copiar configurações</button>
+            </div>
+        </div>
+    </div>
 
     <!-- POPUP DE VISUALIZAÇÃO DE FOLHA GERADA -->
     <div id="popup-folha-gerada" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-folha-gerada-titulo" style="position:fixed;inset:0;z-index:75;background:rgba(15,23,42,.58);align-items:center;justify-content:center;padding:1rem;">
