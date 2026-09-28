@@ -80,16 +80,9 @@
         #menu-lateral .menu-subitem.bg-slate-800 { background: rgba(30,58,138,.35); color: #fff; }
         #menu-lateral .menu-subitem i { font-size: .75rem; }
         #menu-lateral .logout-btn { min-height: 42px; }
-        #menu-lateral > div:first-of-type {
-            min-height: 0;
-            flex: 1 1 auto;
-            display: flex;
-            flex-direction: column;
-        }
         #menu-lateral .menu-nav {
-            flex: 1 1 auto;
-            min-height: 0;
             overflow-y: auto;
+            min-height: 0;
             scrollbar-width: thin;
         }
         #conteudo-principal { min-width: 0; }
@@ -844,7 +837,7 @@
                 <div id="tab-folha" class="tab-content hidden space-y-6">
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-5 border-b border-slate-200"><h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-users-rectangle text-unisuperBlue mr-2"></i> Folha de Pagamento</h3><p class="text-sm text-slate-500 mt-1">Configurações e preparação da integração contábil da folha.</p></div>
-        <div id="folha-tabs-nav" class="flex flex-wrap border-b border-slate-200 px-4 pt-3 gap-1" style="display:flex !important; visibility:visible !important;">
+        <div class="flex flex-wrap border-b border-slate-200 px-4 pt-3 gap-1">
             <button onclick="switchFolhaTab('depara')" id="folhatab-btn-depara" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue"><i class="fa-solid fa-link mr-2"></i>DePara</button>
             <button onclick="switchFolhaTab('gerador')" id="folhatab-btn-gerador" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-file-export mr-2"></i>Gerador de Folha de Pagamento</button>
             <button onclick="switchFolhaTab('geradas')" id="folhatab-btn-geradas" class="folhatab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800"><i class="fa-solid fa-folder-open mr-2"></i>Folhas Geradas</button>
@@ -2137,14 +2130,7 @@
                 btnAlvo.classList.remove('text-slate-300');
                 btnAlvo.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
             }
-            if (tabId === 'folha') {
-                const folha = document.getElementById('tab-folha');
-                const nav = document.getElementById('folha-tabs-nav');
-                if (folha) { folha.classList.remove('hidden'); folha.style.display = 'block'; }
-                if (nav) { nav.classList.remove('hidden'); nav.style.display = 'flex'; nav.style.visibility = 'visible'; }
-                setTimeout(() => switchFolhaTab('depara'), 0);
-            }
-    if (salvar) localStorage.setItem('unisuper_aba_atual', tabId);
+            if (salvar) localStorage.setItem('unisuper_aba_atual', tabId);
         }
 
         function switchConciliacaoAba(modulo, aba, salvar = true) {
@@ -2275,10 +2261,7 @@
             });
             const alvo = document.getElementById('folhatab-' + id);
             const btn = document.getElementById('folhatab-btn-' + id);
-            const nav = document.getElementById('folha-tabs-nav');
-            if (nav) { nav.classList.remove('hidden'); nav.style.display = 'flex'; nav.style.visibility = 'visible'; }
-            document.querySelectorAll('#tab-folha .folhatab-btn').forEach(btn => { btn.style.display = 'inline-flex'; btn.style.visibility = 'visible'; });
-            if (alvo) { alvo.classList.remove('hidden'); alvo.style.display = 'block'; }
+            if (alvo) alvo.classList.remove('hidden');
             if (btn) { btn.classList.remove('border-transparent','text-slate-500'); btn.classList.add('border-unisuperBlue','text-unisuperBlue'); }
             localStorage.setItem('unisuper_folhatab_atual', id);
             if (id === 'depara') atualizarOpcoesDePara();
