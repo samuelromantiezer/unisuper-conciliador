@@ -200,6 +200,58 @@
         #popup-folha-gerada.hidden { display: none !important; }
         #popup-folha-gerada:not(.hidden) { display: flex !important; }
 
+        /* POPUP DE CONFERÊNCIA DA FOLHA */
+        #popup-conferencia-folha {
+            position: fixed;
+            inset: 0;
+            z-index: 75;
+            background: rgba(15, 23, 42, .58);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #popup-conferencia-folha.hidden { display: none; }
+        #popup-conferencia-folha .popup-card {
+            width: min(1050px, 100%);
+            max-height: min(820px, 92vh);
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 24px 70px rgba(15,23,42,.28);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #popup-conferencia-folha .popup-lista {
+            overflow: auto;
+            max-height: 58vh;
+        }
+        .status-rubrica-folha {
+            border: 1px solid;
+            border-radius: .75rem;
+            padding: .8rem 1rem;
+        }
+        .status-rubrica-folha.ok {
+            background: #ecfdf5;
+            border-color: #86efac;
+            color: #166534;
+        }
+        .status-rubrica-folha.alerta {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+        .status-rubrica-folha.erro {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        @media (max-width: 640px) {
+            #popup-conferencia-folha { padding: .5rem; }
+            #popup-conferencia-folha .popup-card { max-height: 96vh; }
+            #popup-conferencia-folha .popup-lista { max-height: 62vh; }
+        }
+
         /* POPUP DE CONSULTA DE RUBRICAS E CONTAS CONTÁBEIS */
         #popup-consulta-cadastros {
             position: fixed;
@@ -2761,8 +2813,11 @@ function converterValorLancamentoFolha(valor) {
             const lancamentosProventos = [];
             const lancamentosDescontos = [];
             const lancamentosOutros = [];
+            const conferenciaRubricas = [];
+            const conferenciaPorCodigo = new Map();
             let totalProventos = 0;
             let totalDescontos = 0;
+
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
                 const rubricaBruta = linha[0];
@@ -2775,16 +2830,42 @@ function converterValorLancamentoFolha(valor) {
                 if (!rubricaCodigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(rubricaCodigo)) continue;
 
                 const valorBruto = linha[32];
-
                 const rubrica = localizarRubricaFolha(rubricaCodigo);
                 const conta = localizarContaDeParaFolha(loja, rubrica);
 
-                if (!rubrica) { inconsistencias.push('Linha '+(i+1)+': rubrica "'+rubricaCodigo+'" não cadastrada.'); continue; }
-                if (!conta) { inconsistencias.push('Linha '+(i+1)+': não existe DePara para loja "'+loja.codigo+'" e rubrica "'+rubricaCodigo+'".'); continue; }
+                let conferencia = conferenciaPorCodigo.get(rubricaCodigo);
+                if (!conferencia) {
+                    conferencia = {
+                        codigo: rubricaCodigo,
+                        descricao: rubrica ? String(rubrica.descricao || '') : '',
+                        tipo: rubrica ? String(rubrica.tipo || '') : '',
+                        conta: conta ? String(conta.codigo || '') : '',
+                        descricaoConta: conta ? String(conta.descricao || '') : '',
+                        status: !rubrica ? 'erro' : (!conta ? 'alerta' : 'ok'),
+                        ocorrencias: 0,
+                        linhaPrimeira: i + 1
+                    };
+                    conferenciaPorCodigo.set(rubricaCodigo, conferencia);
+                    conferenciaRubricas.push(conferencia);
+                }
+                conferencia.ocorrencias++;
+
+                if (!rubrica) {
+                    inconsistencias.push('Linha '+(i+1)+': rubrica "'+rubricaCodigo+'" não cadastrada.');
+                    continue;
+                }
+                if (!conta) {
+                    inconsistencias.push('Linha '+(i+1)+': não existe DePara para loja "'+loja.codigo+'" e rubrica "'+rubricaCodigo+'".');
+                    continue;
+                }
 
                 const numero = Number(String(valorBruto).replace(/\./g,'').replace(',','.'));
                 const valorBrutoNumerico = Number.isFinite(numero) ? numero : Number(valorBruto);
-                if (!Number.isFinite(valorBrutoNumerico)) { inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".'); continue; }
+                if (!Number.isFinite(valorBrutoNumerico)) {
+                    inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".');
+                    continue;
+                }
+
                 // O valor da folha vem em centavos; converte para reais antes de gerar o lançamento.
                 const valor = valorBrutoNumerico / 100;
                 const valorFormatadoTela = valor.toFixed(2).replace('.', ',');
@@ -2824,8 +2905,6 @@ function converterValorLancamentoFolha(valor) {
             // independentemente de qual coluna (débito/crédito) o lançamento individual usa.
             // Proventos -> total no CRÉDITO.
             // Descontos -> total no DÉBITO.
-
-            // Usa as contas do DePara das próprias rubricas totalizadoras.
             const rubricasTotalizadoras = lerListaCadastro('rubricas').filter(r =>
                 String(r.tipo || '').trim().toLowerCase() === 'totalizador'
             );
@@ -2879,8 +2958,72 @@ function converterValorLancamentoFolha(valor) {
 
             linhasLancamentoFolha = lancamentos;
             renderLancamentoFolha();
-            if (inconsistencias.length) alert('Lançamento gerado com '+lancamentos.length+' linha(s).\n\nInconsistências:\n'+inconsistencias.slice(0,20).join('\n')+(inconsistencias.length>20?'\n...':'')); 
-            else alert('Lançamento gerado com '+lancamentos.length+' linha(s).');
+            abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, inconsistencias);
+        }
+
+        function abrirPopupConferenciaFolha(lista, loja, competencia, inconsistencias) {
+            const popup = document.getElementById('popup-conferencia-folha');
+            const subtitulo = document.getElementById('popup-conferencia-folha-subtitulo');
+            const resumo = document.getElementById('popup-conferencia-folha-resumo');
+            const listaEl = document.getElementById('popup-conferencia-folha-lista');
+            const extra = document.getElementById('popup-conferencia-folha-extra');
+            if (!popup || !resumo || !listaEl) return;
+
+            const total = lista.length;
+            const ok = lista.filter(x => x.status === 'ok').length;
+            const alerta = lista.filter(x => x.status === 'alerta').length;
+            const erro = lista.filter(x => x.status === 'erro').length;
+
+            subtitulo.textContent = loja.codigo + ' - ' + loja.nome + ' | Competência ' + competencia + ' | ' + total + ' rubrica(s) encontrada(s) na planilha.';
+
+            resumo.innerHTML =
+                '<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3"><div class="text-xs font-bold text-emerald-700">DEPARA OK</div><div class="text-xl font-bold text-emerald-800">' + ok + '</div></div>' +
+                '<div class="bg-amber-50 border border-amber-200 rounded-lg p-3"><div class="text-xs font-bold text-amber-700">SEM DEPARA</div><div class="text-xl font-bold text-amber-800">' + alerta + '</div></div>' +
+                '<div class="bg-red-50 border border-red-200 rounded-lg p-3"><div class="text-xs font-bold text-red-700">NÃO CADASTRADA</div><div class="text-xl font-bold text-red-800">' + erro + '</div></div>';
+
+            if (!lista.length) {
+                listaEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-sm">Nenhuma rubrica numérica foi encontrada na planilha.</div>';
+            } else {
+                const ordem = {erro: 0, alerta: 1, ok: 2};
+                lista.sort((a,b) => ordem[a.status] - ordem[b.status] || String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric:true}));
+                listaEl.innerHTML = lista.map(item => {
+                    const classe = item.status === 'ok' ? 'ok' : (item.status === 'alerta' ? 'alerta' : 'erro');
+                    const icone = item.status === 'ok' ? 'fa-circle-check' : (item.status === 'alerta' ? 'fa-triangle-exclamation' : 'fa-circle-xmark');
+                    const status = item.status === 'ok'
+                        ? 'DePara cadastrado'
+                        : (item.status === 'alerta' ? 'Sem DePara para esta loja' : 'Rubrica não cadastrada');
+                    const detalhe = item.status === 'ok'
+                        ? 'Conta contábil: <b>' + escapeHtml(item.conta) + '</b> - ' + escapeHtml(item.descricaoConta)
+                        : (item.status === 'alerta'
+                            ? 'A rubrica existe no cadastro, mas não possui vínculo para a loja <b>' + escapeHtml(loja.codigo) + '</b>.'
+                            : 'Cadastre esta rubrica antes de gerar o lançamento.');
+                    return '<div class="status-rubrica-folha ' + classe + ' flex items-start gap-3">' +
+                        '<i class="fa-solid ' + icone + ' mt-0.5"></i>' +
+                        '<div class="min-w-0 flex-1">' +
+                            '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                                '<div class="font-bold">Rubrica ' + escapeHtml(item.codigo) + (item.descricao ? ' - ' + escapeHtml(item.descricao) : '') + '</div>' +
+                                '<span class="text-[11px] font-semibold opacity-80">' + item.ocorrencias + ' ocorrência(s)</span>' +
+                            '</div>' +
+                            '<div class="text-xs mt-1">' + status + '</div>' +
+                            '<div class="text-xs mt-1 opacity-90">' + detalhe + '</div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+            }
+
+            if (inconsistencias.length) {
+                extra.classList.remove('hidden');
+                extra.innerHTML = '<b>Outras inconsistências:</b> ' + escapeHtml(inconsistencias.slice(0, 10).join(' | ')) + (inconsistencias.length > 10 ? ' | ...' : '');
+            } else {
+                extra.classList.add('hidden');
+                extra.innerHTML = '';
+            }
+
+            popup.classList.remove('hidden');
+        }
+
+        function fecharPopupConferenciaFolha() {
+            document.getElementById('popup-conferencia-folha')?.classList.add('hidden');
         }
 
 
@@ -3288,7 +3431,31 @@ async function importarDeParaFolhaTXT(input){
     </div>
 
     <!-- POPUP DE CONSULTA DE RUBRICAS / CONTAS CONTÁBEIS -->
-    <div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo">
+            <div id="popup-conferencia-folha" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-conferencia-folha-titulo">
+            <div class="popup-card">
+                <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-slate-200 bg-white">
+                    <div>
+                        <h3 id="popup-conferencia-folha-titulo" class="text-base font-bold text-slate-800">Conferência das Rubricas da Folha</h3>
+                        <p id="popup-conferencia-folha-subtitulo" class="text-xs text-slate-500 mt-1"></p>
+                    </div>
+                    <button type="button" onclick="fecharPopupConferenciaFolha()" class="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" title="Fechar" aria-label="Fechar">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                    <div id="popup-conferencia-folha-resumo" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+                </div>
+                <div id="popup-conferencia-folha-lista" class="popup-lista p-5 space-y-2"></div>
+                <div id="popup-conferencia-folha-extra" class="hidden px-5 py-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-600"></div>
+                <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-200 bg-white">
+                    <button type="button" onclick="fecharPopupConferenciaFolha()" class="bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-900">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+<div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo">
         <div class="popup-card">
             <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
                 <div>
