@@ -366,7 +366,7 @@
                         <i class="fa-solid fa-folder-plus w-5"></i><span class="menu-label">Cadastro</span>
                     </button>
                     <div class="menu-group">
-                        <button onclick="alternarSubmenuConciliacoes()" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <button onclick="switchTab('conciliacoes'); alternarSubmenuConciliacoes()" id="btn-tab-conciliacoes" title="Conciliações" class="tab-btn menu-item w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition">
                             <span class="flex items-center space-x-3 min-w-0"><i class="fa-solid fa-scale-balanced w-5"></i><span class="menu-label">Conciliações</span></span>
                             <i id="icone-submenu-conciliacoes" class="menu-label fa-solid fa-chevron-down text-[10px] transition-transform"></i>
                         </button>
@@ -501,19 +501,6 @@
                                 <i class="fa-solid fa-scale-balanced text-unisuperBlue mr-2"></i> Central de Conciliações e Cruzamentos
                             </h3>
                             <p class="text-xs text-slate-500 mt-1">Selecione o módulo desejado e execute a validação contábil.</p>
-                        </div>
-
-                        <!-- SUB-ABAS -->
-                        <div class="flex border-b border-slate-200 mb-6 space-x-2">
-                            <button onclick="switchSubTab('caixa')" id="subtab-btn-caixa" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-unisuperBlue text-unisuperBlue flex items-center space-x-2 transition">
-                                <i class="fa-solid fa-cash-register"></i><span>Módulo Caixa</span>
-                            </button>
-                            <button onclick="switchSubTab('fiscal')" id="subtab-btn-fiscal" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition">
-                                <i class="fa-solid fa-receipt"></i><span>Módulo Fiscal</span>
-                            </button>
-                            <button onclick="switchSubTab('financeiro')" id="subtab-btn-financeiro" class="subtab-btn px-4 py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-2 transition">
-                                <i class="fa-solid fa-wallet"></i><span>Módulo Financeiro</span>
-                            </button>
                         </div>
 
                         <!-- SUB-ABA CAIXA -->
