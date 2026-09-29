@@ -3103,6 +3103,16 @@ function converterValorLancamentoFolha(valor) {
             return { proventos, descontos };
         }
 
+        function renderizarDetalhamentoValidacaoFolha(detalhes) {
+            const divergentes = detalhes.filter(x => x.status === 'divergente');
+            const rows = detalhes.map(x => {
+                const classe = x.status === 'divergente' ? 'bg-red-50' : x.status === 'ignorada' ? 'bg-slate-50' : 'bg-emerald-50';
+                const texto = x.status === 'divergente' ? 'DIVERGENTE' : x.status === 'ignorada' ? 'IGNORADA' : 'OK';
+                return '<tr class="' + classe + ' border-b"><td class="p-2 text-xs">' + x.linha + '</td><td class="p-2 text-xs font-semibold">' + escapeHtmlFolha(x.codigo || '-') + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.descricao || '-') + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.tipo || '-') + '</td><td class="p-2 text-xs text-right">' + formatarValorLancamentoFolha(x.valor || 0) + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.conta || '-') + '</td><td class="p-2 text-xs font-semibold">' + texto + '<div class="font-normal">' + escapeHtmlFolha(x.motivo || '') + '</div></td></tr>';
+            }).join('');
+            return '<div class="mt-5 mb-2 flex items-center justify-between"><b>Todos os lançamentos da folha</b><span class="text-xs text-slate-500">' + detalhes.length + ' registros</span></div><div class="border rounded-xl overflow-auto max-h-[52vh]"><table class="w-full min-w-[1050px] text-sm"><thead class="sticky top-0 bg-slate-100"><tr class="text-left text-xs uppercase"><th class="p-2">Linha</th><th class="p-2">Rubrica</th><th class="p-2">Descrição</th><th class="p-2">Tipo</th><th class="p-2 text-right">Valor AG</th><th class="p-2">Conta DePara</th><th class="p-2">Conferência</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }
+
         function abrirValidacaoTotaisFolha() {
             if (!dadosFolhaImportados?.length) return alert('Carregue a planilha da folha antes de validar os totais.');
 
