@@ -2976,73 +2976,162 @@
         function abrirRelatorioFolhaImportada(id) {
             const item = localizarFolhaImportada(id);
             if (!item) return alert('Folha importada não encontrada.');
+
             folhaImportadaVisualizando = item;
             const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
-            const resumo = calcularResumoFolhaImportada(item);
-            const dados = prepararDadosRelatorioFolha(item);
-            const rowsOriginais = Array.isArray(item.dados_planilha) ? item.dados_planilha : [];
-            const cabecalhos = dados.cabecalhos;
-            const linhasOriginais = dados.linhas;
-            const totalProventos = Number(item.total_proventos ?? resumo.proventos ?? 0);
-            const totalDescontos = Number(item.total_descontos ?? resumo.descontos ?? 0);
-            const liquido = totalProventos - totalDescontos;
-            const percentualDescontos = totalProventos ? (totalDescontos / totalProventos * 100) : 0;
-            const statusClasse = Number(item.pendencias || 0) > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
-            const rubricasHtml = dados.rubricas.length ? dados.rubricas.slice(0,80).map(r =>
-                '<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2 font-semibold">'+escapeHtml(r.codigo)+'</td><td class="p-2">'+escapeHtml(r.descricao)+'</td><td class="p-2">'+escapeHtml(r.tipo)+'</td><td class="p-2 text-center">'+r.ocorrencias+'</td><td class="p-2 text-right font-semibold">'+formatarValorLancamentoFolha(r.total)+'</td></tr>'
-            ).join('') : '<tr><td colspan="5" class="p-6 text-center text-slate-400">Não foi possível identificar rubricas automaticamente pelos cabeçalhos da planilha.</td></tr>';
+            const rows = Array.isArray(item.dados_planilha) ? item.dados_planilha : [];
+            if (!rows.length) return alert('Esta folha importada não possui dados para visualização.');
 
-            const colaboradoresHtml = dados.colaboradores.length ? dados.colaboradores.slice(0,200).map(f =>
-                '<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2">'+escapeHtml(f.matricula||'-')+'</td><td class="p-2 font-medium">'+escapeHtml(f.nome||'-')+'</td><td class="p-2">'+escapeHtml(f.cpf||'-')+'</td><td class="p-2 text-right">'+formatarValorLancamentoFolha(f.proventos)+'</td><td class="p-2 text-right">'+formatarValorLancamentoFolha(f.descontos)+'</td><td class="p-2 text-right font-bold">'+formatarValorLancamentoFolha(f.liquido || (f.proventos-f.descontos))+'</td></tr>'
-            ).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400">A planilha não possui cabeçalhos suficientes para identificar colaboradores individualmente.</td></tr>';
+            const formatarCelula = (valor) => {
+                if (valor === null || valor === undefined) return '';
+                if (typeof valor === 'number' && Number.isFinite(valor)) {
+                    // Datas do Excel/SheetJS que aparecem no cabeçalho do relatório.
+                    if (valor > 30000 && valor < 60000) {
+                        return new Date(Date.UTC(1899, 11, 30) + valor * 86400000).toLocaleString('pt-BR');
+                    }
+                    return String(valor);
+                }
+                return String(valor);
+            };
 
-            const letras = n => { let s=''; n++; while(n){ let x=(n-1)%26; s=String.fromCharCode(65+x)+s; n=Math.floor((n-1)/26); } return s; };
-            const originalHeaders = cabecalhos.length ? cabecalhos.map((h,i)=>'<th class="p-2 text-xs text-left border-b whitespace-nowrap bg-slate-100">'+escapeHtml(h || letras(i))+'</th>').join('') : '';
-            const rawRows = linhasOriginais.map((linha,idx) => {
-                const cells = cabecalhos.map((_,col)=>'<td class="p-2 text-xs whitespace-nowrap border-b">'+escapeHtml(linha?.[col] ?? '')+'</td>').join('');
-                return '<tr class="hover:bg-slate-50"><td class="p-2 text-xs font-bold sticky left-0 bg-white border-b">'+(dados.possuiCabecalho ? idx+2 : idx+1)+'</td>'+cells+'</tr>';
-            }).join('');
+            const paginaDeLinha = (index) => {
+                const valor = String(rows[index]?.[35] ?? '').trim();
+                const m = valor.match(/^(\d+)\/(\d+)$/);
+                return m ? Number(m[1]) : null;
+            };
+
+            const paginaCabecalho = {};
+            rows.forEach((linha, index) => {
+                const pagina = paginaDeLinha(index);
+                if (pagina && !paginaCabecalho[pagina]) paginaCabecalho[pagina] = index;
+            });
+
+            const grupos = [];
+            let inicio = 0;
+            let paginaAtual = 1;
+            for (let i = 0; i < rows.length; i++) {
+                const pagina = paginaDeLinha(i);
+                if (pagina && pagina !== paginaAtual) {
+                    grupos.push({pagina: paginaAtual, inicio, fim: i - 1});
+                    inicio = i;
+                    paginaAtual = pagina;
+                }
+            }
+            grupos.push({pagina: paginaAtual, inicio, fim: rows.length - 1});
+
+            const numeroColunas = Math.max(39, ...rows.map(r => Array.isArray(r) ? r.length : 0));
+            const larguras = [
+                70,18,315,18,18,18,18,18,18,18,18,18,18,18,105,18,18,110,18,18,18,78,18,18,18,100,100,70,18,78,18,105,105,18,18,78,18,18,18
+            ];
+            while (larguras.length < numeroColunas) larguras.push(18);
+
+            const classesLinha = (linha) => {
+                const c1 = String(linha?.[0] ?? '').trim().toUpperCase();
+                const c28 = String(linha?.[27] ?? '').trim().toUpperCase();
+                const c24 = String(linha?.[23] ?? '').trim().toUpperCase();
+
+                if (c1 === 'RESUMO DA FOLHA') return 'folha-titulo';
+                if (c1 === 'PROVENTOS' || c1 === 'DESCONTOS' || c1 === 'INFORMATIVA') return 'folha-grupo';
+                if (c28 === 'TOTAL:') return 'folha-total';
+                if (c24 === 'LÍQUIDO GERAL:') return 'folha-liquido';
+                if (c1 === 'RUBRICA') return 'folha-cabecalho';
+                if (c1 === 'INSS' || c1 === 'SITUAÇÕES' || c1 === 'IRRF CONFORME COMPETÊNCIA DO CÁLCULO') return 'folha-secao';
+                if (c1 === 'EMPRESA:' || c1 === 'CNPJ:' || c1 === 'CÁLCULO:' || c1 === 'COMPETÊNCIA:') return 'folha-meta';
+                return '';
+            };
+
+            const renderPagina = (grupo) => {
+                const linhas = [];
+                for (let i = grupo.inicio; i <= grupo.fim; i++) {
+                    const linha = Array.isArray(rows[i]) ? rows[i] : [];
+                    const classe = classesLinha(linha);
+                    const temDados = linha.some(v => v !== null && v !== undefined && String(v).trim() !== '');
+                    if (!temDados) {
+                        linhas.push('<tr class="folha-vazia"><td colspan="' + numeroColunas + '"></td></tr>');
+                        continue;
+                    }
+
+                    let html = '<tr class="' + classe + '">';
+                    for (let col = 0; col < numeroColunas; col++) {
+                        const valor = formatarCelula(linha[col]);
+                        const upper = String(valor).trim().toUpperCase();
+                        let classeCelula = 'folha-celula';
+                        if ([0,2,14,17,21,25,27,31,32,35,38].includes(col)) classeCelula += ' folha-coluna-importante';
+                        if (col === 0 && /^\d+$/.test(upper)) classeCelula += ' folha-codigo';
+                        if (col === 2) classeCelula += ' folha-descricao';
+                        if ([11,33].includes(col)) classeCelula += ' folha-valor';
+                        if ([21,25,31,35].includes(col)) classeCelula += ' folha-numero';
+                        if (col === 38) classeCelula += ' folha-marca';
+
+                        html += '<td class="' + classeCelula + '">' + escapeHtml(valor) + '</td>';
+                    }
+                    html += '</tr>';
+                    linhas.push(html);
+                }
+
+                return '<section class="folha-pagina">' +
+                    '<div class="folha-pagina-cabecalho">' +
+                        '<div><strong>' + escapeHtml(loja ? loja.codigo + ' - ' + loja.nome : 'Folha importada') + '</strong><span> · Resumo da Folha</span></div>' +
+                        '<div>Página ' + grupo.pagina + ' / ' + grupos.length + '</div>' +
+                    '</div>' +
+                    '<div class="folha-scroll"><table class="folha-tabela"><colgroup>' +
+                        larguras.map(w => '<col style="width:' + w + 'px">').join('') +
+                    '</colgroup><tbody>' + linhas.join('') + '</tbody></table></div>' +
+                '</section>';
+            };
 
             let popup = document.getElementById('popup-relatorio-folha-importada');
             if (!popup) {
                 popup = document.createElement('div');
                 popup.id = 'popup-relatorio-folha-importada';
-                popup.className = 'fixed inset-0 z-[96] bg-slate-950/70 flex items-center justify-center p-3 md:p-6';
                 document.body.appendChild(popup);
             }
 
+            popup.className = 'fixed inset-0 z-[96] bg-slate-950/80 flex items-center justify-center p-2 md:p-4';
             popup.innerHTML =
-                '<div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-[98vw] max-h-[96vh] flex flex-col overflow-hidden">' +
-                    '<div class="p-5 md:p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-unisuperBlue text-white">' +
-                        '<div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">' +
-                            '<div><div class="text-xs uppercase tracking-[0.18em] text-blue-200 font-bold">Relatório de Folha de Pagamento</div><h3 class="text-2xl md:text-3xl font-black mt-1">'+escapeHtml(loja ? loja.codigo+' - '+loja.nome : 'Loja não encontrada')+'</h3><div class="text-sm text-slate-200 mt-1">Competência '+escapeHtml(formatarCompetenciaFolhaISO(item.competencia))+' · '+escapeHtml(item.arquivo_nome || 'Arquivo não informado')+'</div></div>' +
-                            '<div class="flex flex-wrap gap-2">' +
-                                '<button type="button" onclick="exportarRelatorioFolhaImportadaExcel('+Number(item.id)+')" class="px-4 py-2.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 text-sm font-bold"><i class="fa-solid fa-file-excel mr-1"></i> Exportar relatório Excel</button>' +
-                                '<button type="button" onclick="exportarFolhaImportadaOriginalExcel('+Number(item.id)+')" class="px-4 py-2.5 rounded-lg bg-white/10 text-white hover:bg-white/20 text-sm font-bold"><i class="fa-solid fa-file-arrow-down mr-1"></i> Exportar planilha original</button>' +
-                                '<button type="button" onclick="fecharRelatorioFolhaImportada()" class="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold">Fechar</button>' +
-                            '</div>' +
+                '<style>' +
+                '#popup-relatorio-folha-importada .folha-modal{width:100%;height:100%;max-width:1500px;background:#eef1f5;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 25px 80px rgba(0,0,0,.45)}' +
+                '#popup-relatorio-folha-importada .folha-toolbar{background:#172033;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}' +
+                '#popup-relatorio-folha-importada .folha-toolbar h3{font-size:18px;font-weight:800;margin:0}' +
+                '#popup-relatorio-folha-importada .folha-toolbar p{font-size:12px;color:#cbd5e1;margin:3px 0 0}' +
+                '#popup-relatorio-folha-importada .folha-actions{display:flex;gap:8px;flex-wrap:wrap}' +
+                '#popup-relatorio-folha-importada .folha-actions button{border:0;border-radius:8px;padding:9px 13px;font-weight:700;cursor:pointer}' +
+                '#popup-relatorio-folha-importada .folha-actions .excel{background:#16803c;color:#fff}' +
+                '#popup-relatorio-folha-importada .folha-actions .print{background:#fff;color:#172033}' +
+                '#popup-relatorio-folha-importada .folha-actions .close{background:#334155;color:#fff}' +
+                '#popup-relatorio-folha-importada .folha-corpo{overflow:auto;padding:18px;background:#dfe4ea}' +
+                '#popup-relatorio-folha-importada .folha-pagina{background:#fff;margin:0 auto 22px;box-shadow:0 5px 18px rgba(15,23,42,.18);border:1px solid #cbd5e1;max-width:max-content}' +
+                '#popup-relatorio-folha-importada .folha-pagina-cabecalho{display:none}' +
+                '#popup-relatorio-folha-importada .folha-scroll{overflow:visible}' +
+                '#popup-relatorio-folha-importada .folha-tabela{border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;min-width:1450px}' +
+                '#popup-relatorio-folha-importada .folha-tabela td{height:18px;padding:2px 4px;border:0;white-space:pre-wrap;vertical-align:middle;overflow:hidden}' +
+                '#popup-relatorio-folha-importada .folha-vazia td{height:12px}' +
+                '#popup-relatorio-folha-importada .folha-meta td{font-weight:700;font-size:11px}' +
+                '#popup-relatorio-folha-importada .folha-meta td:nth-child(5),#popup-relatorio-folha-importada .folha-meta td:nth-child(36){font-weight:700}' +
+                '#popup-relatorio-folha-importada .folha-titulo td{font-size:15px;font-weight:900;padding-top:8px;padding-bottom:8px}' +
+                '#popup-relatorio-folha-importada .folha-cabecalho td{font-weight:800;border-top:1px solid #555;border-bottom:1px solid #555;background:#f5f5f5}' +
+                '#popup-relatorio-folha-importada .folha-grupo td{font-weight:900;border-top:1px solid #222;border-bottom:1px solid #222;padding-top:5px;padding-bottom:5px}' +
+                '#popup-relatorio-folha-importada .folha-total td{font-weight:900;border-top:1px solid #222;border-bottom:1px solid #222}' +
+                '#popup-relatorio-folha-importada .folha-liquido td{font-weight:900;border-top:2px solid #222;border-bottom:2px solid #222;padding-top:5px;padding-bottom:5px}' +
+                '#popup-relatorio-folha-importada .folha-secao td{font-weight:900;border-top:1px solid #222;border-bottom:1px solid #222;padding-top:5px;padding-bottom:5px}' +
+                '#popup-relatorio-folha-importada .folha-codigo{text-align:right}' +
+                '#popup-relatorio-folha-importada .folha-valor{text-align:right}' +
+                '#popup-relatorio-folha-importada .folha-numero{text-align:right}' +
+                '#popup-relatorio-folha-importada .folha-marca{text-align:center}' +
+                '@media print{body>*:not(#popup-relatorio-folha-importada){display:none!important}#popup-relatorio-folha-importada{position:static!important;display:block!important;background:#fff!important;padding:0!important}#popup-relatorio-folha-importada .folha-modal{height:auto;max-width:none;box-shadow:none;border-radius:0}#popup-relatorio-folha-importada .folha-toolbar{display:none!important}#popup-relatorio-folha-importada .folha-corpo{padding:0;background:#fff;overflow:visible}#popup-relatorio-folha-importada .folha-pagina{box-shadow:none;border:0;margin:0;page-break-after:always;max-width:none}#popup-relatorio-folha-importada .folha-tabela{width:100%;min-width:0;font-size:8px}#popup-relatorio-folha-importada .folha-tabela td{height:13px;padding:1px 2px}#popup-relatorio-folha-importada .folha-pagina:last-child{page-break-after:auto}}' +
+                '</style>' +
+                '<div class="folha-modal">' +
+                    '<div class="folha-toolbar">' +
+                        '<div><h3>Resumo da Folha</h3><p>' + escapeHtml(loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada') + ' · Competência ' + escapeHtml(formatarCompetenciaFolhaISO(item.competencia)) + ' · ' + escapeHtml(item.arquivo_nome || '') + '</p></div>' +
+                        '<div class="folha-actions">' +
+                            '<button type="button" class="excel" onclick="exportarFolhaImportadaOriginalExcel(' + Number(item.id) + ')"><i class="fa-solid fa-file-excel mr-1"></i> Exportar Excel</button>' +
+                            '<button type="button" class="print" onclick="window.print()"><i class="fa-solid fa-print mr-1"></i> Imprimir / PDF</button>' +
+                            '<button type="button" class="close" onclick="fecharRelatorioFolhaImportada()">Fechar</button>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="p-4 md:p-6 overflow-auto">' +
-                        '<div class="rounded-2xl border '+statusClasse+' p-4 mb-5"><div class="font-bold">'+(Number(item.pendencias||0)>0?'Folha importada com pendências':'Folha importada processada')+'</div><div class="text-sm mt-1">Arquivo: '+escapeHtml(item.arquivo_nome||'-')+' · Atualizada em '+escapeHtml(item.updated_at ? new Date(item.updated_at).toLocaleString('pt-BR') : '-')+'</div></div>' +
-                        '<div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-5">' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Linhas</div><div class="text-2xl font-black text-slate-900 mt-1">'+rowsOriginais.length+'</div></div>' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Rubricas</div><div class="text-2xl font-black text-violet-700 mt-1">'+resumo.rubricas+'</div></div>' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Funcionários</div><div class="text-2xl font-black text-blue-700 mt-1">'+dados.colaboradores.length+'</div></div>' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Proventos</div><div class="text-lg font-black text-emerald-700 mt-2">'+formatarValorLancamentoFolha(totalProventos)+'</div></div>' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Descontos</div><div class="text-lg font-black text-red-700 mt-2">'+formatarValorLancamentoFolha(totalDescontos)+'</div></div>' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Líquido</div><div class="text-lg font-black text-unisuperBlue mt-2">'+formatarValorLancamentoFolha(liquido)+'</div></div>' +
-                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Desconto %</div><div class="text-lg font-black text-slate-800 mt-2">'+percentualDescontos.toFixed(2).replace('.',',')+'%</div></div>' +
-                        '</div>' +
-                        '<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">' +
-                            '<div class="bg-white border rounded-2xl overflow-hidden"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Composição por tipo</h4><p class="text-xs text-slate-500 mt-1">Quantidade de ocorrências identificadas na planilha.</p></div><div class="p-4 space-y-2">'+Object.keys(resumo.tipos).map(tipo=>'<div class="flex items-center justify-between border-b last:border-0 py-2 text-sm"><span>'+escapeHtml(tipo)+'</span><strong>'+Number(resumo.tipos[tipo]||0)+'</strong></div>').join('')+'</div></div>' +
-                            '<div class="bg-white border rounded-2xl overflow-hidden"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Conferência da importação</h4><p class="text-xs text-slate-500 mt-1">Indicadores armazenados no processamento da folha.</p></div><div class="p-4 grid grid-cols-2 gap-3"><div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Informativas</div><div class="text-xl font-bold">'+resumo.informativas+'</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">Pendências</div><div class="text-xl font-bold text-amber-800">'+Number(item.pendencias||0)+'</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Impostos</div><div class="text-xl font-bold">'+formatarValorLancamentoFolha(resumo.impostos)+'</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Totalizadores</div><div class="text-xl font-bold">'+formatarValorLancamentoFolha(resumo.totalizadores)+'</div></div></div></div>' +
-                        '</div>' +
-                        '<div class="bg-white border rounded-2xl overflow-hidden mb-5"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Resumo por rubrica</h4><p class="text-xs text-slate-500 mt-1">Valores consolidados a partir das linhas da folha e do cadastro de rubricas.</p></div><div class="overflow-auto max-h-[46vh]"><table class="min-w-[760px] w-full text-sm"><thead class="sticky top-0"><tr><th class="p-2 text-left bg-slate-100">Código</th><th class="p-2 text-left bg-slate-100">Descrição</th><th class="p-2 text-left bg-slate-100">Tipo</th><th class="p-2 text-center bg-slate-100">Ocorrências</th><th class="p-2 text-right bg-slate-100">Total</th></tr></thead><tbody>'+rubricasHtml+'</tbody></table></div></div>' +
-                        '<div class="bg-white border rounded-2xl overflow-hidden mb-5"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Resumo por colaborador</h4><p class="text-xs text-slate-500 mt-1">Quando a planilha possui colunas de funcionário/matrícula, o sistema consolida os valores automaticamente.</p></div><div class="overflow-auto max-h-[46vh]"><table class="min-w-[980px] w-full text-sm"><thead class="sticky top-0"><tr><th class="p-2 text-left bg-slate-100">Matrícula</th><th class="p-2 text-left bg-slate-100">Nome</th><th class="p-2 text-left bg-slate-100">CPF</th><th class="p-2 text-right bg-slate-100">Proventos</th><th class="p-2 text-right bg-slate-100">Descontos</th><th class="p-2 text-right bg-slate-100">Líquido</th></tr></thead><tbody>'+colaboradoresHtml+'</tbody></table></div></div>' +
-                        '<details class="bg-white border rounded-2xl overflow-hidden"><summary class="cursor-pointer p-4 bg-slate-50 font-black text-slate-800">Mostrar todos os dados originais da planilha</summary><div class="overflow-auto max-h-[55vh]"><table class="min-w-max border-collapse text-sm"><thead class="sticky top-0"><tr><th class="p-2 text-xs text-left border-b bg-slate-100 sticky left-0">Linha</th>'+originalHeaders+'</tr></thead><tbody>'+rawRows+'</tbody></table></div></details>' +
-                    '</div>' +
+                    '<div class="folha-corpo">' + grupos.map(renderPagina).join('') + '</div>' +
                 '</div>';
+
             popup.classList.remove('hidden');
         }
 
