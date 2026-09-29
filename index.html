@@ -3841,7 +3841,7 @@ function converterValorLancamentoFolha(valor) {
             for (const linha of (Array.isArray(dadosFolhaImportados) ? dadosFolhaImportados : [])) {
                 if (!Array.isArray(linha)) continue;
                 const texto = String(linha[0] ?? '').trim().toLowerCase();
-                if (texto === alvo) return normalizarNumeroInssFolha(linha[1]);
+                if (texto === alvo) return normalizarNumeroInssFolha(linha[11]);
             }
             return 0;
         }
@@ -4104,7 +4104,45 @@ function converterValorLancamentoFolha(valor) {
                 }
             }
 
-            // Impostos ficam sempre depois de todos os descontos.
+            // INSS do Resumo da Folha fica imediatamente abaixo dos descontos.
+            // Os valores do Resumo da Folha estão na coluna L (índice 11).
+            const inserirLinhaInssResumo = (descricao, valor, natureza) => {
+                if (!Number.isFinite(valor) || valor <= 0) return;
+                const alvo = normalizarDescricaoRubricaFolha(descricao);
+                const rubricaInss = rubricasCadastradas.find(r => {
+                    const d = normalizarDescricaoRubricaFolha(r.descricao);
+                    return d === alvo ||
+                        d === 'inss ' + alvo ||
+                        d.replace(/^totalizador\\s+/, '') === alvo;
+                });
+                if (!rubricaInss) {
+                    inconsistencias.push('Rubrica de INSS "' + descricao + '" não está cadastrada.');
+                    return;
+                }
+                const contaInss = localizarContaDeParaFolha(loja, rubricaInss);
+                if (!contaInss) {
+                    inconsistencias.push('Não existe DePara para o INSS "' + descricao + '" na loja "' + loja.codigo + '".');
+                    return;
+                }
+                const valorTexto = valor.toFixed(2).replace('.', ',');
+                lancamentos.push({
+                    conta: contaInss.codigo,
+                    debito: natureza === 'debito' ? valorTexto : '0,00',
+                    credito: natureza === 'credito' ? valorTexto : '0,00',
+                    historico: loja.nome + ' - INSS ' + descricao.toUpperCase() + ' - ' + competencia
+                });
+            };
+
+            const resumoInss = resumoInssFolhaAtual || gerarResumoInssFolha();
+            if (resumoInss) {
+                inserirLinhaInssResumo('Segurados', resumoInss.segurados, 'credito');
+                inserirLinhaInssResumo('Contribuintes', resumoInss.contribuintes, 'credito');
+                inserirLinhaInssResumo('Empresa', resumoInss.empresa, 'debito');
+                inserirLinhaInssResumo('RAT', resumoInss.rat, 'debito');
+                inserirLinhaInssResumo('Terceiros', resumoInss.terceiros, 'debito');
+            }
+
+            // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
             lancamentos.push(...lancamentosImpostos);
 
             // Soma os valores por descrição para formar os totalizadores.
