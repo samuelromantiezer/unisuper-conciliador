@@ -3137,7 +3137,18 @@ function converterValorLancamentoFolha(valor) {
                 if (!codigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
 
                 const rubrica = localizarRubricaFolha(codigo);
-                if (!rubrica || String(rubrica.tipo || '').trim().toLowerCase() !== 'imposto') continue;
+                if (!rubrica) continue;
+
+                const descricaoRubrica = normalizarDescricaoRubricaFolha(rubrica.descricao);
+                const tipoRubricaAtual = String(rubrica.tipo || '').trim().toLowerCase();
+
+                // Para o cálculo do INSS Empresa, o INSS Descontado também entra
+                // mesmo quando estiver cadastrado como Desconto.
+                const participaTotalizadorInss =
+                    tipoRubricaAtual === 'imposto' ||
+                    descricaoRubrica === 'inss descontado';
+
+                if (!participaTotalizadorInss) continue;
 
                 const bruto = linha[32];
                 const numero = Number(String(bruto).replace(/\./g, '').replace(',', '.'));
