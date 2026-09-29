@@ -2929,6 +2929,16 @@ function converterValorLancamentoFolha(valor) {
             document.getElementById('tabela-lancamentos-folha')?.lastElementChild?.querySelector('input')?.focus();
         }
 
+        function linhaFolhaEhInformativa(linha) {
+            return (linha || []).some(valor => {
+                const texto = String(valor ?? '').trim()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase();
+                return texto.includes('informativa');
+            });
+        }
+
         function conferirRubricasFolhaImportada() {
             if (!dadosFolhaImportados.length) return;
 
@@ -2944,6 +2954,7 @@ function converterValorLancamentoFolha(valor) {
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativa(linha)) break;
                 const rubricaBruta = linha[0];
                 const textoRubrica = String(rubricaBruta ?? '').trim();
                 const rubricaCodigo = textoRubrica.replace(/^["']|["']$/g, '').trim();
@@ -3031,6 +3042,7 @@ function converterValorLancamentoFolha(valor) {
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativa(linha)) break;
                 const rubricaBruta = linha[0];
 
                 // A coluna A define se a linha é uma rubrica válida.
@@ -3177,6 +3189,7 @@ function converterValorLancamentoFolha(valor) {
             const valoresImpostos = new Map();
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativa(linha)) break;
                 const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
                 const somenteNumeros = codigo.replace(/\D/g, '');
                 if (!codigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
