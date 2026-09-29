@@ -3430,7 +3430,7 @@ function converterValorLancamentoFolha(valor) {
             return valorColunaAM.includes('*');
         }
 
-        async async function conferirRubricasFolhaImportada() {
+        async function conferirRubricasFolhaImportada() {
             if (!dadosFolhaImportados.length) return;
 
             const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
