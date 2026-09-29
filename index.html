@@ -4264,6 +4264,139 @@ function converterValorLancamentoFolha(valor) {
                 inserirImpostoInssComTotalizador('RAT', Number(resumoInss.rat || 0));
             }
 
+            // FGTS: os rótulos ficam na coluna R (índice 17) e os valores
+            // correspondentes no Resumo da Folha ficam na coluna AH (índice 33).
+            // Cada valor de FGTS gera uma linha própria e, ao final, um
+            // Totalizador FGTS a crédito.
+            const localizarRubricaFgtsPorDescricao = descricao => {
+                const normalizarFgts = valor => normalizarDescricaoRubricaFolha(valor)
+                    .replace(/[.:]/g, '')
+                    .replace(/^valor\s+/, '')
+                    .replace(/^do\s+/, '')
+                    .replace(/^fgts\s+/, 'fgts ');
+
+                const alvo = normalizarFgts(descricao);
+                const aliases = {
+                    'valor do fgts': ['fgts', 'valor do fgts'],
+                    'valor do fgts aprendiz': ['fgts aprendiz', 'fgts do aprendiz', 'valor do fgts aprendiz'],
+                    'valor fgts rescisorio': ['fgts - grrf', 'fgts grrf', 'fgts rescisorio', 'fgts de aviso previo'],
+                    'valor fgts resc mes ant': ['fgts resc mes ant', 'fgts mes ant grrf', 'fgts - grrf mes ant']
+                };
+
+                const candidatos = aliases[alvo] || [alvo];
+                const rubricasImposto = rubricasCadastradas.filter(r =>
+                    String(r.tipo || '').trim().toLowerCase() === 'imposto'
+                );
+
+                const encontrados = rubricasImposto.filter(r => {
+                    const d = normalizarFgts(r.descricao);
+                    return candidatos.includes(d);
+                });
+
+                if (encontrados.length) return encontrados[0];
+
+                const flexiveis = rubricasImposto.filter(r => {
+                    const d = normalizarFgts(r.descricao);
+                    return candidatos.some(c => d === c || d.startsWith(c + ' ') || c.startsWith(d + ' '));
+                });
+
+                return flexiveis[0] || null;
+            };
+
+            const localizarRubricaTotalizadorFgts = () => {
+                const totalizadoras = rubricasCadastradas.filter(r =>
+                    String(r.tipo || '').trim().toLowerCase() === 'totalizador'
+                );
+
+                return totalizadoras.find(r => {
+                    const d = normalizarDescricaoRubricaFolha(r.descricao)
+                        .replace(/[.:]/g, '')
+                        .replace(/^totalizador\s+/, '');
+                    return d === 'fgts';
+                }) || totalizadoras.find(r =>
+                    normalizarDescricaoRubricaFolha(r.descricao).includes('fgts')
+                ) || null;
+            };
+
+            const inserirLinhaFgts = (descricaoFonte, valor) => {
+                if (!Number.isFinite(valor) || valor <= 0) return 0;
+
+                const rubricaFgts = localizarRubricaFgtsPorDescricao(descricaoFonte);
+                if (!rubricaFgts) {
+                    inconsistencias.push(
+                        'Rubrica de FGTS "' + descricaoFonte +
+                        '" não está cadastrada como Imposto.'
+                    );
+                    return 0;
+                }
+
+                const contaFgts = localizarContaDeParaFolha(loja, rubricaFgts);
+                if (!contaFgts) {
+                    inconsistencias.push(
+                        'Não existe DePara para o FGTS "' + descricaoFonte +
+                        '" na loja "' + loja.codigo + '".'
+                    );
+                    return 0;
+                }
+
+                const valorTexto = valor.toFixed(2).replace('.', ',');
+                lancamentos.push({
+                    conta: contaFgts.codigo,
+                    debito: valorTexto,
+                    credito: '0,00',
+                    historico: loja.nome + ' - FGTS ' + rubricaFgts.descricao.toUpperCase() + ' - ' + competencia
+                });
+
+                return valor;
+            };
+
+            const localizarValorFgtsFolha = linha => {
+                if (!Array.isArray(linha)) return 0;
+                const valor = linha[33]; // Coluna AH
+                if (valor === null || valor === undefined || String(valor).trim() === '') return 0;
+                return normalizarNumeroInssFolha(valor);
+            };
+
+            let totalFgtsLancado = 0;
+            for (const linha of (Array.isArray(dadosFolhaImportados) ? dadosFolhaImportados : [])) {
+                if (!Array.isArray(linha)) continue;
+
+                const descricaoFonte = String(linha[17] ?? '').trim();
+                if (!/^valor\s+.*fgts/i.test(descricaoFonte)) continue;
+
+                totalFgtsLancado += inserirLinhaFgts(
+                    descricaoFonte,
+                    localizarValorFgtsFolha(linha)
+                );
+            }
+
+            if (totalFgtsLancado > 0) {
+                const rubricaTotalizadorFgts = localizarRubricaTotalizadorFgts();
+
+                if (!rubricaTotalizadorFgts) {
+                    inconsistencias.push(
+                        'Rubrica "Totalizador FGTS" não está cadastrada como Totalizador.'
+                    );
+                } else {
+                    const contaTotalizadorFgts = localizarContaDeParaFolha(loja, rubricaTotalizadorFgts);
+
+                    if (!contaTotalizadorFgts) {
+                        inconsistencias.push(
+                            'Não existe DePara para o Totalizador FGTS na loja "' +
+                            loja.codigo + '".'
+                        );
+                    } else {
+                        const valorTexto = totalFgtsLancado.toFixed(2).replace('.', ',');
+                        lancamentos.push({
+                            conta: contaTotalizadorFgts.codigo,
+                            debito: '0,00',
+                            credito: valorTexto,
+                            historico: loja.nome + ' - FGTS - ' + competencia
+                        });
+                    }
+                }
+            }
+
             // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
             lancamentos.push(...lancamentosImpostos);
 
