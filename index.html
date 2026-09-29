@@ -4098,8 +4098,8 @@ function converterValorLancamentoFolha(valor) {
             const localizarRubricaInssPorImposto = descricao => {
                 const alvo = normalizarDescricaoRubricaFolha(descricao)
                     .replace(/[.:]/g, '')
-                    .replace(/^inss\\s+/, '')
-                    .replace(/^totalizador\\s+/, '');
+                    .replace(/^inss\s+/, '')
+                    .replace(/^totalizador\s+/, '');
 
                 const aliases = {
                     empresa: ['empresa', 'inss empresa', 'inss empresa e rat', 'empresa e rat'],
@@ -4115,16 +4115,16 @@ function converterValorLancamentoFolha(valor) {
 
                 const candidatosNormalizados = candidatos.map(c => normalizarDescricaoRubricaFolha(c)
                     .replace(/[.:]/g, '')
-                    .replace(/^inss\\s+/, '')
-                    .replace(/^totalizador\\s+/, ''));
+                    .replace(/^inss\s+/, '')
+                    .replace(/^totalizador\s+/, ''));
 
                 // Primeiro tenta a correspondência exata. Depois aceita variações
                 // como "INSS Empresa", "Empresa e RAT" e "INSS Empresa e RAT".
                 const encontradosExatos = rubricasImposto.filter(r => {
                     const d = normalizarDescricaoRubricaFolha(r.descricao)
                         .replace(/[.:]/g, '')
-                        .replace(/^inss\\s+/, '')
-                        .replace(/^totalizador\\s+/, '');
+                        .replace(/^inss\s+/, '')
+                        .replace(/^totalizador\s+/, '');
                     return candidatosNormalizados.includes(d);
                 });
 
@@ -4133,8 +4133,8 @@ function converterValorLancamentoFolha(valor) {
                 const encontradosFlexiveis = rubricasImposto.filter(r => {
                     const d = normalizarDescricaoRubricaFolha(r.descricao)
                         .replace(/[.:]/g, '')
-                        .replace(/^inss\\s+/, '')
-                        .replace(/^totalizador\\s+/, '');
+                        .replace(/^inss\s+/, '')
+                        .replace(/^totalizador\s+/, '');
                     return candidatosNormalizados.some(c => d === c || d.startsWith(c + ' ') || d.includes(c));
                 });
 
@@ -4144,9 +4144,9 @@ function converterValorLancamentoFolha(valor) {
             const localizarRubricaInssPorTotalizador = descricao => {
                 const alvo = normalizarDescricaoRubricaFolha(descricao)
                     .replace(/[.:]/g, '')
-                    .replace(/^inss\\s+/, '')
-                    .replace(/^totalizador\\s+/, '')
-                    .replace(/\\s+totalizador$/, '');
+                    .replace(/^inss\s+/, '')
+                    .replace(/^totalizador\s+/, '')
+                    .replace(/\s+totalizador$/, '');
 
                 const aliases = {
                     empresa: ['empresa', 'inss empresa', 'inss empresa e rat', 'empresa e rat'],
@@ -4163,9 +4163,9 @@ function converterValorLancamentoFolha(valor) {
                 const encontrados = rubricasTotalizadorasInss.filter(r => {
                     const d = normalizarDescricaoRubricaFolha(r.descricao)
                         .replace(/[.:]/g, '')
-                        .replace(/^inss\\s+/, '')
-                        .replace(/^totalizador\\s+/, '')
-                        .replace(/\\s+totalizador$/, '');
+                        .replace(/^inss\s+/, '')
+                        .replace(/^totalizador\s+/, '')
+                        .replace(/\s+totalizador$/, '');
                     return candidatos.includes(d);
                 });
 
