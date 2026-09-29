@@ -4106,31 +4106,61 @@ function converterValorLancamentoFolha(valor) {
 
             // INSS do Resumo da Folha fica imediatamente abaixo dos descontos.
             // Os valores do Resumo da Folha estão na coluna L (índice 11).
+            // INSS da folha: Empresa, Terceiros, Contribuintes e RAT são
+            // rubricas do cadastro do tipo "Imposto". A rubrica Empresa continua
+            // sendo um totalizador contábil calculado por RAT + Terceiros.
+            const localizarRubricaInssPorImposto = descricao => {
+                const alvo = normalizarDescricaoRubricaFolha(descricao)
+                    .replace(/[.:]/g, '')
+                    .replace(/^inss\\s+/, '')
+                    .replace(/^totalizador\\s+/, '');
+
+                const aliases = {
+                    empresa: ['empresa', 'inss empresa', 'inss empresa e rat', 'empresa e rat'],
+                    terceiros: ['terceiros', 'inss terceiros'],
+                    contribuintes: ['contribuintes', 'inss contribuintes'],
+                    rat: ['rat', 'inss rat']
+                };
+
+                const candidatos = aliases[alvo] || [alvo];
+                const rubricasImposto = rubricasCadastradas.filter(r =>
+                    String(r.tipo || '').trim().toLowerCase() === 'imposto'
+                );
+
+                const encontrados = rubricasImposto.filter(r => {
+                    const d = normalizarDescricaoRubricaFolha(r.descricao)
+                        .replace(/[.:]/g, '')
+                        .replace(/^inss\\s+/, '')
+                        .replace(/^totalizador\\s+/, '');
+                    return candidatos.includes(d);
+                });
+
+                return encontrados[0] || null;
+            };
+
             const inserirLinhaInssResumo = (descricao, valor, natureza) => {
                 if (!Number.isFinite(valor) || valor <= 0) return;
-                const alvo = normalizarDescricaoRubricaFolha(descricao).replace(/[.:]/g, '');
-                const rubricasInss = rubricasCadastradas.filter(r => {
-                    const d = normalizarDescricaoRubricaFolha(r.descricao).replace(/[.:]/g, '');
-                    const dSemInss = d.replace(/^inss\\s+/, '');
-                    const dSemTotalizador = d.replace(/^totalizador\\s+/, '');
-                    return d === alvo ||
-                        dSemInss === alvo ||
-                        dSemTotalizador === alvo ||
-                        dSemInss === 'empresa e rat' && alvo === 'empresa';
-                });
-                // Empresa é uma rubrica totalizadora: prioriza o cadastro do tipo Totalizador.
-                const rubricaInss = descricao === 'Empresa'
-                    ? (rubricasInss.find(r => String(r.tipo || '').trim().toLowerCase() === 'totalizador') || rubricasInss[0])
-                    : rubricasInss[0];
+
+                const rubricaInss = localizarRubricaInssPorImposto(
+                    normalizarDescricaoRubricaFolha(descricao)
+                );
+
                 if (!rubricaInss) {
-                    inconsistencias.push('Rubrica de INSS "' + descricao + '" não está cadastrada.');
+                    inconsistencias.push(
+                        'Rubrica de INSS "' + descricao + '" não está cadastrada como Imposto.'
+                    );
                     return;
                 }
+
                 const contaInss = localizarContaDeParaFolha(loja, rubricaInss);
                 if (!contaInss) {
-                    inconsistencias.push('Não existe DePara para o INSS "' + descricao + '" na loja "' + loja.codigo + '".');
+                    inconsistencias.push(
+                        'Não existe DePara para o INSS "' + descricao +
+                        '" na loja "' + loja.codigo + '".'
+                    );
                     return;
                 }
+
                 const valorTexto = valor.toFixed(2).replace('.', ',');
                 lancamentos.push({
                     conta: contaInss.codigo,
@@ -4142,9 +4172,12 @@ function converterValorLancamentoFolha(valor) {
 
             const resumoInss = resumoInssFolhaAtual || gerarResumoInssFolha();
             if (resumoInss) {
-                // INSS Empresa é um totalizador contábil: RAT + Terceiros.
-                // Segurados já está lançado nos descontos e Contribuintes permanece separado.
-                const totalInssEmpresa = Number(resumoInss.rat || 0) + Number(resumoInss.terceiros || 0);
+                // Empresa é o totalizador contábil do INSS patronal:
+                // RAT + Terceiros. Segurados já está lançado nos descontos.
+                const totalInssEmpresa =
+                    Number(resumoInss.rat || 0) +
+                    Number(resumoInss.terceiros || 0);
+
                 inserirLinhaInssResumo('Empresa', totalInssEmpresa, 'debito');
                 inserirLinhaInssResumo('Contribuintes', resumoInss.contribuintes, 'credito');
             }
