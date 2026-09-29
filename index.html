@@ -3042,7 +3042,7 @@ function converterValorLancamentoFolha(valor) {
                 const numeros = codigo.replace(/\D/g, '');
                 if (informativa && numeros && /^\d+(?:[.,]\d+)?$/.test(codigo) && ignoradas < 4) {
                     ignoradas++;
-                    detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim(),tipo:'Informativa',valor:normalizarNumeroFolha(linha[32])/100,status:'ignorada',motivo:'Uma das quatro rubricas após INFORMATIVA.'});
+                    detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim(),tipo:'Informativa',valor:normalizarNumeroFolha(linha[32]),status:'ignorada',motivo:'Uma das quatro rubricas após INFORMATIVA.'});
                     continue;
                 }
                 if (!codigo || !numeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
@@ -3051,7 +3051,7 @@ function converterValorLancamentoFolha(valor) {
                 let status='ok', motivo='Conferido.';
                 if (!rubrica) { status='divergente'; motivo='Rubrica não cadastrada.'; }
                 else if (!conta) { status='divergente'; motivo='Sem DePara para a loja selecionada.'; }
-                detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim() || String(rubrica?.descricao || ''),tipo:rubrica?String(rubrica.tipo||''):'Não cadastrada',valor:normalizarNumeroFolha(linha[32])/100,conta:conta?String(conta.codigo||''):'',status,motivo});
+                detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim() || String(rubrica?.descricao || ''),tipo:rubrica?String(rubrica.tipo||''):'Não cadastrada',valor:normalizarNumeroFolha(linha[32]),conta:conta?String(conta.codigo||''):'',status,motivo});
             }
             return detalhes;
         }
@@ -3085,7 +3085,7 @@ function converterValorLancamentoFolha(valor) {
 
                 // O valor dos totais está na coluna AG (índice 32).
                 // A planilha da folha usa a mesma escala em centavos das rubricas.
-                const valor = normalizarNumeroFolha((linha || [])[32]) / 100;
+                const valor = normalizarNumeroFolha((linha || [])[32]);
                 if (!encontrouProventos) {
                     totalProventos = valor;
                     encontrouProventos = true;
@@ -3268,8 +3268,8 @@ function converterValorLancamentoFolha(valor) {
                     continue;
                 }
 
-                // O valor da folha vem em centavos; converte para reais antes de gerar o lançamento.
-                const valor = valorBrutoNumerico / 100;
+                // O valor da folha já é lido na escala exata da planilha, sem dividir por 100.
+                const valor = valorBrutoNumerico;
                 const valorFormatadoTela = valor.toFixed(2).replace('.', ',');
                 const tipoRubrica = String(rubrica.tipo || '').trim().toLowerCase();
                 let debito = '0,00';
@@ -3405,7 +3405,7 @@ function converterValorLancamentoFolha(valor) {
                 const valorBrutoNumerico = Number.isFinite(numero) ? numero : Number(bruto);
                 if (!Number.isFinite(valorBrutoNumerico)) continue;
 
-                const valor = valorBrutoNumerico / 100;
+                const valor = valorBrutoNumerico;
                 const chave = normalizarDescricaoRubricaFolha(rubrica.descricao);
                 valoresImpostos.set(chave, (valoresImpostos.get(chave) || 0) + valor);
             }
