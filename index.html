@@ -2651,6 +2651,7 @@
         let folhasImportadas = [];
         let folhaGeradaVisualizando = null;
         let folhaImportadaVisualizando = null;
+        let nomeArquivoFolhaImportadaAtual = '';
         let pendenciasConferenciaFolha = {
             lista: [],
             loja: null,
@@ -3306,6 +3307,10 @@ function converterValorLancamentoFolha(valor) {
 
             salvarPendenciasConferenciaFolha(conferenciaRubricas, loja, competencia, []);
 
+            salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual).catch(erroAtualizacao => {
+                console.error('Erro ao atualizar o processamento da folha importada:', erroAtualizacao);
+            });
+
             try {
                 const importadaAtual = folhasImportadas.find(x => Number(x.loja_id) === Number(loja.id) && String(x.competencia || '') === obterCompetenciaFolhaISO());
                 if (importadaAtual && supabaseClient) {
@@ -3489,7 +3494,8 @@ function converterValorLancamentoFolha(valor) {
                     dadosFolhaImportados = XLSX.utils.sheet_to_json(planilha, {header:1, defval:''});
                     if (!dadosFolhaImportados.length) throw new Error('A planilha está vazia.');
                     document.getElementById('btn-validar-totais-folha')?.classList.remove('hidden');
-                    try { await salvarFolhaImportadaAtual(file.name); } catch (erroSalvar) { console.error('Erro ao salvar folha importada:', erroSalvar); }
+                    nomeArquivoFolhaImportadaAtual = file.name || '';
+                    try { await salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual); } catch (erroSalvar) { console.error('Erro ao salvar folha importada:', erroSalvar); }
                     conferirRubricasFolhaImportada();
                 } catch (e) {
                     alert('Erro ao ler a planilha da folha de pagamento: ' + (e.message || e));
