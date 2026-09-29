@@ -4277,10 +4277,10 @@ function converterValorLancamentoFolha(valor) {
 
                 const alvo = normalizarFgts(descricao);
                 const aliases = {
-                    'valor do fgts': ['fgts', 'valor do fgts'],
-                    'valor do fgts aprendiz': ['fgts aprendiz', 'fgts do aprendiz', 'valor do fgts aprendiz'],
-                    'valor fgts rescisorio': ['fgts - grrf', 'fgts grrf', 'fgts rescisorio', 'fgts de aviso previo'],
-                    'valor fgts resc mes ant': ['fgts resc mes ant', 'fgts mes ant grrf', 'fgts - grrf mes ant']
+                    'fgts': ['fgts'],
+                    'fgts aprendiz': ['fgts aprendiz', 'fgts do aprendiz'],
+                    'fgts rescisorio': ['fgts - grrf', 'fgts grrf', 'fgts rescisorio', 'fgts de aviso previo'],
+                    'fgts resc mes ant': ['fgts resc mes ant', 'fgts mes ant grrf', 'fgts - grrf mes ant']
                 };
 
                 const candidatos = aliases[alvo] || [alvo];
