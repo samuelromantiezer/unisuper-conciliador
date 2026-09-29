@@ -3010,7 +3010,13 @@ function converterValorLancamentoFolha(valor) {
                 : 'não informada';
 
             salvarPendenciasConferenciaFolha(conferenciaRubricas, loja, competencia, []);
-            abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, []);
+
+            const totalPendencias = conferenciaRubricas.filter(item => item.status !== 'ok').length;
+            if (totalPendencias > 0) {
+                abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, []);
+            } else {
+                alert('Lançamento gerado com sucesso!');
+            }
         }
 
         function carregarArquivoFolhaPagamento(input) {
