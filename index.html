@@ -1099,6 +1099,20 @@
                             <i class="fa-solid fa-plus"></i> Adicionar linha
                         </button>
                     </div>
+                    <div class="mt-5 border border-slate-200 rounded-lg overflow-hidden">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h5 class="font-bold text-slate-700 text-sm"><i class="fa-solid fa-calculator text-unisuperBlue mr-2"></i>INSS da Folha</h5>
+                                <p class="text-xs text-slate-500 mt-1">Gerado automaticamente junto com o lançamento, usando os totalizadores do Resumo da Folha importado.</p>
+                            </div>
+                            <button type="button" onclick="exportarInssFolhaExcel()" class="inline-flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700">
+                                <i class="fa-solid fa-file-excel"></i> Exportar INSS 97-2003
+                            </button>
+                        </div>
+                        <div id="resumo-inss-folha" class="p-4 bg-slate-50">
+                            <div class="p-5 text-center text-slate-400 text-sm">O INSS será gerado automaticamente ao clicar em "Gerar Lançamento".</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2654,6 +2668,7 @@
         }
         let linhasLancamentoFolha = [];
         let dadosFolhaImportados = [];
+        let resumoInssFolhaAtual = null;
         let folhasGeradas = [];
         let folhasImportadas = [];
         let folhaGeradaVisualizando = null;
@@ -3812,6 +3827,111 @@ function converterValorLancamentoFolha(valor) {
             reader.readAsArrayBuffer(file);
         }
 
+        function normalizarNumeroInssFolha(valor) {
+            if (valor === null || valor === undefined || valor === '') return 0;
+            if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+            const texto = String(valor).trim().replace(/\s/g, '');
+            if (!texto) return 0;
+            const numero = Number(texto.replace(/\./g, '').replace(',', '.'));
+            return Number.isFinite(numero) ? numero : 0;
+        }
+
+        function localizarValorResumoInssFolha(rotulo) {
+            const alvo = String(rotulo || '').trim().toLowerCase();
+            for (const linha of (Array.isArray(dadosFolhaImportados) ? dadosFolhaImportados : [])) {
+                if (!Array.isArray(linha)) continue;
+                const texto = String(linha[0] ?? '').trim().toLowerCase();
+                if (texto === alvo) return normalizarNumeroInssFolha(linha[1]);
+            }
+            return 0;
+        }
+
+        function gerarResumoInssFolha() {
+            if (!Array.isArray(dadosFolhaImportados) || !dadosFolhaImportados.length) {
+                resumoInssFolhaAtual = null;
+                renderResumoInssFolha();
+                return null;
+            }
+
+            const baseTotal = localizarValorResumoInssFolha('Base total:');
+            const segurados = localizarValorResumoInssFolha('Segurados:');
+            const empresa = localizarValorResumoInssFolha('Empresa:');
+            const rat = localizarValorResumoInssFolha('RAT:');
+            const contribuintes = localizarValorResumoInssFolha('Contribuintes:');
+            const terceiros = localizarValorResumoInssFolha('Terceiros:');
+            const totalInssInformado = localizarValorResumoInssFolha('Total INSS:');
+
+            resumoInssFolhaAtual = {
+                baseTotal,
+                segurados,
+                empresa,
+                rat,
+                contribuintes,
+                terceiros,
+                totalInss: totalInssInformado || (segurados + empresa + rat + contribuintes + terceiros)
+            };
+
+            renderResumoInssFolha();
+            return resumoInssFolhaAtual;
+        }
+
+        function renderResumoInssFolha() {
+            const el = document.getElementById('resumo-inss-folha');
+            if (!el) return;
+
+            if (!resumoInssFolhaAtual) {
+                el.innerHTML = '<div class="p-5 text-center text-slate-400 text-sm">O INSS será gerado automaticamente ao clicar em "Gerar Lançamento".</div>';
+                return;
+            }
+
+            const item = resumoInssFolhaAtual;
+            const moeda = valor => Number(valor || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+            el.innerHTML =
+                '<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">' +
+                    '<div class="rounded-lg border border-slate-200 bg-white p-3"><div class="text-[11px] uppercase font-bold text-slate-500">Base total</div><div class="mt-1 text-sm font-bold text-slate-800">R$ ' + moeda(item.baseTotal) + '</div></div>' +
+                    '<div class="rounded-lg border border-slate-200 bg-white p-3"><div class="text-[11px] uppercase font-bold text-slate-500">Segurados</div><div class="mt-1 text-sm font-bold text-slate-800">R$ ' + moeda(item.segurados) + '</div></div>' +
+                    '<div class="rounded-lg border border-slate-200 bg-white p-3"><div class="text-[11px] uppercase font-bold text-slate-500">Empresa</div><div class="mt-1 text-sm font-bold text-slate-800">R$ ' + moeda(item.empresa) + '</div></div>' +
+                    '<div class="rounded-lg border border-slate-200 bg-white p-3"><div class="text-[11px] uppercase font-bold text-slate-500">RAT</div><div class="mt-1 text-sm font-bold text-slate-800">R$ ' + moeda(item.rat) + '</div></div>' +
+                    '<div class="rounded-lg border border-slate-200 bg-white p-3"><div class="text-[11px] uppercase font-bold text-slate-500">Terceiros</div><div class="mt-1 text-sm font-bold text-slate-800">R$ ' + moeda(item.terceiros) + '</div></div>' +
+                    '<div class="rounded-lg border border-blue-200 bg-blue-50 p-3"><div class="text-[11px] uppercase font-bold text-blue-700">Total INSS</div><div class="mt-1 text-sm font-bold text-blue-900">R$ ' + moeda(item.totalInss) + '</div></div>' +
+                '</div>';
+        }
+
+        function exportarInssFolhaExcel() {
+            if (!resumoInssFolhaAtual) gerarResumoInssFolha();
+            if (!resumoInssFolhaAtual) {
+                alert('Gere o lançamento da folha antes de exportar o INSS.');
+                return;
+            }
+            if (typeof XLSX === 'undefined') {
+                alert('A biblioteca Excel não foi carregada.');
+                return;
+            }
+
+            const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
+            const competencia = obterCompetenciaFolha();
+            const dados = [
+                ['INSS DA FOLHA DE PAGAMENTO'],
+                ['Loja', lojaCodigo],
+                ['Competência', competencia],
+                [],
+                ['Descrição', 'Valor'],
+                ['Base total', resumoInssFolhaAtual.baseTotal],
+                ['Segurados', resumoInssFolhaAtual.segurados],
+                ['Empresa', resumoInssFolhaAtual.empresa],
+                ['RAT', resumoInssFolhaAtual.rat],
+                ['Contribuintes', resumoInssFolhaAtual.contribuintes],
+                ['Terceiros', resumoInssFolhaAtual.terceiros],
+                ['Total INSS', resumoInssFolhaAtual.totalInss]
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet(dados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'INSS');
+            XLSX.writeFile(wb, 'INSS_Folha_' + (competencia || 'competencia').replace('/', '_') + '.xls', {bookType:'xls'});
+        }
+
         function gerarLancamentoFolha() {
             const competencia = obterCompetenciaFolha();
             const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
@@ -3819,6 +3939,9 @@ function converterValorLancamentoFolha(valor) {
             if (!loja) return alert('Selecione a loja antes de gerar o lançamento.');
             if (!competencia) return alert('Selecione a competência antes de gerar o lançamento.');
             if (!dadosFolhaImportados.length) return alert('Importe primeiro a planilha Excel da Folha de Pagamento.');
+
+            // Gera o resumo do INSS junto com o lançamento da folha.
+            gerarResumoInssFolha();
 
             const lancamentos = [];
             const inconsistencias = [];
