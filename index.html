@@ -3022,6 +3022,41 @@ function converterValorLancamentoFolha(valor) {
 
         let validacaoTotaisFolha = null;
         // validação detalhada
+        function obterDetalhamentoLancamentosFolha() {
+            const detalhes = [];
+            let informativa = false;
+            let ignoradas = 0;
+            const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
+            const loja = lerListaCadastro('lojas').find(x => String(x.codigo ?? '').trim() === lojaCodigo);
+            for (let i = 0; i < (dadosFolhaImportados || []).length; i++) {
+                const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativaPorColunaAM(linha)) {
+                    detalhes.push({linha:i+1,codigo:'',descricao:'Informativa (*)',tipo:'Informativa',valor:0,status:'ignorada',motivo:'Marcada com * na coluna AM.'});
+                    continue;
+                }
+                if (linhaFolhaEhInformativa(linha)) {
+                    informativa = true; ignoradas = 0;
+                    continue;
+                }
+                const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
+                const numeros = codigo.replace(/\D/g, '');
+                if (informativa && numeros && /^\d+(?:[.,]\d+)?$/.test(codigo) && ignoradas < 4) {
+                    ignoradas++;
+                    detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim(),tipo:'Informativa',valor:normalizarNumeroFolha(linha[32])/100,status:'ignorada',motivo:'Uma das quatro rubricas após INFORMATIVA.'});
+                    continue;
+                }
+                if (!codigo || !numeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
+                const rubrica = localizarRubricaFolha(codigo);
+                const conta = rubrica && loja ? localizarContaDeParaFolha(loja,rubrica) : null;
+                let status='ok', motivo='Conferido.';
+                if (!rubrica) { status='divergente'; motivo='Rubrica não cadastrada.'; }
+                else if (!conta) { status='divergente'; motivo='Sem DePara para a loja selecionada.'; }
+                detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim() || String(rubrica?.descricao || ''),tipo:rubrica?String(rubrica.tipo||''):'Não cadastrada',valor:normalizarNumeroFolha(linha[32])/100,conta:conta?String(conta.codigo||''):'',status,motivo});
+            }
+            return detalhes;
+        }
+
+
 
         function normalizarNumeroFolha(valor) {
             if (typeof valor === 'number') return valor;
