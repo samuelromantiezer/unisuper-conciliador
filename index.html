@@ -1112,8 +1112,8 @@
             atualizarStatusSupabase(true, "Conectado ao Supabase");
             carregarCadastros();
 
-            const abaSalva = localStorage.getItem('unisuper_aba_atual') || 'cadastro';
-            const subAbaSalva = localStorage.getItem('unisuper_subaba_atual') || 'caixa';
+            const abaSalva = sessionStorage.getItem('unisuper_aba_atual') || 'cadastro';
+            const subAbaSalva = sessionStorage.getItem('unisuper_subaba_atual') || 'caixa';
 
             switchTab(abaSalva, false);
             switchSubTab(subAbaSalva, false);
@@ -1145,8 +1145,8 @@
 
         async function fazerLogout() {
             if (supabaseClient) { await supabaseClient.auth.signOut(); }
-            localStorage.removeItem('unisuper_aba_atual');
-            localStorage.removeItem('unisuper_subaba_atual');
+            sessionStorage.removeItem('unisuper_aba_atual');
+            sessionStorage.removeItem('unisuper_subaba_atual');
             mostrarLogin();
         }
 
@@ -2129,7 +2129,7 @@
                 btnAlvo.classList.remove('text-slate-300');
                 btnAlvo.classList.add('bg-unisuperBlue', 'text-white', 'shadow');
             }
-            if (salvar) localStorage.setItem('unisuper_aba_atual', tabId);
+            if (salvar) sessionStorage.setItem('unisuper_aba_atual', tabId);
         }
 
         function switchSubTab(subTabId, salvar = true) {
@@ -2146,7 +2146,7 @@
                 btnSubAlvo.classList.remove('border-transparent', 'text-slate-500');
                 btnSubAlvo.classList.add('border-unisuperBlue', 'text-unisuperBlue');
             }
-            if (salvar) localStorage.setItem('unisuper_subaba_atual', subTabId);
+            if (salvar) sessionStorage.setItem('unisuper_subaba_atual', subTabId);
             marcarModuloConciliacaoAtivo(subTabId);
             alternarSubmenuConciliacoes(true);
             if (subTabId === 'financeiro') {
@@ -2163,7 +2163,7 @@
             const abrir = forcarEstado === null ? fechadoAtual : Boolean(forcarEstado);
             submenu.classList.toggle('submenu-fechado', !abrir);
             if (icone) icone.classList.toggle('submenu-aberto', abrir);
-            try { localStorage.setItem('unisuper_submenu_conciliacoes_aberto', abrir ? '1' : '0'); } catch (e) {}
+            try { sessionStorage.setItem('unisuper_submenu_conciliacoes_aberto', abrir ? '1' : '0'); } catch (e) {}
         }
 
         function marcarModuloConciliacaoAtivo(subTabId) {
@@ -2201,7 +2201,7 @@
                 botao.classList.add('border-unisuperBlue', 'text-unisuperBlue');
             }
             if (salvar) {
-                try { localStorage.setItem('unisuper_conciliacao_aba_' + modulo, aba); } catch (e) {}
+                try { sessionStorage.setItem('unisuper_conciliacao_aba_' + modulo, aba); } catch (e) {}
             }
         }
 
@@ -2210,7 +2210,7 @@
             Object.keys(padroes).forEach(modulo => {
                 let aba = padroes[modulo];
                 try {
-                    const salvo = localStorage.getItem('unisuper_conciliacao_aba_' + modulo);
+                    const salvo = sessionStorage.getItem('unisuper_conciliacao_aba_' + modulo);
                     if (salvo) aba = salvo;
                 } catch (e) {}
                 switchConciliacaoAba(modulo, aba, false);
@@ -2232,8 +2232,8 @@
             depara: 'unisuper_depara_folha'
         };
 
-        // Os dados dos cadastros ficam no Supabase. LocalStorage é usado apenas
-        // para lembrar abas/filtros da interface, nunca como banco de dados.
+        // Os dados dos cadastros ficam no Supabase. sessionStorage é usado para
+        // lembrar o estado da interface somente nesta aba do navegador.
         let cacheCadastros = { lojas: [], plano: [], rubricas: [], historicos: [], depara: [] };
         let carregandoCadastros = false;
 
@@ -2250,7 +2250,7 @@
             const btn = document.getElementById('cadtab-btn-' + id);
             if (alvo) alvo.classList.remove('hidden');
             if (btn) { btn.classList.remove('border-transparent','text-slate-500'); btn.classList.add('border-unisuperBlue','text-unisuperBlue'); }
-            localStorage.setItem('unisuper_cadastrotab_atual', id);
+            sessionStorage.setItem('unisuper_cadastrotab_atual', id);
         }
         function switchFolhaTab(id) {
             document.querySelectorAll('.folhatab-content').forEach(el => el.classList.add('hidden'));
@@ -2262,7 +2262,7 @@
             const btn = document.getElementById('folhatab-btn-' + id);
             if (alvo) alvo.classList.remove('hidden');
             if (btn) { btn.classList.remove('border-transparent','text-slate-500'); btn.classList.add('border-unisuperBlue','text-unisuperBlue'); }
-            localStorage.setItem('unisuper_folhatab_atual', id);
+            sessionStorage.setItem('unisuper_folhatab_atual', id);
             if (id === 'depara') atualizarOpcoesDePara();
             if (id === 'geradas') carregarFolhasGeradas();
         }
@@ -3736,7 +3736,7 @@ async function importarDeParaFolhaTXT(input){
                             <button type="button" onclick="editarDeParaFolha(${x.id})" class="text-blue-600 hover:text-blue-800" title="Editar conta contábil" aria-label="Editar conta contábil"><i class="fa-solid fa-pen-to-square"></i></button>
                             <button type="button" onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700" title="Excluir vínculo" aria-label="Excluir vínculo"><i class="fa-solid fa-trash"></i></button>
                         </div></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
-        async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
+        async function inicializarNovosCadastros(){const c=sessionStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=sessionStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
         setTimeout(() => {
             atualizarOpcoesLojas();
@@ -3756,7 +3756,7 @@ async function importarDeParaFolhaTXT(input){
                 botao.setAttribute('aria-expanded', String(!recolhido));
                 botao.title = recolhido ? 'Expandir menu' : 'Recolher menu';
             }
-            try { localStorage.setItem('menuRecolhido', recolhido ? '1' : '0'); } catch (e) {}
+            try { sessionStorage.setItem('menuRecolhido', recolhido ? '1' : '0'); } catch (e) {}
         }
 
         function inicializarMenuResponsivo() {
@@ -3764,7 +3764,7 @@ async function importarDeParaFolhaTXT(input){
             if (!menu) return;
             let recolhido = window.innerWidth < 768;
             try {
-                const salvo = localStorage.getItem('menuRecolhido');
+                const salvo = sessionStorage.getItem('menuRecolhido');
                 if (salvo !== null && window.innerWidth >= 768) recolhido = salvo === '1';
             } catch (e) {}
             menu.classList.toggle('menu-recolhido', recolhido);
@@ -3791,9 +3791,9 @@ async function importarDeParaFolhaTXT(input){
             let aberto = false;
             let modulo = 'caixa';
             try {
-                const salvo = localStorage.getItem('unisuper_submenu_conciliacoes_aberto');
+                const salvo = sessionStorage.getItem('unisuper_submenu_conciliacoes_aberto');
                 if (salvo !== null) aberto = salvo === '1';
-                const salvoModulo = localStorage.getItem('unisuper_subaba_atual');
+                const salvoModulo = sessionStorage.getItem('unisuper_subaba_atual');
                 if (['caixa','fiscal','financeiro'].includes(salvoModulo)) modulo = salvoModulo;
             } catch (e) {}
             alternarSubmenuConciliacoes(aberto);
