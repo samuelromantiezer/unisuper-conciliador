@@ -960,8 +960,8 @@
                         <h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-circle-check text-unisuperBlue mr-2"></i>Folhas Importadas</h4>
                         <p class="text-sm text-slate-600 mt-1">Consulte o processamento das planilhas sem precisar abrir novamente o Excel.</p>
                     </div>
-                    <button type="button" onclick="carregarFolhasImportadas(true)" class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-900">
-                        <i class="fa-solid fa-rotate"></i> Atualizar
+                    <button type="button" onclick="carregarFolhasImportadas(true)" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-blue-900 shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass"></i> Consultar Folhas
                     </button>
                 </div>
                 <div class="p-5">
@@ -998,7 +998,11 @@
                                 </tr>
                             </thead>
                             <tbody id="tabela-folhas-importadas">
-                                <tr><td colspan="9" class="p-8 text-center text-slate-400">Carregando folhas importadas...</td></tr>
+                                <tr><td colspan="9" class="p-10 text-center text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass text-2xl mb-2"></i>
+                                    <div class="font-semibold text-slate-600">Nenhuma consulta realizada</div>
+                                    <div class="text-xs mt-1">Clique em "Consultar Folhas" para carregar as folhas importadas.</div>
+                                </td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2369,7 +2373,7 @@
             sessionStorage.setItem('unisuper_folhatab_atual', id);
             if (id === 'depara') atualizarOpcoesDePara();
             if (id === 'geradas') { atualizarFiltrosFolhasGeradas(); carregarFolhasGeradas(); }
-            if (id === 'importadas') { atualizarFiltrosFolhasImportadas(); carregarFolhasImportadas(); }
+            if (id === 'importadas') { atualizarFiltrosFolhasImportadas(); }
         }
 
         async function consultarTabelaCompleta(tabela, colunas, ordem) {
@@ -2805,13 +2809,200 @@
             return {rubricas,informativas,proventos,descontos,impostos,totalizadores,tipos};
         }
 
+        function obterCabecalhosRelatorioFolha(item) {
+            const rows = Array.isArray(item?.dados_planilha) ? item.dados_planilha : [];
+            const cab = Array.isArray(item?.cabecalhos) && item.cabecalhos.length ? item.cabecalhos : (Array.isArray(rows[0]) ? rows[0] : []);
+            return cab.map((v, i) => String(v ?? '').trim() || 'Coluna ' + String.fromCharCode(65 + (i % 26)));
+        }
+
+        function normalizarCabecalhoRelatorioFolha(valor) {
+            return String(valor ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+        }
+
+        function localizarColunaRelatorioFolha(cabecalhos, aliases, preferPrefix = false) {
+            const normalizados = cabecalhos.map(normalizarCabecalhoRelatorioFolha);
+            const a = aliases.map(normalizarCabecalhoRelatorioFolha);
+            for (const alias of a) {
+                const idx = normalizados.findIndex(x => x === alias);
+                if (idx >= 0) return idx;
+            }
+            for (const alias of a) {
+                const idx = normalizados.findIndex(x => preferPrefix ? x.startsWith(alias) : x.includes(alias));
+                if (idx >= 0) return idx;
+            }
+            return -1;
+        }
+
+        function formatarNumeroRelatorioFolha(valor) {
+            const n = normalizarNumeroFolha(valor);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function obterLinhasDadosRelatorioFolha(item) {
+            const rows = Array.isArray(item?.dados_planilha) ? item.dados_planilha : [];
+            const cab = obterCabecalhosRelatorioFolha(item);
+            const primeira = Array.isArray(rows[0]) ? rows[0] : [];
+            const pareceCabecalho = primeira.length && primeira.some((v, i) => {
+                const texto = normalizarCabecalhoRelatorioFolha(v);
+                return texto && (
+                    texto.includes('nome') || texto.includes('funcionario') || texto.includes('matricula') ||
+                    texto.includes('rubrica') || texto.includes('provento') || texto.includes('desconto') ||
+                    texto.includes('valor') || texto.includes('cpf') || texto.includes('cargo')
+                );
+            });
+            return {cabecalhos:cab, linhas:pareceCabecalho ? rows.slice(1) : rows, possuiCabecalho:pareceCabecalho};
+        }
+
+        function prepararDadosRelatorioFolha(item) {
+            const base = obterLinhasDadosRelatorioFolha(item);
+            const h = base.cabecalhos;
+            const linhas = base.linhas;
+            const idxCodigo = localizarColunaRelatorioFolha(h, ['codigo rubrica','cod rubrica','codigo','rubrica','cod']);
+            const idxDescricao = localizarColunaRelatorioFolha(h, ['descricao rubrica','descricao','rubrica descricao','evento']);
+            const idxNome = localizarColunaRelatorioFolha(h, ['nome','nome funcionario','funcionario','colaborador','empregado']);
+            const idxMatricula = localizarColunaRelatorioFolha(h, ['matricula','registro','codigo funcionario','cod funcionario']);
+            const idxCpf = localizarColunaRelatorioFolha(h, ['cpf','documento']);
+            const idxValor = localizarColunaRelatorioFolha(h, ['valor rubrica','valor','valor evento','vlr evento','total rubrica','valor calculado']);
+            const idxProvento = localizarColunaRelatorioFolha(h, ['provento','proventos','valor provento']);
+            const idxDesconto = localizarColunaRelatorioFolha(h, ['desconto','descontos','valor desconto']);
+            const idxLiquido = localizarColunaRelatorioFolha(h, ['liquido','liquido folha','salario liquido','valor liquido']);
+
+            const valorColuna = idxValor >= 0 ? idxValor : 32;
+            const rubricas = new Map();
+            const colaboradores = new Map();
+
+            for (const linha of linhas) {
+                if (!Array.isArray(linha)) continue;
+                const codigo = String(linha[idxCodigo >= 0 ? idxCodigo : 0] ?? '').replace(/^["']|["']$/g,'').trim();
+                if (!codigo || !/^\\d+(?:[.,]\\d+)?$/.test(codigo)) continue;
+
+                const descricao = String(linha[idxDescricao >= 0 ? idxDescricao : -1] ?? '').trim() || localizarRubricaFolha(codigo)?.descricao || 'Rubrica ' + codigo;
+                const rubrica = localizarRubricaFolha(codigo);
+                const tipo = rubrica ? String(rubrica.tipo || 'Não classificada') : 'Não cadastrada';
+                let valor = formatarNumeroRelatorioFolha(linha[valorColuna]);
+
+                if (idxProvento >= 0 && idxDesconto >= 0) {
+                    const p = formatarNumeroRelatorioFolha(linha[idxProvento]);
+                    const d = formatarNumeroRelatorioFolha(linha[idxDesconto]);
+                    if (Math.abs(p) > 0 || Math.abs(d) > 0) valor = p || d;
+                }
+
+                const chave = codigo;
+                const r = rubricas.get(chave) || {codigo,descricao,tipo,ocorrencias:0,total:0};
+                r.ocorrencias++;
+                r.total += valor;
+                rubricas.set(chave,r);
+
+                if (idxNome >= 0 || idxMatricula >= 0) {
+                    const nome = idxNome >= 0 ? String(linha[idxNome] ?? '').trim() : '';
+                    const matricula = idxMatricula >= 0 ? String(linha[idxMatricula] ?? '').trim() : '';
+                    const cpf = idxCpf >= 0 ? String(linha[idxCpf] ?? '').trim() : '';
+                    const chaveFuncionario = matricula || cpf || nome;
+                    if (chaveFuncionario) {
+                        const f = colaboradores.get(chaveFuncionario) || {matricula,nome,cpf,proventos:0,descontos:0,liquido:0,ocorrencias:0};
+                        f.ocorrencias++;
+                        if (tipo.toLowerCase().includes('provento')) f.proventos += valor;
+                        if (tipo.toLowerCase().includes('desconto') || tipo.toLowerCase().includes('imposto')) f.descontos += valor;
+                        if (idxLiquido >= 0) {
+                            const liq = formatarNumeroRelatorioFolha(linha[idxLiquido]);
+                            if (liq) f.liquido = liq;
+                        }
+                        colaboradores.set(chaveFuncionario,f);
+                    }
+                }
+            }
+
+            return {
+                ...base,
+                idxCodigo,idxDescricao,idxNome,idxMatricula,idxCpf,idxValor,idxProvento,idxDesconto,idxLiquido,
+                rubricas:[...rubricas.values()].sort((a,b)=>Math.abs(b.total)-Math.abs(a.total)),
+                colaboradores:[...colaboradores.values()].sort((a,b)=>String(a.nome||a.matricula).localeCompare(String(b.nome||b.matricula),'pt-BR'))
+            };
+        }
+
+        function exportarFolhaImportadaOriginalExcel(id) {
+            const item = localizarFolhaImportada(id);
+            if (!item) return alert('Folha importada não encontrada.');
+            if (typeof XLSX === 'undefined') return alert('A biblioteca Excel não foi carregada.');
+            const rows = Array.isArray(item.dados_planilha) ? item.dados_planilha : [];
+            if (!rows.length) return alert('A folha importada não possui dados para exportação.');
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Folha');
+            const competencia = String(item.competencia || '').replace(/[^0-9-]/g,'');
+            const nome = String(item.arquivo_nome || 'Folha_Importada').replace(/\\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]+/g,'_');
+            XLSX.writeFile(wb, nome + '_' + competencia + '.xlsx');
+        }
+
+        function exportarRelatorioFolhaImportadaExcel(id) {
+            const item = localizarFolhaImportada(id);
+            if (!item) return alert('Folha importada não encontrada.');
+            if (typeof XLSX === 'undefined') return alert('A biblioteca Excel não foi carregada.');
+            const dados = prepararDadosRelatorioFolha(item);
+            const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
+            const resumo = calcularResumoFolhaImportada(item);
+
+            const resumoRows = [
+                ['RELATÓRIO DE FOLHA DE PAGAMENTO'],
+                ['Loja', loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada'],
+                ['Competência', formatarCompetenciaFolhaISO(item.competencia)],
+                ['Arquivo', item.arquivo_nome || ''],
+                ['Status', item.status || 'Importada'],
+                [],
+                ['INDICADORES','VALOR'],
+                ['Linhas importadas', Array.isArray(item.dados_planilha) ? item.dados_planilha.length : 0],
+                ['Rubricas', resumo.rubricas],
+                ['Informativas', resumo.informativas],
+                ['Pendências', Number(item.pendencias || 0)],
+                ['Proventos', Number(item.total_proventos || resumo.proventos || 0)],
+                ['Descontos', Number(item.total_descontos || resumo.descontos || 0)],
+                ['Líquido estimado', Number(item.total_proventos || resumo.proventos || 0) - Number(item.total_descontos || resumo.descontos || 0)]
+            ];
+
+            const rubricaRows = [['Código','Descrição','Tipo','Ocorrências','Total']];
+            dados.rubricas.forEach(r=>rubricaRows.push([r.codigo,r.descricao,r.tipo,r.ocorrencias,r.total]));
+            const colaboradorRows = [['Matrícula','Nome','CPF','Proventos','Descontos','Líquido','Ocorrências']];
+            dados.colaboradores.forEach(f=>colaboradorRows.push([f.matricula,f.nome,f.cpf,f.proventos,f.descontos,f.liquido || (f.proventos-f.descontos),f.ocorrencias]));
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumoRows), 'Resumo');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rubricaRows), 'Rubricas');
+            if (colaboradorRows.length > 1) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(colaboradorRows), 'Colaboradores');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(Array.isArray(item.dados_planilha) ? item.dados_planilha : []), 'Dados Originais');
+            const competencia = String(item.competencia || '').replace(/[^0-9-]/g,'');
+            XLSX.writeFile(wb, 'Relatorio_Folha_' + competencia + '.xlsx');
+        }
+
         function abrirRelatorioFolhaImportada(id) {
             const item = localizarFolhaImportada(id);
             if (!item) return alert('Folha importada não encontrada.');
             folhaImportadaVisualizando = item;
             const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
-            const rows = Array.isArray(item.dados_planilha) ? item.dados_planilha : [];
             const resumo = calcularResumoFolhaImportada(item);
+            const dados = prepararDadosRelatorioFolha(item);
+            const rowsOriginais = Array.isArray(item.dados_planilha) ? item.dados_planilha : [];
+            const cabecalhos = dados.cabecalhos;
+            const linhasOriginais = dados.linhas;
+            const totalProventos = Number(item.total_proventos ?? resumo.proventos ?? 0);
+            const totalDescontos = Number(item.total_descontos ?? resumo.descontos ?? 0);
+            const liquido = totalProventos - totalDescontos;
+            const percentualDescontos = totalProventos ? (totalDescontos / totalProventos * 100) : 0;
+            const statusClasse = Number(item.pendencias || 0) > 0 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
+            const rubricasHtml = dados.rubricas.length ? dados.rubricas.slice(0,80).map(r =>
+                '<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2 font-semibold">'+escapeHtml(r.codigo)+'</td><td class="p-2">'+escapeHtml(r.descricao)+'</td><td class="p-2">'+escapeHtml(r.tipo)+'</td><td class="p-2 text-center">'+r.ocorrencias+'</td><td class="p-2 text-right font-semibold">'+formatarValorLancamentoFolha(r.total)+'</td></tr>'
+            ).join('') : '<tr><td colspan="5" class="p-6 text-center text-slate-400">Não foi possível identificar rubricas automaticamente pelos cabeçalhos da planilha.</td></tr>';
+
+            const colaboradoresHtml = dados.colaboradores.length ? dados.colaboradores.slice(0,200).map(f =>
+                '<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-2">'+escapeHtml(f.matricula||'-')+'</td><td class="p-2 font-medium">'+escapeHtml(f.nome||'-')+'</td><td class="p-2">'+escapeHtml(f.cpf||'-')+'</td><td class="p-2 text-right">'+formatarValorLancamentoFolha(f.proventos)+'</td><td class="p-2 text-right">'+formatarValorLancamentoFolha(f.descontos)+'</td><td class="p-2 text-right font-bold">'+formatarValorLancamentoFolha(f.liquido || (f.proventos-f.descontos))+'</td></tr>'
+            ).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400">A planilha não possui cabeçalhos suficientes para identificar colaboradores individualmente.</td></tr>';
+
+            const letras = n => { let s=''; n++; while(n){ let x=(n-1)%26; s=String.fromCharCode(65+x)+s; n=Math.floor((n-1)/26); } return s; };
+            const originalHeaders = cabecalhos.length ? cabecalhos.map((h,i)=>'<th class="p-2 text-xs text-left border-b whitespace-nowrap bg-slate-100">'+escapeHtml(h || letras(i))+'</th>').join('') : '';
+            const rawRows = linhasOriginais.map((linha,idx) => {
+                const cells = cabecalhos.map((_,col)=>'<td class="p-2 text-xs whitespace-nowrap border-b">'+escapeHtml(linha?.[col] ?? '')+'</td>').join('');
+                return '<tr class="hover:bg-slate-50"><td class="p-2 text-xs font-bold sticky left-0 bg-white border-b">'+(dados.possuiCabecalho ? idx+2 : idx+1)+'</td>'+cells+'</tr>';
+            }).join('');
+
             let popup = document.getElementById('popup-relatorio-folha-importada');
             if (!popup) {
                 popup = document.createElement('div');
@@ -2819,38 +3010,37 @@
                 popup.className = 'fixed inset-0 z-[96] bg-slate-950/70 flex items-center justify-center p-3 md:p-6';
                 document.body.appendChild(popup);
             }
-            const maxColunas = rows.reduce((m, r) => Math.max(m, Array.isArray(r) ? r.length : 0), 0);
-            const letras = n => { let s=''; n++; while(n){ let x=(n-1)%26; s=String.fromCharCode(65+x)+s; n=Math.floor((n-1)/26); } return s; };
-            const rawRows = rows.map((linha,idx) => {
-                const cells = [];
-                for(let col=0; col<maxColunas; col++) cells.push('<td class="p-2 text-xs whitespace-nowrap border-b">' + escapeHtml(linha?.[col] ?? '') + '</td>');
-                return '<tr class="hover:bg-slate-50"><td class="p-2 text-xs font-bold sticky left-0 bg-white border-b">' + (idx+1) + '</td>' + cells.join('') + '</tr>';
-            }).join('');
-            const headers = Array.from({length:maxColunas},(_,i)=>'<th class="p-2 text-xs text-left border-b whitespace-nowrap">' + letras(i) + '</th>').join('');
+
             popup.innerHTML =
-                '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-[96vw] max-h-[94vh] flex flex-col overflow-hidden">' +
-                    '<div class="p-5 border-b bg-gradient-to-r from-slate-900 to-slate-700 text-white">' +
-                        '<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">' +
-                            '<div><div class="text-xs uppercase tracking-wider opacity-80">Relatório dinâmico da folha</div><h3 class="text-xl font-bold mt-1">' + escapeHtml(loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada') + '</h3><div class="text-sm opacity-90 mt-1">Competência ' + escapeHtml(formatarCompetenciaFolhaISO(item.competencia)) + ' • ' + escapeHtml(item.arquivo_nome || 'Arquivo não informado') + '</div></div>' +
-                            '<button type="button" onclick="fecharRelatorioFolhaImportada()" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold">Fechar</button>' +
+                '<div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-[98vw] max-h-[96vh] flex flex-col overflow-hidden">' +
+                    '<div class="p-5 md:p-6 bg-gradient-to-r from-slate-950 via-slate-900 to-unisuperBlue text-white">' +
+                        '<div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">' +
+                            '<div><div class="text-xs uppercase tracking-[0.18em] text-blue-200 font-bold">Relatório de Folha de Pagamento</div><h3 class="text-2xl md:text-3xl font-black mt-1">'+escapeHtml(loja ? loja.codigo+' - '+loja.nome : 'Loja não encontrada')+'</h3><div class="text-sm text-slate-200 mt-1">Competência '+escapeHtml(formatarCompetenciaFolhaISO(item.competencia))+' · '+escapeHtml(item.arquivo_nome || 'Arquivo não informado')+'</div></div>' +
+                            '<div class="flex flex-wrap gap-2">' +
+                                '<button type="button" onclick="exportarRelatorioFolhaImportadaExcel('+Number(item.id)+')" class="px-4 py-2.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 text-sm font-bold"><i class="fa-solid fa-file-excel mr-1"></i> Exportar relatório Excel</button>' +
+                                '<button type="button" onclick="exportarFolhaImportadaOriginalExcel('+Number(item.id)+')" class="px-4 py-2.5 rounded-lg bg-white/10 text-white hover:bg-white/20 text-sm font-bold"><i class="fa-solid fa-file-arrow-down mr-1"></i> Exportar planilha original</button>' +
+                                '<button type="button" onclick="fecharRelatorioFolhaImportada()" class="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold">Fechar</button>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
-                    '<div class="p-5 overflow-auto">' +
-                        '<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-5">' +
-                            '<div class="rounded-xl bg-blue-50 border border-blue-100 p-4"><div class="text-xs text-blue-700 font-bold">Linhas</div><div class="text-2xl font-bold text-blue-900 mt-1">' + rows.length + '</div></div>' +
-                            '<div class="rounded-xl bg-emerald-50 border border-emerald-100 p-4"><div class="text-xs text-emerald-700 font-bold">Proventos</div><div class="text-lg font-bold text-emerald-900 mt-2">' + formatarValorLancamentoFolha(item.total_proventos ?? resumo.proventos) + '</div></div>' +
-                            '<div class="rounded-xl bg-amber-50 border border-amber-100 p-4"><div class="text-xs text-amber-700 font-bold">Descontos</div><div class="text-lg font-bold text-amber-900 mt-2">' + formatarValorLancamentoFolha(item.total_descontos ?? resumo.descontos) + '</div></div>' +
-                            '<div class="rounded-xl bg-violet-50 border border-violet-100 p-4"><div class="text-xs text-violet-700 font-bold">Rubricas</div><div class="text-2xl font-bold text-violet-900 mt-1">' + resumo.rubricas + '</div></div>' +
-                            '<div class="rounded-xl bg-slate-50 border border-slate-200 p-4"><div class="text-xs text-slate-600 font-bold">Informativas</div><div class="text-2xl font-bold text-slate-800 mt-1">' + resumo.informativas + '</div></div>' +
-                            '<div class="rounded-xl bg-red-50 border border-red-100 p-4"><div class="text-xs text-red-700 font-bold">Pendências</div><div class="text-2xl font-bold text-red-900 mt-1">' + Number(item.pendencias || 0) + '</div></div>' +
+                    '<div class="p-4 md:p-6 overflow-auto">' +
+                        '<div class="rounded-2xl border '+statusClasse+' p-4 mb-5"><div class="font-bold">'+(Number(item.pendencias||0)>0?'Folha importada com pendências':'Folha importada processada')+'</div><div class="text-sm mt-1">Arquivo: '+escapeHtml(item.arquivo_nome||'-')+' · Atualizada em '+escapeHtml(item.updated_at ? new Date(item.updated_at).toLocaleString('pt-BR') : '-')+'</div></div>' +
+                        '<div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-5">' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Linhas</div><div class="text-2xl font-black text-slate-900 mt-1">'+rowsOriginais.length+'</div></div>' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Rubricas</div><div class="text-2xl font-black text-violet-700 mt-1">'+resumo.rubricas+'</div></div>' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Funcionários</div><div class="text-2xl font-black text-blue-700 mt-1">'+dados.colaboradores.length+'</div></div>' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Proventos</div><div class="text-lg font-black text-emerald-700 mt-2">'+formatarValorLancamentoFolha(totalProventos)+'</div></div>' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Descontos</div><div class="text-lg font-black text-red-700 mt-2">'+formatarValorLancamentoFolha(totalDescontos)+'</div></div>' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Líquido</div><div class="text-lg font-black text-unisuperBlue mt-2">'+formatarValorLancamentoFolha(liquido)+'</div></div>' +
+                            '<div class="bg-white border rounded-xl p-4"><div class="text-xs text-slate-500 font-bold">Desconto %</div><div class="text-lg font-black text-slate-800 mt-2">'+percentualDescontos.toFixed(2).replace('.',',')+'%</div></div>' +
                         '</div>' +
-                        '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">' +
-                            '<div class="border rounded-xl p-4"><h4 class="font-bold text-slate-800 mb-3">Composição por tipo</h4><div class="space-y-2">' +
-                                Object.keys(resumo.tipos).map(tipo=>'<div class="flex justify-between text-sm border-b last:border-0 pb-2"><span>' + escapeHtml(tipo) + '</span><strong>' + Number(resumo.tipos[tipo]||0) + '</strong></div>').join('') +
-                            '</div></div>' +
-                            '<div class="border rounded-xl p-4"><h4 class="font-bold text-slate-800 mb-3">Totais adicionais</h4><div class="space-y-2 text-sm"><div class="flex justify-between"><span>Impostos</span><strong>' + formatarValorLancamentoFolha(resumo.impostos) + '</strong></div><div class="flex justify-between"><span>Totalizadores</span><strong>' + formatarValorLancamentoFolha(resumo.totalizadores) + '</strong></div><div class="flex justify-between"><span>Status</span><strong>' + escapeHtml(item.status || 'Importada') + '</strong></div></div></div>' +
+                        '<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">' +
+                            '<div class="bg-white border rounded-2xl overflow-hidden"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Composição por tipo</h4><p class="text-xs text-slate-500 mt-1">Quantidade de ocorrências identificadas na planilha.</p></div><div class="p-4 space-y-2">'+Object.keys(resumo.tipos).map(tipo=>'<div class="flex items-center justify-between border-b last:border-0 py-2 text-sm"><span>'+escapeHtml(tipo)+'</span><strong>'+Number(resumo.tipos[tipo]||0)+'</strong></div>').join('')+'</div></div>' +
+                            '<div class="bg-white border rounded-2xl overflow-hidden"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Conferência da importação</h4><p class="text-xs text-slate-500 mt-1">Indicadores armazenados no processamento da folha.</p></div><div class="p-4 grid grid-cols-2 gap-3"><div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Informativas</div><div class="text-xl font-bold">'+resumo.informativas+'</div></div><div class="rounded-xl bg-amber-50 p-3"><div class="text-xs text-amber-700">Pendências</div><div class="text-xl font-bold text-amber-800">'+Number(item.pendencias||0)+'</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Impostos</div><div class="text-xl font-bold">'+formatarValorLancamentoFolha(resumo.impostos)+'</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-xs text-slate-500">Totalizadores</div><div class="text-xl font-bold">'+formatarValorLancamentoFolha(resumo.totalizadores)+'</div></div></div></div>' +
                         '</div>' +
-                        '<div class="border rounded-xl overflow-hidden"><div class="p-4 bg-slate-50 border-b"><h4 class="font-bold text-slate-800">Dados completos da planilha</h4><p class="text-xs text-slate-500 mt-1">Todas as linhas e colunas foram preservadas na importação.</p></div><div class="overflow-auto max-h-[52vh]"><table class="min-w-max border-collapse"><thead class="sticky top-0 bg-slate-100"><tr><th class="p-2 text-xs text-left border-b sticky left-0 bg-slate-100">Linha</th>' + headers + '</tr></thead><tbody>' + rawRows + '</tbody></table></div></div>' +
+                        '<div class="bg-white border rounded-2xl overflow-hidden mb-5"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Resumo por rubrica</h4><p class="text-xs text-slate-500 mt-1">Valores consolidados a partir das linhas da folha e do cadastro de rubricas.</p></div><div class="overflow-auto max-h-[46vh]"><table class="min-w-[760px] w-full text-sm"><thead class="sticky top-0"><tr><th class="p-2 text-left bg-slate-100">Código</th><th class="p-2 text-left bg-slate-100">Descrição</th><th class="p-2 text-left bg-slate-100">Tipo</th><th class="p-2 text-center bg-slate-100">Ocorrências</th><th class="p-2 text-right bg-slate-100">Total</th></tr></thead><tbody>'+rubricasHtml+'</tbody></table></div></div>' +
+                        '<div class="bg-white border rounded-2xl overflow-hidden mb-5"><div class="p-4 border-b bg-slate-50"><h4 class="font-black text-slate-800">Resumo por colaborador</h4><p class="text-xs text-slate-500 mt-1">Quando a planilha possui colunas de funcionário/matrícula, o sistema consolida os valores automaticamente.</p></div><div class="overflow-auto max-h-[46vh]"><table class="min-w-[980px] w-full text-sm"><thead class="sticky top-0"><tr><th class="p-2 text-left bg-slate-100">Matrícula</th><th class="p-2 text-left bg-slate-100">Nome</th><th class="p-2 text-left bg-slate-100">CPF</th><th class="p-2 text-right bg-slate-100">Proventos</th><th class="p-2 text-right bg-slate-100">Descontos</th><th class="p-2 text-right bg-slate-100">Líquido</th></tr></thead><tbody>'+colaboradoresHtml+'</tbody></table></div></div>' +
+                        '<details class="bg-white border rounded-2xl overflow-hidden"><summary class="cursor-pointer p-4 bg-slate-50 font-black text-slate-800">Mostrar todos os dados originais da planilha</summary><div class="overflow-auto max-h-[55vh]"><table class="min-w-max border-collapse text-sm"><thead class="sticky top-0"><tr><th class="p-2 text-xs text-left border-b bg-slate-100 sticky left-0">Linha</th>'+originalHeaders+'</tr></thead><tbody>'+rawRows+'</tbody></table></div></details>' +
                     '</div>' +
                 '</div>';
             popup.classList.remove('hidden');
@@ -3240,7 +3430,7 @@ function converterValorLancamentoFolha(valor) {
             return valorColunaAM.includes('*');
         }
 
-        async function conferirRubricasFolhaImportada() {
+        async async function conferirRubricasFolhaImportada() {
             if (!dadosFolhaImportados.length) return;
 
             const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
