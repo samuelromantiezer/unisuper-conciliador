@@ -2939,6 +2939,11 @@ function converterValorLancamentoFolha(valor) {
             });
         }
 
+        function linhaFolhaEhInformativaPorColunaAM(linha) {
+            const valorColunaAM = String((linha || [])[38] ?? '').trim();
+            return valorColunaAM.includes('*');
+        }
+
         function conferirRubricasFolhaImportada() {
             if (!dadosFolhaImportados.length) return;
 
@@ -2956,6 +2961,9 @@ function converterValorLancamentoFolha(valor) {
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativaPorColunaAM(linha)) {
+                    continue;
+                }
                 if (linhaFolhaEhInformativa(linha)) {
                     encontrouInformativa = true;
                     informativasIgnoradas = 0;
@@ -3054,6 +3062,9 @@ function converterValorLancamentoFolha(valor) {
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativaPorColunaAM(linha)) {
+                    continue;
+                }
                 if (linhaFolhaEhInformativa(linha)) {
                     encontrouInformativa = true;
                     informativasIgnoradas = 0;
@@ -3207,6 +3218,9 @@ function converterValorLancamentoFolha(valor) {
             let informativasIgnoradasImpostos = 0;
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                if (linhaFolhaEhInformativaPorColunaAM(linha)) {
+                    continue;
+                }
                 if (linhaFolhaEhInformativa(linha)) {
                     encontrouInformativaImpostos = true;
                     informativasIgnoradasImpostos = 0;
