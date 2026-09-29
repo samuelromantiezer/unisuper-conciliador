@@ -4138,10 +4138,11 @@ function converterValorLancamentoFolha(valor) {
 
             const resumoInss = resumoInssFolhaAtual || gerarResumoInssFolha();
             if (resumoInss) {
+                // INSS Empresa é um totalizador contábil: RAT + Terceiros.
+                // Segurados já está lançado nos descontos e Contribuintes permanece separado.
+                const totalInssEmpresa = Number(resumoInss.rat || 0) + Number(resumoInss.terceiros || 0);
+                inserirLinhaInssResumo('Empresa', totalInssEmpresa, 'debito');
                 inserirLinhaInssResumo('Contribuintes', resumoInss.contribuintes, 'credito');
-                inserirLinhaInssResumo('Empresa', resumoInss.empresa, 'debito');
-                inserirLinhaInssResumo('RAT', resumoInss.rat, 'debito');
-                inserirLinhaInssResumo('Terceiros', resumoInss.terceiros, 'debito');
             }
 
             // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
