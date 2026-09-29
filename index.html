@@ -2977,7 +2977,8 @@ function converterValorLancamentoFolha(valor) {
             const inconsistencias = [];
             const lancamentosProventos = [];
             const lancamentosDescontos = [];
-            const lancamentosOutros = [];
+            const lancamentosImpostos = [];
+            const lancamentosTotalizadoresImpostos = [];
             const conferenciaRubricas = [];
             const conferenciaPorCodigo = new Map();
             let totalProventos = 0;
@@ -3060,33 +3061,38 @@ function converterValorLancamentoFolha(valor) {
                     lancamentosProventos.push(lancamento);
                 } else if (tipoRubrica === 'desconto') {
                     lancamentosDescontos.push(lancamento);
-                } else {
-                    lancamentosOutros.push(lancamento);
+                } else if (tipoRubrica === 'imposto') {
+                    lancamentosImpostos.push(lancamento);
+                } else if (tipoRubrica === 'totalizador') {
+                    lancamentosTotalizadoresImpostos.push(lancamento);
                 }
             }
 
             // Totalizadores da folha:
-            // Os totais são calculados diretamente pelo TIPO de cada rubrica,
-            // independentemente de qual coluna (débito/crédito) o lançamento individual usa.
-            // Proventos -> total no CRÉDITO.
-            // Descontos -> total no DÉBITO.
-            const rubricasTotalizadoras = lerListaCadastro('rubricas').filter(r =>
+            // 1) Proventos + totalizador de Proventos
+            // 2) Descontos + totalizador de Descontos
+            // 3) Impostos detalhados
+            // 4) Totalizadores dos impostos
+            const rubricasCadastradas = lerListaCadastro('rubricas');
+            const rubricasTotalizadoras = rubricasCadastradas.filter(r =>
                 String(r.tipo || '').trim().toLowerCase() === 'totalizador'
             );
-            const encontrarTotalizador = palavra => rubricasTotalizadoras.find(r => {
-                const descricao = String(r.descricao || '').trim().toLowerCase();
-                return descricao === palavra || descricao === palavra + 's' || descricao.includes(palavra);
-            });
 
-            const rubricaTotalProventos = encontrarTotalizador('provento');
-            const rubricaTotalDescontos = encontrarTotalizador('desconto');
+            const normalizarDescricaoRubricaFolha = valor =>
+                String(valor || '').trim().toLowerCase()
+                    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+                    .replace(/\\s+/g, ' ');
 
-            // A ordem da tela é obrigatória:
-            // 1) todos os proventos
-            // 2) totalizador de proventos
-            // 3) todos os descontos
-            // 4) totalizador de descontos
-            // 5) demais tipos da folha
+            const encontrarTotalizador = descricao =>
+                rubricasTotalizadoras.find(r =>
+                    normalizarDescricaoRubricaFolha(r.descricao) === normalizarDescricaoRubricaFolha(descricao)
+                );
+
+            const rubricaTotalProventos = encontrarTotalizador('Totalizador Proventos')
+                || rubricasTotalizadoras.find(r => normalizarDescricaoRubricaFolha(r.descricao).includes('provento'));
+            const rubricaTotalDescontos = encontrarTotalizador('Totalizador Descontos')
+                || rubricasTotalizadoras.find(r => normalizarDescricaoRubricaFolha(r.descricao).includes('desconto'));
+
             lancamentos.push(...lancamentosProventos);
 
             if (totalProventos > 0 && rubricaTotalProventos) {
@@ -3119,7 +3125,78 @@ function converterValorLancamentoFolha(valor) {
                 }
             }
 
-            lancamentos.push(...lancamentosOutros);
+            // Impostos ficam sempre depois de todos os descontos.
+            lancamentos.push(...lancamentosImpostos);
+
+            // Soma os valores por descrição para formar os totalizadores.
+            const valoresImpostos = new Map();
+            for (let i = 0; i < dadosFolhaImportados.length; i++) {
+                const linha = dadosFolhaImportados[i] || [];
+                const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
+                const somenteNumeros = codigo.replace(/\D/g, '');
+                if (!codigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
+
+                const rubrica = localizarRubricaFolha(codigo);
+                if (!rubrica || String(rubrica.tipo || '').trim().toLowerCase() !== 'imposto') continue;
+
+                const bruto = linha[32];
+                const numero = Number(String(bruto).replace(/\./g, '').replace(',', '.'));
+                const valorBrutoNumerico = Number.isFinite(numero) ? numero : Number(bruto);
+                if (!Number.isFinite(valorBrutoNumerico)) continue;
+
+                const valor = valorBrutoNumerico / 100;
+                const chave = normalizarDescricaoRubricaFolha(rubrica.descricao);
+                valoresImpostos.set(chave, (valoresImpostos.get(chave) || 0) + valor);
+            }
+
+            // Exceção: o Totalizador INSS Empresa consolida estes quatro impostos.
+            const valorTotalInssEmpresa =
+                (valoresImpostos.get('inss empresa') || 0) +
+                (valoresImpostos.get('inss terceiros') || 0) +
+                (valoresImpostos.get('deducao fpas') || 0) +
+                (valoresImpostos.get('inss descontado') || 0);
+
+            const totalizadorInssEmpresa = rubricasTotalizadoras.find(r => {
+                const d = normalizarDescricaoRubricaFolha(r.descricao);
+                return d === 'totalizador inss empresa' || d === 'inss empresa totalizador';
+            });
+
+            // Demais totalizadores correspondem individualmente ao imposto de mesmo nome.
+            for (const rubricaTotalizador of rubricasTotalizadoras) {
+                if (rubricaTotalizador.id === rubricaTotalProventos?.id ||
+                    rubricaTotalizador.id === rubricaTotalDescontos?.id) continue;
+
+                const descricaoTotalizador = normalizarDescricaoRubricaFolha(rubricaTotalizador.descricao);
+                let valorTotalizador = 0;
+
+                if (rubricaTotalizador.id === totalizadorInssEmpresa?.id) {
+                    valorTotalizador = valorTotalInssEmpresa;
+                } else {
+                    for (const [descricaoImposto, valor] of valoresImpostos.entries()) {
+                        if (descricaoImposto === descricaoTotalizador ||
+                            'totalizador ' + descricaoImposto === descricaoTotalizador ||
+                            descricaoImposto + ' totalizador' === descricaoTotalizador) {
+                            valorTotalizador = valor;
+                            break;
+                        }
+                    }
+                }
+
+                if (valorTotalizador <= 0) continue;
+
+                const contaTotal = localizarContaDeParaFolha(loja, rubricaTotalizador);
+                if (!contaTotal) {
+                    inconsistencias.push('Não existe DePara para o totalizador "' + rubricaTotalizador.descricao + '" na loja "' + loja.codigo + '".');
+                    continue;
+                }
+
+                lancamentos.push({
+                    conta: contaTotal.codigo,
+                    debito: valorTotalizador.toFixed(2).replace('.', ','),
+                    credito: '0,00',
+                    historico: loja.nome + ' - ' + rubricaTotalizador.descricao + ' - ' + competencia
+                });
+            }
 
             linhasLancamentoFolha = lancamentos;
             renderLancamentoFolha();
