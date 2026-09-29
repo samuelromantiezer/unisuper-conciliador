@@ -3060,7 +3060,15 @@ function converterValorLancamentoFolha(valor) {
 
         function normalizarNumeroFolha(valor) {
             if (typeof valor === 'number') return valor;
-            const texto = String(valor ?? '').trim().replace(/\./g, '').replace(',', '.');
+            const textoOriginal = String(valor ?? '').trim();
+            if (!textoOriginal) return 0;
+
+            // Só converte a parte decimal quando a planilha realmente possui vírgula.
+            // Se não houver vírgula, preserva o número como está.
+            const texto = textoOriginal.includes(',')
+                ? textoOriginal.replace(/\./g, '').replace(',', '.')
+                : textoOriginal;
+
             const numero = Number(texto.replace(/[^0-9.-]/g, ''));
             return Number.isFinite(numero) ? numero : 0;
         }
