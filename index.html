@@ -3444,26 +3444,116 @@ function converterValorLancamentoFolha(valor) {
             const popup = document.getElementById('popup-detalhes-rubrica-folha');
             const titulo = document.getElementById('popup-detalhes-rubrica-folha-titulo');
             const conteudo = document.getElementById('popup-detalhes-rubrica-folha-conteudo');
+            const botaoSalvar = document.getElementById('btn-salvar-rubrica-popup');
             if (!popup || !titulo || !conteudo) return;
 
-            titulo.textContent = 'Rubrica ' + alvo;
+            titulo.textContent = rubrica ? 'Editar Rubrica ' + alvo : 'Cadastrar Rubrica ' + alvo;
             const descricaoPlanilha = item.descricaoPlanilha || item.descricao || '';
             const descricaoCadastro = rubrica ? String(rubrica.descricao || '') : '';
-            const tipo = rubrica ? String(rubrica.tipo || '') : '';
-            const statusCadastro = rubrica ? 'Cadastrada' : 'Não cadastrada';
+            const tipoCadastro = rubrica ? String(rubrica.tipo || '') : '';
+            const statusCadastro = rubrica ? 'Rubrica já cadastrada' : 'Rubrica não cadastrada';
             const statusClasse = rubrica ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200';
 
             conteudo.innerHTML =
-                '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
-                    '<div class="bg-slate-50 border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">Código</div><div class="font-bold text-slate-800 mt-1">' + escapeHtml(alvo) + '</div></div>' +
-                    '<div class="border rounded-lg p-3 ' + statusClasse + '"><div class="text-[11px] font-bold opacity-70 uppercase">Cadastro</div><div class="font-bold mt-1">' + statusCadastro + '</div></div>' +
-                    '<div class="bg-white border border-slate-200 rounded-lg p-3 sm:col-span-2"><div class="text-[11px] font-bold text-slate-500 uppercase">Descrição na planilha (coluna C)</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(descricaoPlanilha || 'Não informada') + '</div></div>' +
-                    '<div class="bg-white border border-slate-200 rounded-lg p-3 sm:col-span-2"><div class="text-[11px] font-bold text-slate-500 uppercase">Descrição no cadastro</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(descricaoCadastro || 'Rubrica não cadastrada') + '</div></div>' +
-                    '<div class="bg-white border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">Tipo</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(tipo || '—') + '</div></div>' +
-                    '<div class="bg-white border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">DePara da loja</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(conta ? (String(conta.codigo || '') + ' - ' + String(conta.descricao || '')) : 'Sem DePara') + '</div></div>' +
+                '<div class="space-y-4">' +
+                    '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+                        '<div class="bg-white border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">Código da Rubrica</div><input id="popup-rubrica-codigo" type="text" class="w-full mt-2 text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-unisuperBlue focus:outline-none" value="' + escapeHtml(alvo) + '"></div>' +
+                        '<div class="border rounded-lg p-3 ' + statusClasse + '"><div class="text-[11px] font-bold opacity-70 uppercase">Status</div><div class="font-bold mt-2">' + statusCadastro + '</div></div>' +
+                    '</div>' +
+                    '<div class="bg-white border border-slate-200 rounded-lg p-3">' +
+                        '<div class="text-[11px] font-bold text-slate-500 uppercase">Descrição da Rubrica</div>' +
+                        '<input id="popup-rubrica-descricao" type="text" class="w-full mt-2 text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-unisuperBlue focus:outline-none" value="' + escapeHtml(descricaoCadastro || descricaoPlanilha) + '" placeholder="Descrição da rubrica">' +
+                        '<div class="text-[11px] text-slate-500 mt-2">Descrição lida da coluna C: <b>' + escapeHtml(descricaoPlanilha || 'Não informada') + '</b></div>' +
+                    '</div>' +
+                    '<div class="bg-white border border-slate-200 rounded-lg p-3">' +
+                        '<div class="text-[11px] font-bold text-slate-500 uppercase">Tipo da Rubrica</div>' +
+                        '<select id="popup-rubrica-tipo" class="w-full mt-2 text-sm border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-unisuperBlue focus:outline-none">' +
+                            '<option value="">Selecione o tipo</option>' +
+                            '<option value="Provento"' + (tipoCadastro === 'Provento' ? ' selected' : '') + '>Provento</option>' +
+                            '<option value="Desconto"' + (tipoCadastro === 'Desconto' ? ' selected' : '') + '>Desconto</option>' +
+                            '<option value="Imposto"' + (tipoCadastro === 'Imposto' ? ' selected' : '') + '>Imposto</option>' +
+                            '<option value="Totalizador"' + (tipoCadastro === 'Totalizador' ? ' selected' : '') + '>Totalizador</option>' +
+                        '</select>' +
+                    '</div>' +
+                    '<div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">' +
+                        '<div><b>DePara da loja:</b> ' + escapeHtml(conta ? (String(conta.codigo || '') + ' - ' + String(conta.descricao || '')) : 'Sem DePara') + '</div>' +
+                        '<div class="mt-1"><b>Observação:</b> o cadastro da rubrica é único e não depende da loja.</div>' +
+                    '</div>' +
                 '</div>';
 
+            if (botaoSalvar) {
+                botaoSalvar.innerHTML = rubrica
+                    ? '<i class="fa-solid fa-floppy-disk mr-2"></i>Salvar Alteração'
+                    : '<i class="fa-solid fa-plus mr-2"></i>Cadastrar Rubrica';
+                botaoSalvar.disabled = false;
+            }
             popup.classList.remove('hidden');
+            setTimeout(() => document.getElementById('popup-rubrica-descricao')?.focus(), 50);
+        }
+
+        async function salvarRubricaPeloPopup() {
+            if (!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
+
+            const codigoEl = document.getElementById('popup-rubrica-codigo');
+            const descricaoEl = document.getElementById('popup-rubrica-descricao');
+            const tipoEl = document.getElementById('popup-rubrica-tipo');
+            const botao = document.getElementById('btn-salvar-rubrica-popup');
+            const codigo = String(codigoEl?.value || '').trim();
+            const descricao = String(descricaoEl?.value || '').trim();
+            const tipo = String(tipoEl?.value || '').trim();
+
+            if (!codigo) return alert('Informe o código da rubrica.');
+            if (!descricao) return alert('Informe a descrição da rubrica.');
+            if (!['Provento','Desconto','Imposto','Totalizador'].includes(tipo)) return alert('Selecione o tipo da rubrica.');
+
+            const existente = localizarRubricaFolha(codigo);
+            if (botao) {
+                botao.disabled = true;
+                botao.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Salvando...';
+            }
+
+            try {
+                let data;
+                if (existente?.id) {
+                    const resposta = await supabaseClient
+                        .from('rubricas')
+                        .update({ codigo, descricao, tipo })
+                        .eq('id', existente.id)
+                        .select()
+                        .single();
+                    if (resposta.error) throw resposta.error;
+                    data = resposta.data;
+                    cacheCadastros.rubricas = cacheCadastros.rubricas.map(x => Number(x.id) === Number(existente.id) ? data : x);
+                } else {
+                    const resposta = await supabaseClient
+                        .from('rubricas')
+                        .insert([{ codigo, descricao, tipo }])
+                        .select()
+                        .single();
+                    if (resposta.error) throw resposta.error;
+                    data = resposta.data;
+                    cacheCadastros.rubricas.push(data);
+                }
+
+                renderCadastros();
+                const item = (pendenciasConferenciaFolha.lista || []).find(x => String(x.codigo ?? '').trim() === codigo);
+                if (item) {
+                    item.descricaoCadastro = descricao;
+                    item.descricao = descricao;
+                }
+                salvarPendenciasConferenciaFolha();
+                alert(existente ? 'Rubrica alterada com sucesso no Supabase.' : 'Rubrica cadastrada com sucesso no Supabase.');
+                fecharDetalhesRubricaFolha();
+                atualizarBotaoPendenciasFolha();
+                abrirPendenciasFolha();
+            } catch (err) {
+                console.error('Erro ao salvar rubrica pelo popup:', err);
+                alert('Erro ao salvar a rubrica no Supabase:\n' + (err.message || err));
+                if (botao) {
+                    botao.disabled = false;
+                    botao.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Salvar novamente';
+                }
+            }
         }
 
         function fecharDetalhesRubricaFolha() {
@@ -3986,9 +4076,12 @@ async function importarDeParaFolhaTXT(input){
                 </div>
                 <button type="button" onclick="fecharDetalhesRubricaFolha()" class="w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100" title="Fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div id="popup-detalhes-rubrica-folha-conteudo" class="p-5 bg-slate-50"></div>
-            <div class="p-4 border-t border-slate-200 bg-white flex justify-end">
-                <button type="button" onclick="fecharDetalhesRubricaFolha()" class="bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-900">Fechar</button>
+            <div id="popup-detalhes-rubrica-folha-conteudo" class="p-5 bg-slate-50 overflow-auto"></div>
+            <div class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-end gap-2">
+                <button type="button" onclick="fecharDetalhesRubricaFolha()" class="bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-300">Fechar</button>
+                <button type="button" id="btn-salvar-rubrica-popup" onclick="salvarRubricaPeloPopup()" class="bg-unisuperBlue text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-900">
+                    <i class="fa-solid fa-floppy-disk mr-2"></i>Cadastrar Rubrica
+                </button>
             </div>
         </div>
     </div>
