@@ -3340,7 +3340,7 @@ function converterValorLancamentoFolha(valor) {
                 const detalhe = item.status === 'alerta'
                     ? 'A rubrica existe no cadastro, mas não possui vínculo para a loja <b>' + escapeHtml(loja.codigo || '') + '</b>.'
                     : 'Cadastre esta rubrica antes de gerar o lançamento.';
-                return '<button type="button" onclick="abrirDetalhesRubricaFolha(\\'' + escapeHtml(item.codigo).replace(/'/g, '&#039;') + '\\')" class="status-rubrica-folha ' + classe + ' w-full text-left flex items-start gap-3 hover:shadow-sm transition cursor-pointer" title="Clique para consultar o cadastro da rubrica">' +
+                return '<button type="button" data-codigo-rubrica="' + escapeHtml(item.codigo) + '" onclick="abrirDetalhesRubricaFolha(this.dataset.codigoRubrica)" class="status-rubrica-folha ' + classe + ' w-full text-left flex items-start gap-3 hover:shadow-sm transition cursor-pointer" title="Clique para consultar o cadastro da rubrica">' +
                     '<i class="fa-solid ' + icone + ' mt-0.5"></i>' +
                     '<div class="min-w-0 flex-1">' +
                         '<div class="flex flex-wrap items-center justify-between gap-2">' +
