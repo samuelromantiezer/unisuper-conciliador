@@ -3017,8 +3017,6 @@ function converterValorLancamentoFolha(valor) {
             const totalPendencias = conferenciaRubricas.filter(item => item.status !== 'ok').length;
             if (totalPendencias > 0) {
                 abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, []);
-            } else {
-                alert('Lançamento gerado com sucesso!');
             }
         }
 
@@ -3415,7 +3413,14 @@ function converterValorLancamentoFolha(valor) {
             linhasLancamentoFolha = lancamentos;
             renderLancamentoFolha();
             salvarPendenciasConferenciaFolha(conferenciaRubricas, loja, competencia, inconsistencias);
-            abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, inconsistencias);
+
+            const totalPendenciasGeracao = conferenciaRubricas.filter(item => item.status !== 'ok').length
+                + inconsistencias.length;
+            if (totalPendenciasGeracao > 0) {
+                abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, inconsistencias);
+            } else {
+                alert('Lançamento gerado com sucesso!');
+            }
         }
 
         function chavePendenciasConferenciaFolha(loja, competencia) {
