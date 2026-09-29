@@ -3037,11 +3037,11 @@ function converterValorLancamentoFolha(valor) {
 
             for (const linha of (dadosFolhaImportados || [])) {
                 const textoAB = String((linha || [])[27] ?? '').trim().toUpperCase();
-                if (textoAB !== 'TOTAL') continue;
+                if (!textoAB.includes('TOTAL')) continue;
 
-                // Os dois TOTAL da coluna AB são sequenciais: o primeiro é Proventos,
-                // o segundo é Descontos. O valor do total é obtido da própria coluna de valores.
-                const valor = normalizarNumeroFolha((linha || [])[32]);
+                // O valor dos totais está na coluna AG (índice 32).
+                // A planilha da folha usa a mesma escala em centavos das rubricas.
+                const valor = normalizarNumeroFolha((linha || [])[32]) / 100;
                 if (!encontrouProventos) {
                     totalProventos = valor;
                     encontrouProventos = true;
