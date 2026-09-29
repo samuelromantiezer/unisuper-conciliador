@@ -4113,15 +4113,32 @@ function converterValorLancamentoFolha(valor) {
                     String(r.tipo || '').trim().toLowerCase() === 'imposto'
                 );
 
-                const encontrados = rubricasImposto.filter(r => {
+                const candidatosNormalizados = candidatos.map(c => normalizarDescricaoRubricaFolha(c)
+                    .replace(/[.:]/g, '')
+                    .replace(/^inss\\s+/, '')
+                    .replace(/^totalizador\\s+/, ''));
+
+                // Primeiro tenta a correspondência exata. Depois aceita variações
+                // como "INSS Empresa", "Empresa e RAT" e "INSS Empresa e RAT".
+                const encontradosExatos = rubricasImposto.filter(r => {
                     const d = normalizarDescricaoRubricaFolha(r.descricao)
                         .replace(/[.:]/g, '')
                         .replace(/^inss\\s+/, '')
                         .replace(/^totalizador\\s+/, '');
-                    return candidatos.includes(d);
+                    return candidatosNormalizados.includes(d);
                 });
 
-                return encontrados[0] || null;
+                if (encontradosExatos.length) return encontradosExatos[0];
+
+                const encontradosFlexiveis = rubricasImposto.filter(r => {
+                    const d = normalizarDescricaoRubricaFolha(r.descricao)
+                        .replace(/[.:]/g, '')
+                        .replace(/^inss\\s+/, '')
+                        .replace(/^totalizador\\s+/, '');
+                    return candidatosNormalizados.some(c => d === c || d.startsWith(c + ' ') || d.includes(c));
+                });
+
+                return encontradosFlexiveis[0] || null;
             };
 
             const localizarRubricaInssPorTotalizador = descricao => {
