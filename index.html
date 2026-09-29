@@ -4106,9 +4106,8 @@ function converterValorLancamentoFolha(valor) {
 
             // INSS do Resumo da Folha fica imediatamente abaixo dos descontos.
             // Os valores do Resumo da Folha estão na coluna L (índice 11).
-            // INSS da folha: Empresa, Terceiros, Contribuintes e RAT são
-            // rubricas do cadastro do tipo "Imposto". A rubrica Empresa continua
-            // sendo um totalizador contábil calculado por RAT + Terceiros.
+            // INSS da folha: cada imposto gera sua própria linha contábil.
+            // Segurados não entra aqui porque já está lançado nos descontos.
             const localizarRubricaInssPorImposto = descricao => {
                 const alvo = normalizarDescricaoRubricaFolha(descricao)
                     .replace(/[.:]/g, '')
@@ -4138,12 +4137,10 @@ function converterValorLancamentoFolha(valor) {
                 return encontrados[0] || null;
             };
 
-            const inserirLinhaInssResumo = (descricao, valor, natureza) => {
+            const inserirLinhaInssResumo = (descricao, valor) => {
                 if (!Number.isFinite(valor) || valor <= 0) return;
 
-                const rubricaInss = localizarRubricaInssPorImposto(
-                    normalizarDescricaoRubricaFolha(descricao)
-                );
+                const rubricaInss = localizarRubricaInssPorImposto(descricao);
 
                 if (!rubricaInss) {
                     inconsistencias.push(
@@ -4164,22 +4161,20 @@ function converterValorLancamentoFolha(valor) {
                 const valorTexto = valor.toFixed(2).replace('.', ',');
                 lancamentos.push({
                     conta: contaInss.codigo,
-                    debito: natureza === 'debito' ? valorTexto : '0,00',
-                    credito: natureza === 'credito' ? valorTexto : '0,00',
+                    debito: valorTexto,
+                    credito: '0,00',
                     historico: loja.nome + ' - INSS ' + descricao.toUpperCase() + ' - ' + competencia
                 });
             };
 
             const resumoInss = resumoInssFolhaAtual || gerarResumoInssFolha();
             if (resumoInss) {
-                // Empresa é o totalizador contábil do INSS patronal:
-                // RAT + Terceiros. Segurados já está lançado nos descontos.
-                const totalInssEmpresa =
-                    Number(resumoInss.rat || 0) +
-                    Number(resumoInss.terceiros || 0);
-
-                inserirLinhaInssResumo('Empresa', totalInssEmpresa, 'debito');
-                inserirLinhaInssResumo('Contribuintes', resumoInss.contribuintes, 'credito');
+                // Cada valor do Resumo Geral das bases de INSS gera uma linha.
+                // Empresa NÃO é calculada como RAT + Terceiros.
+                inserirLinhaInssResumo('Empresa', Number(resumoInss.empresa || 0));
+                inserirLinhaInssResumo('Terceiros', Number(resumoInss.terceiros || 0));
+                inserirLinhaInssResumo('Contribuintes', Number(resumoInss.contribuintes || 0));
+                inserirLinhaInssResumo('RAT', Number(resumoInss.rat || 0));
             }
 
             // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
