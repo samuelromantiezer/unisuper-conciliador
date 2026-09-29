@@ -261,6 +261,36 @@
             #popup-conferencia-folha .popup-lista { max-height: 62vh; }
         }
 
+        /* POPUP DE DETALHES DA RUBRICA */
+        #popup-detalhes-rubrica-folha {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            background: rgba(15, 23, 42, .58);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #popup-detalhes-rubrica-folha.hidden { display: none !important; }
+        #popup-detalhes-rubrica-folha .popup-card {
+            width: min(700px, 100%);
+            max-height: min(760px, 92vh);
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 24px 70px rgba(15,23,42,.28);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #popup-detalhes-rubrica-folha #popup-detalhes-rubrica-folha-conteudo {
+            overflow: auto;
+        }
+        @media (max-width: 640px) {
+            #popup-detalhes-rubrica-folha { padding: .5rem; }
+            #popup-detalhes-rubrica-folha .popup-card { max-height: 96vh; }
+        }
+
         /* POPUP DE CONSULTA DE RUBRICAS E CONTAS CONTÁBEIS */
         #popup-consulta-cadastros {
             position: fixed;
