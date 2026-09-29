@@ -3091,22 +3091,15 @@ function converterValorLancamentoFolha(valor) {
         }
 
         function calcularTotaisImportadosFolha() {
+            const detalhes = obterDetalhamentoLancamentosFolha();
             let proventos = 0;
             let descontos = 0;
-
-            for (const linha of (dadosFolhaImportados || [])) {
-                if (linhaFolhaEhInformativaPorColunaAM(linha)) continue;
-                const codigo = String((linha || [])[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
-                if (!/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
-                const rubrica = localizarRubricaFolha(codigo);
-                if (!rubrica) continue;
-                const tipo = String(rubrica.tipo || '').trim().toLowerCase();
-                if (tipo !== 'provento' && tipo !== 'desconto') continue;
-                const valor = normalizarNumeroFolha((linha || [])[32]) / 100;
-                if (tipo === 'provento') proventos += valor;
-                if (tipo === 'desconto') descontos += valor;
-            }
-
+            detalhes.forEach(item => {
+                if (item.status !== 'ok') return;
+                const tipo = String(item.tipo || '').trim().toLowerCase();
+                if (tipo === 'provento') proventos += item.valor;
+                if (tipo === 'desconto') descontos += item.valor;
+            });
             return { proventos, descontos };
         }
 
