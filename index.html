@@ -3261,8 +3261,7 @@ function converterValorLancamentoFolha(valor) {
                     continue;
                 }
 
-                const numero = Number(String(valorBruto).replace(/\./g,'').replace(',','.'));
-                const valorBrutoNumerico = Number.isFinite(numero) ? numero : Number(valorBruto);
+                const valorBrutoNumerico = normalizarNumeroFolha(valorBruto);
                 if (!Number.isFinite(valorBrutoNumerico)) {
                     inconsistencias.push('Linha '+(i+1)+': valor inválido "'+valorBruto+'".');
                     continue;
