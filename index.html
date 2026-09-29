@@ -2782,7 +2782,10 @@
                     '<td class="p-3 text-right">' + formatarValorLancamentoFolha(item.total_descontos || 0) + '</td>' +
                     '<td class="p-3 text-center font-bold">' + pendencias + '</td>' +
                     '<td class="p-3 text-center"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold ' + statusClasse + '">' + escapeHtml(item.status || 'Importada') + '</span></td>' +
-                    '<td class="p-3 text-center"><button type="button" onclick="abrirRelatorioFolhaImportada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-chart-column"></i> Relatório</button></td>' +
+                    '<td class="p-3 text-center"><div class="flex flex-wrap items-center justify-center gap-2">' +
+                        '<button type="button" onclick="abrirRelatorioFolhaImportada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-file-lines"></i> Resumo</button>' +
+                        '<button type="button" onclick="excluirFolhaImportada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-700"><i class="fa-solid fa-trash"></i> Excluir</button>' +
+                    '</div></td>' +
                 '</tr>';
             }).join('');
         }
