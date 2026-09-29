@@ -3153,8 +3153,8 @@ function converterValorLancamentoFolha(valor) {
                 '<div class="text-sm mt-1 ' + (divergencia ? 'text-red-600' : 'text-emerald-600') + '">' +
                 (divergencia ? 'Os valores da planilha não conferem com o conteúdo importado.' : 'Os totais de proventos e descontos estão conferindo.') + '</div></div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
-                '<div class="border rounded-xl p-4"><b>Proventos</b><div class="text-sm mt-2">Planilha: <strong>' + (planilha.encontrouProventos ? planilha.totalProventos.toFixed(2) : 'TOTAL não encontrado') + '</strong></div><div class="text-sm">Importado: <strong>' + calculado.proventos.toFixed(2) + '</strong></div></div>' +
-                '<div class="border rounded-xl p-4"><b>Descontos</b><div class="text-sm mt-2">Planilha: <strong>' + (planilha.encontrouDescontos ? planilha.totalDescontos.toFixed(2) : 'TOTAL não encontrado') + '</strong></div><div class="text-sm">Importado: <strong>' + calculado.descontos.toFixed(2) + '</strong></div></div>' +
+                '<div class="border rounded-xl p-4"><b>Proventos</b><div class="text-sm mt-2">Planilha: <strong>' + (planilha.encontrouProventos ? planilha.totalProventos.toFixed(2) : 'TOTAL não encontrado') + '</strong></div><div class="text-sm">Importado: <strong>' + formatarValorLancamentoFolha(calculado.proventos) + '</strong></div></div>' +
+                '<div class="border rounded-xl p-4"><b>Descontos</b><div class="text-sm mt-2">Planilha: <strong>' + (planilha.encontrouDescontos ? planilha.totalDescontos.toFixed(2) : 'TOTAL não encontrado') + '</strong></div><div class="text-sm">Importado: <strong>' + formatarValorLancamentoFolha(calculado.descontos) + '</strong></div></div>' +
                 '</div>';
             conteudo.innerHTML += renderizarDetalhamentoValidacaoFolha(detalhes);
             popup.classList.remove('hidden');
