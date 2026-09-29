@@ -4109,7 +4109,7 @@ function converterValorLancamentoFolha(valor) {
             const inserirLinhaInssResumo = (descricao, valor, natureza) => {
                 if (!Number.isFinite(valor) || valor <= 0) return;
                 const alvo = normalizarDescricaoRubricaFolha(descricao).replace(/[.:]/g, '');
-                const rubricaInss = rubricasCadastradas.find(r => {
+                const rubricasInss = rubricasCadastradas.filter(r => {
                     const d = normalizarDescricaoRubricaFolha(r.descricao).replace(/[.:]/g, '');
                     const dSemInss = d.replace(/^inss\\s+/, '');
                     const dSemTotalizador = d.replace(/^totalizador\\s+/, '');
@@ -4118,6 +4118,10 @@ function converterValorLancamentoFolha(valor) {
                         dSemTotalizador === alvo ||
                         dSemInss === 'empresa e rat' && alvo === 'empresa';
                 });
+                // Empresa é uma rubrica totalizadora: prioriza o cadastro do tipo Totalizador.
+                const rubricaInss = descricao === 'Empresa'
+                    ? (rubricasInss.find(r => String(r.tipo || '').trim().toLowerCase() === 'totalizador') || rubricasInss[0])
+                    : rubricasInss[0];
                 if (!rubricaInss) {
                     inconsistencias.push('Rubrica de INSS "' + descricao + '" não está cadastrada.');
                     return;
