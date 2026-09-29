@@ -2922,6 +2922,7 @@ function converterValorLancamentoFolha(valor) {
                 // A coluna A define as rubricas. Cabeçalhos e textos são ignorados.
                 if (!rubricaCodigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(rubricaCodigo)) continue;
 
+                const descricaoPlanilha = String(linha[2] ?? '').trim();
                 const rubrica = localizarRubricaFolha(rubricaCodigo);
                 const conta = localizarContaDeParaFolha(loja, rubrica);
 
@@ -2929,7 +2930,9 @@ function converterValorLancamentoFolha(valor) {
                 if (!conferencia) {
                     conferencia = {
                         codigo: rubricaCodigo,
-                        descricao: rubrica ? String(rubrica.descricao || '') : '',
+                        descricao: descricaoPlanilha || (rubrica ? String(rubrica.descricao || '') : ''),
+                        descricaoPlanilha: descricaoPlanilha,
+                        descricaoCadastro: rubrica ? String(rubrica.descricao || '') : '',
                         tipo: rubrica ? String(rubrica.tipo || '') : '',
                         conta: conta ? String(conta.codigo || '') : '',
                         descricaoConta: conta ? String(conta.descricao || '') : '',
@@ -3337,7 +3340,7 @@ function converterValorLancamentoFolha(valor) {
                 const detalhe = item.status === 'alerta'
                     ? 'A rubrica existe no cadastro, mas não possui vínculo para a loja <b>' + escapeHtml(loja.codigo || '') + '</b>.'
                     : 'Cadastre esta rubrica antes de gerar o lançamento.';
-                return '<div class="status-rubrica-folha ' + classe + ' flex items-start gap-3">' +
+                return '<button type="button" onclick="abrirDetalhesRubricaFolha(\\'' + escapeHtml(item.codigo).replace(/'/g, '&#039;') + '\\')" class="status-rubrica-folha ' + classe + ' w-full text-left flex items-start gap-3 hover:shadow-sm transition cursor-pointer" title="Clique para consultar o cadastro da rubrica">' +
                     '<i class="fa-solid ' + icone + ' mt-0.5"></i>' +
                     '<div class="min-w-0 flex-1">' +
                         '<div class="flex flex-wrap items-center justify-between gap-2">' +
@@ -3346,8 +3349,9 @@ function converterValorLancamentoFolha(valor) {
                         '</div>' +
                         '<div class="text-xs mt-1">' + status + '</div>' +
                         '<div class="text-xs mt-1 opacity-90">' + detalhe + '</div>' +
+                        '<div class="text-[11px] mt-2 font-semibold opacity-70"><i class="fa-solid fa-magnifying-glass mr-1"></i>Clique para consultar a rubrica</div>' +
                     '</div>' +
-                '</div>';
+                '</button>';
             }).join('');
         }
 
@@ -3397,6 +3401,43 @@ function converterValorLancamentoFolha(valor) {
 
         function fecharPopupConferenciaFolha() {
             document.getElementById('popup-conferencia-folha')?.classList.add('hidden');
+        }
+
+        function abrirDetalhesRubricaFolha(codigo) {
+            const alvo = String(codigo ?? '').trim();
+            const item = (pendenciasConferenciaFolha.lista || []).find(x => String(x.codigo ?? '').trim() === alvo);
+            if (!item) return;
+
+            const rubrica = localizarRubricaFolha(alvo);
+            const loja = pendenciasConferenciaFolha.loja || null;
+            const conta = localizarContaDeParaFolha(loja, rubrica);
+            const popup = document.getElementById('popup-detalhes-rubrica-folha');
+            const titulo = document.getElementById('popup-detalhes-rubrica-folha-titulo');
+            const conteudo = document.getElementById('popup-detalhes-rubrica-folha-conteudo');
+            if (!popup || !titulo || !conteudo) return;
+
+            titulo.textContent = 'Rubrica ' + alvo;
+            const descricaoPlanilha = item.descricaoPlanilha || item.descricao || '';
+            const descricaoCadastro = rubrica ? String(rubrica.descricao || '') : '';
+            const tipo = rubrica ? String(rubrica.tipo || '') : '';
+            const statusCadastro = rubrica ? 'Cadastrada' : 'Não cadastrada';
+            const statusClasse = rubrica ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200';
+
+            conteudo.innerHTML =
+                '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+                    '<div class="bg-slate-50 border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">Código</div><div class="font-bold text-slate-800 mt-1">' + escapeHtml(alvo) + '</div></div>' +
+                    '<div class="border rounded-lg p-3 ' + statusClasse + '"><div class="text-[11px] font-bold opacity-70 uppercase">Cadastro</div><div class="font-bold mt-1">' + statusCadastro + '</div></div>' +
+                    '<div class="bg-white border border-slate-200 rounded-lg p-3 sm:col-span-2"><div class="text-[11px] font-bold text-slate-500 uppercase">Descrição na planilha (coluna C)</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(descricaoPlanilha || 'Não informada') + '</div></div>' +
+                    '<div class="bg-white border border-slate-200 rounded-lg p-3 sm:col-span-2"><div class="text-[11px] font-bold text-slate-500 uppercase">Descrição no cadastro</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(descricaoCadastro || 'Rubrica não cadastrada') + '</div></div>' +
+                    '<div class="bg-white border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">Tipo</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(tipo || '—') + '</div></div>' +
+                    '<div class="bg-white border border-slate-200 rounded-lg p-3"><div class="text-[11px] font-bold text-slate-500 uppercase">DePara da loja</div><div class="font-semibold text-slate-800 mt-1">' + escapeHtml(conta ? (String(conta.codigo || '') + ' - ' + String(conta.descricao || '')) : 'Sem DePara') + '</div></div>' +
+                '</div>';
+
+            popup.classList.remove('hidden');
+        }
+
+        function fecharDetalhesRubricaFolha() {
+            document.getElementById('popup-detalhes-rubrica-folha')?.classList.add('hidden');
         }
 
         let tipoPopupConsultaCadastro = '';
@@ -3905,6 +3946,22 @@ async function importarDeParaFolhaTXT(input){
                 </div>
             </div>
         </div>
+
+<div id="popup-detalhes-rubrica-folha" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-detalhes-rubrica-folha-titulo">
+        <div class="popup-card max-w-2xl">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3 bg-white">
+                <div>
+                    <h3 id="popup-detalhes-rubrica-folha-titulo" class="text-base font-bold text-slate-800">Rubrica</h3>
+                    <p class="text-xs text-slate-500 mt-1">Detalhes encontrados na planilha e no cadastro.</p>
+                </div>
+                <button type="button" onclick="fecharDetalhesRubricaFolha()" class="w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100" title="Fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="popup-detalhes-rubrica-folha-conteudo" class="p-5 bg-slate-50"></div>
+            <div class="p-4 border-t border-slate-200 bg-white flex justify-end">
+                <button type="button" onclick="fecharDetalhesRubricaFolha()" class="bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-900">Fechar</button>
+            </div>
+        </div>
+    </div>
 
 <div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo">
         <div class="popup-card">
