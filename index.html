@@ -953,8 +953,11 @@
                             <h5 class="font-bold text-slate-700 text-sm">Lançamento Contábil</h5>
                             <p class="text-xs text-slate-500 mt-1">Planilha editável para conferência e ajustes antes da futura exportação para Excel 97–2003.</p>
                         </div>
-                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                             <span id="folha-lancamento-contagem" class="bg-slate-100 border border-slate-200 rounded-full px-3 py-1">0 lançamentos</span>
+                            <button type="button" id="btn-verificar-pendencias-folha" onclick="abrirPendenciasFolha()" class="hidden inline-flex items-center gap-2 bg-amber-100 text-amber-800 border border-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-amber-200 transition">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Verificar Pendências
+                            </button>
                         </div>
                     </div>
                     <div class="overflow-x-auto border border-slate-300 rounded-lg shadow-sm">
@@ -2541,6 +2544,13 @@
         let dadosFolhaImportados = [];
         let folhasGeradas = [];
         let folhaGeradaVisualizando = null;
+        let pendenciasConferenciaFolha = {
+            lista: [],
+            loja: null,
+            competencia: '',
+            inconsistencias: [],
+            filtro: 'todas'
+        };
 
         function escapeHtmlFolha(valor) { return String(valor ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
@@ -2860,6 +2870,7 @@ function converterValorLancamentoFolha(valor) {
             const contador = document.getElementById('folha-lancamento-contagem');
             if (!tbody) return;
             if (contador) contador.textContent = linhasLancamentoFolha.length === 1 ? '1 lançamento' : linhasLancamentoFolha.length + ' lançamentos';
+            atualizarBotaoPendenciasFolha();
             if (!linhasLancamentoFolha.length) {
                 tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-400">Nenhum lançamento na planilha.</td></tr>';
                 atualizarTotaisLancamentoFolha();
@@ -2936,6 +2947,7 @@ function converterValorLancamentoFolha(valor) {
                 ? (obterCompetenciaFolha() || 'não informada')
                 : 'não informada';
 
+            salvarPendenciasConferenciaFolha(conferenciaRubricas, loja, competencia, []);
             abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, []);
         }
 
@@ -3211,21 +3223,152 @@ function converterValorLancamentoFolha(valor) {
 
             linhasLancamentoFolha = lancamentos;
             renderLancamentoFolha();
+            salvarPendenciasConferenciaFolha(conferenciaRubricas, loja, competencia, inconsistencias);
             abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, inconsistencias);
+        }
+
+        function chavePendenciasConferenciaFolha(loja, competencia) {
+            const lojaCodigo = String(loja?.codigo || '').trim() || 'sem-loja';
+            const comp = String(competencia || '').trim() || 'sem-competencia';
+            return 'unisuper_pendencias_folha_' + lojaCodigo + '_' + comp.replace(/[^0-9A-Za-z_-]/g, '_');
+        }
+
+        function salvarPendenciasConferenciaFolha(lista, loja, competencia, inconsistencias) {
+            pendenciasConferenciaFolha = {
+                lista: Array.isArray(lista) ? lista.map(x => ({...x})) : [],
+                loja: loja ? {...loja} : null,
+                competencia: String(competencia || ''),
+                inconsistencias: Array.isArray(inconsistencias) ? [...inconsistencias] : [],
+                filtro: 'todas'
+            };
+            atualizarBotaoPendenciasFolha();
+            try {
+                localStorage.setItem(chavePendenciasConferenciaFolha(loja, competencia), JSON.stringify(pendenciasConferenciaFolha));
+            } catch (e) {}
+        }
+
+        function carregarPendenciasSalvasConferenciaFolha() {
+            try {
+                const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
+                const loja = lerListaCadastro('lojas').find(x => String(x.codigo ?? '').trim() === lojaCodigo);
+                const competencia = typeof obterCompetenciaFolha === 'function' ? (obterCompetenciaFolha() || '') : '';
+                if (!loja || !competencia) return false;
+                const salvo = localStorage.getItem(chavePendenciasConferenciaFolha(loja, competencia));
+                if (!salvo) return false;
+                const dados = JSON.parse(salvo);
+                if (!dados || !Array.isArray(dados.lista)) return false;
+                pendenciasConferenciaFolha = {
+                    lista: dados.lista,
+                    loja: loja,
+                    competencia: String(dados.competencia || competencia),
+                    inconsistencias: Array.isArray(dados.inconsistencias) ? dados.inconsistencias : [],
+                    filtro: 'todas'
+                };
+                atualizarBotaoPendenciasFolha();
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function atualizarBotaoPendenciasFolha() {
+            const btn = document.getElementById('btn-verificar-pendencias-folha');
+            if (!btn) return;
+            const total = (pendenciasConferenciaFolha.lista || []).filter(x => x.status !== 'ok').length
+                + (pendenciasConferenciaFolha.inconsistencias || []).length;
+            btn.classList.toggle('hidden', !total);
+            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Verificar Pendências' + (total ? ' (' + total + ')' : '');
+        }
+
+        function abrirPendenciasFolha() {
+            if (!pendenciasConferenciaFolha.lista.length) {
+                if (!carregarPendenciasSalvasConferenciaFolha()) {
+                    return alert('Nenhuma pendência registrada para a loja e competência atuais.');
+                }
+            }
+            const loja = pendenciasConferenciaFolha.loja || localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
+            const competencia = pendenciasConferenciaFolha.competencia || obterCompetenciaFolha() || 'não informada';
+            if (!loja) return alert('Selecione a loja para consultar as pendências.');
+            abrirPopupConferenciaFolha(pendenciasConferenciaFolha.lista, loja, competencia, pendenciasConferenciaFolha.inconsistencias);
+        }
+
+        function atualizarFiltrosPendenciasFolha() {
+            const filtro = pendenciasConferenciaFolha.filtro || 'todas';
+            ['todas','nao-cadastradas','sem-depara'].forEach(id => {
+                const btn = document.getElementById('filtro-pendencias-' + id);
+                if (!btn) return;
+                const ativo = id === filtro;
+                btn.classList.toggle('bg-slate-800', ativo);
+                btn.classList.toggle('text-white', ativo);
+                btn.classList.toggle('border-slate-800', ativo);
+                if (!ativo) {
+                    btn.classList.remove('bg-slate-800','text-white','border-slate-800');
+                }
+            });
+        }
+
+        function filtrarPendenciasFolha(filtro) {
+            pendenciasConferenciaFolha.filtro = filtro;
+            renderListaPendenciasConferenciaFolha();
+            atualizarFiltrosPendenciasFolha();
+        }
+
+        function renderListaPendenciasConferenciaFolha() {
+            const listaEl = document.getElementById('popup-conferencia-folha-lista');
+            if (!listaEl) return;
+            const filtro = pendenciasConferenciaFolha.filtro || 'todas';
+            const origem = Array.isArray(pendenciasConferenciaFolha.lista) ? pendenciasConferenciaFolha.lista : [];
+            const filtrada = origem.filter(item => {
+                if (filtro === 'nao-cadastradas') return item.status === 'erro';
+                if (filtro === 'sem-depara') return item.status === 'alerta';
+                return item.status !== 'ok';
+            });
+            if (!filtrada.length) {
+                listaEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-sm">Nenhuma pendência encontrada neste filtro.</div>';
+                return;
+            }
+            const ordem = {erro: 0, alerta: 1, ok: 2};
+            const ordenada = [...filtrada].sort((a,b) => ordem[a.status] - ordem[b.status] || String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric:true}));
+            const loja = pendenciasConferenciaFolha.loja || {};
+            listaEl.innerHTML = ordenada.map(item => {
+                const classe = item.status === 'alerta' ? 'alerta' : 'erro';
+                const icone = item.status === 'alerta' ? 'fa-triangle-exclamation' : 'fa-circle-xmark';
+                const status = item.status === 'alerta' ? 'Sem DePara para esta loja' : 'Rubrica não cadastrada';
+                const detalhe = item.status === 'alerta'
+                    ? 'A rubrica existe no cadastro, mas não possui vínculo para a loja <b>' + escapeHtml(loja.codigo || '') + '</b>.'
+                    : 'Cadastre esta rubrica antes de gerar o lançamento.';
+                return '<div class="status-rubrica-folha ' + classe + ' flex items-start gap-3">' +
+                    '<i class="fa-solid ' + icone + ' mt-0.5"></i>' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                            '<div class="font-bold">Rubrica ' + escapeHtml(item.codigo) + (item.descricao ? ' - ' + escapeHtml(item.descricao) : '') + '</div>' +
+                            '<span class="text-[11px] font-semibold opacity-80">' + item.ocorrencias + ' ocorrência(s)</span>' +
+                        '</div>' +
+                        '<div class="text-xs mt-1">' + status + '</div>' +
+                        '<div class="text-xs mt-1 opacity-90">' + detalhe + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
         }
 
         function abrirPopupConferenciaFolha(lista, loja, competencia, inconsistencias) {
             const popup = document.getElementById('popup-conferencia-folha');
             const subtitulo = document.getElementById('popup-conferencia-folha-subtitulo');
             const resumo = document.getElementById('popup-conferencia-folha-resumo');
-            const listaEl = document.getElementById('popup-conferencia-folha-lista');
+            const filtros = document.getElementById('popup-conferencia-folha-filtros');
             const extra = document.getElementById('popup-conferencia-folha-extra');
-            if (!popup || !resumo || !listaEl) return;
+            if (!popup || !resumo) return;
 
-            const total = lista.length;
-            const ok = lista.filter(x => x.status === 'ok').length;
-            const alerta = lista.filter(x => x.status === 'alerta').length;
-            const erro = lista.filter(x => x.status === 'erro').length;
+            const dados = Array.isArray(lista) ? lista : [];
+            const total = dados.length;
+            const ok = dados.filter(x => x.status === 'ok').length;
+            const alerta = dados.filter(x => x.status === 'alerta').length;
+            const erro = dados.filter(x => x.status === 'erro').length;
+
+            pendenciasConferenciaFolha.lista = dados;
+            pendenciasConferenciaFolha.loja = loja;
+            pendenciasConferenciaFolha.competencia = String(competencia || '');
+            pendenciasConferenciaFolha.inconsistencias = Array.isArray(inconsistencias) ? inconsistencias : [];
 
             subtitulo.textContent = loja.codigo + ' - ' + loja.nome + ' | Competência ' + competencia + ' | ' + total + ' rubrica(s) encontrada(s) na planilha.';
 
@@ -3234,51 +3377,27 @@ function converterValorLancamentoFolha(valor) {
                 '<div class="bg-amber-50 border border-amber-200 rounded-lg p-3"><div class="text-xs font-bold text-amber-700">SEM DEPARA</div><div class="text-xl font-bold text-amber-800">' + alerta + '</div></div>' +
                 '<div class="bg-red-50 border border-red-200 rounded-lg p-3"><div class="text-xs font-bold text-red-700">NÃO CADASTRADA</div><div class="text-xl font-bold text-red-800">' + erro + '</div></div>';
 
-            if (!lista.length) {
-                listaEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-sm">Nenhuma rubrica numérica foi encontrada na planilha.</div>';
-            } else {
-                const ordem = {erro: 0, alerta: 1, ok: 2};
-                lista.sort((a,b) => ordem[a.status] - ordem[b.status] || String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric:true}));
-                listaEl.innerHTML = lista.map(item => {
-                    const classe = item.status === 'ok' ? 'ok' : (item.status === 'alerta' ? 'alerta' : 'erro');
-                    const icone = item.status === 'ok' ? 'fa-circle-check' : (item.status === 'alerta' ? 'fa-triangle-exclamation' : 'fa-circle-xmark');
-                    const status = item.status === 'ok'
-                        ? 'DePara cadastrado'
-                        : (item.status === 'alerta' ? 'Sem DePara para esta loja' : 'Rubrica não cadastrada');
-                    const detalhe = item.status === 'ok'
-                        ? 'Conta contábil: <b>' + escapeHtml(item.conta) + '</b> - ' + escapeHtml(item.descricaoConta)
-                        : (item.status === 'alerta'
-                            ? 'A rubrica existe no cadastro, mas não possui vínculo para a loja <b>' + escapeHtml(loja.codigo) + '</b>.'
-                            : 'Cadastre esta rubrica antes de gerar o lançamento.');
-                    return '<div class="status-rubrica-folha ' + classe + ' flex items-start gap-3">' +
-                        '<i class="fa-solid ' + icone + ' mt-0.5"></i>' +
-                        '<div class="min-w-0 flex-1">' +
-                            '<div class="flex flex-wrap items-center justify-between gap-2">' +
-                                '<div class="font-bold">Rubrica ' + escapeHtml(item.codigo) + (item.descricao ? ' - ' + escapeHtml(item.descricao) : '') + '</div>' +
-                                '<span class="text-[11px] font-semibold opacity-80">' + item.ocorrencias + ' ocorrência(s)</span>' +
-                            '</div>' +
-                            '<div class="text-xs mt-1">' + status + '</div>' +
-                            '<div class="text-xs mt-1 opacity-90">' + detalhe + '</div>' +
-                        '</div>' +
-                    '</div>';
-                }).join('');
+            if (filtros) filtros.classList.toggle('hidden', !alerta && !erro);
+            renderListaPendenciasConferenciaFolha();
+            atualizarFiltrosPendenciasFolha();
+
+            if (extra) {
+                if (inconsistencias.length) {
+                    extra.classList.remove('hidden');
+                    extra.innerHTML = '<b>Outras inconsistências:</b> ' + escapeHtml(inconsistencias.slice(0, 10).join(' | ')) + (inconsistencias.length > 10 ? ' | ...' : '');
+                } else {
+                    extra.classList.add('hidden');
+                    extra.innerHTML = '';
+                }
             }
 
-            if (inconsistencias.length) {
-                extra.classList.remove('hidden');
-                extra.innerHTML = '<b>Outras inconsistências:</b> ' + escapeHtml(inconsistencias.slice(0, 10).join(' | ')) + (inconsistencias.length > 10 ? ' | ...' : '');
-            } else {
-                extra.classList.add('hidden');
-                extra.innerHTML = '';
-            }
-
+            atualizarBotaoPendenciasFolha();
             popup.classList.remove('hidden');
         }
 
         function fecharPopupConferenciaFolha() {
             document.getElementById('popup-conferencia-folha')?.classList.add('hidden');
         }
-
 
         let tipoPopupConsultaCadastro = '';
 
@@ -3619,7 +3738,12 @@ async function importarDeParaFolhaTXT(input){
                         </div></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
         async function inicializarNovosCadastros(){const c=localStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=localStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
-        setTimeout(() => atualizarOpcoesLojas(), 0);
+        setTimeout(() => {
+            atualizarOpcoesLojas();
+            carregarPendenciasSalvasConferenciaFolha();
+        }, 0);
+        document.getElementById('folha-loja')?.addEventListener('change', carregarPendenciasSalvasConferenciaFolha);
+        document.getElementById('folha-competencia')?.addEventListener('change', carregarPendenciasSalvasConferenciaFolha);
 
         // Menu lateral recolhível
         function alternarMenu() {
@@ -3765,6 +3889,12 @@ async function importarDeParaFolhaTXT(input){
                 </div>
                 <div class="px-5 py-4 bg-slate-50 border-b border-slate-200">
                     <div id="popup-conferencia-folha-resumo" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+                </div>
+                <div id="popup-conferencia-folha-filtros" class="hidden px-5 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500 mr-1">Filtrar:</span>
+                    <button type="button" id="filtro-pendencias-todas" onclick="filtrarPendenciasFolha('todas')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border bg-slate-800 text-white border-slate-800">Todas</button>
+                    <button type="button" id="filtro-pendencias-nao-cadastradas" onclick="filtrarPendenciasFolha('nao-cadastradas')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100">Não cadastrada</button>
+                    <button type="button" id="filtro-pendencias-sem-depara" onclick="filtrarPendenciasFolha('sem-depara')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">Sem DePara</button>
                 </div>
                 <div id="popup-conferencia-folha-lista" class="popup-lista p-5 space-y-2"></div>
                 <div id="popup-conferencia-folha-extra" class="hidden px-5 py-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-600"></div>
