@@ -4222,8 +4222,8 @@ function converterValorLancamentoFolha(valor) {
                 const valorTexto = valor.toFixed(2).replace('.', ',');
                 lancamentos.push({
                     conta: contaTotalizador.codigo,
-                    debito: valorTexto,
-                    credito: '0,00',
+                    debito: '0,00',
+                    credito: valorTexto,
                     historico: loja.nome + ' - TOTALIZADOR INSS ' + descricao.toUpperCase() + ' - ' + competencia
                 });
             };
