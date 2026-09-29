@@ -954,7 +954,7 @@
         </div>
 
         <div id="folhatab-importadas" class="folhatab-content hidden p-5 space-y-5">
-            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
                 <div class="p-5 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                         <h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-circle-check text-unisuperBlue mr-2"></i>Folhas Importadas</h4>
@@ -965,20 +965,22 @@
                     </button>
                 </div>
                 <div class="p-5">
-                    <div class="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-5">
-                        <div class="min-w-[220px] flex-1">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
+                        <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Loja</label>
                             <select id="filtro-folhas-importadas-loja" onchange="renderFolhasImportadas()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
                                 <option value="">Todas as lojas</option>
                             </select>
                         </div>
-                        <div class="min-w-[180px]">
+                        <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Competência</label>
                             <input id="filtro-folhas-importadas-competencia" type="month" onchange="renderFolhasImportadas()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
                         </div>
-                        <button type="button" onclick="limparFiltrosFolhasImportadas()" class="h-[38px] border border-slate-300 bg-white text-slate-700 px-4 rounded-lg text-xs font-semibold hover:bg-slate-100">
-                            <i class="fa-solid fa-filter-circle-xmark mr-1"></i> Limpar filtros
-                        </button>
+                        <div class="flex items-end">
+                            <button type="button" onclick="limparFiltrosFolhasImportadas()" class="w-full border border-slate-300 bg-white text-slate-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-slate-100">
+                                <i class="fa-solid fa-filter-circle-xmark mr-1"></i> Limpar filtros
+                            </button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto border border-slate-200 rounded-lg">
                         <table class="w-full min-w-[1050px] text-sm border-collapse">
@@ -2768,51 +2770,25 @@
                 return;
             }
 
-            // Ordem fixa: loja pelo código natural (1, 2, 3, 10...), depois competência
-            // da mais recente para a mais antiga. Em empate, usa nome do arquivo e ID.
-            const chaveLoja = (item) => {
-                const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
-                return String(loja?.codigo ?? '').trim();
-            };
-            const compararLojas = (a, b) => {
-                const ca = chaveLoja(a);
-                const cb = chaveLoja(b);
-                const na = Number(ca.replace(/[^0-9]/g, ''));
-                const nb = Number(cb.replace(/[^0-9]/g, ''));
-                if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
-                return ca.localeCompare(cb, 'pt-BR', {numeric:true, sensitivity:'base'});
-            };
-            const compararCompetencias = (a, b) => {
-                const ca = String(a.competencia || '');
-                const cb = String(b.competencia || '');
-                return cb.localeCompare(ca);
-            };
-
+            // Mesma ordenação e apresentação da lista de Folhas Geradas:
+            // competência mais recente primeiro e, em empate, loja/arquivo/ID.
             lista.sort((a, b) =>
-                compararLojas(a, b)
-                || compararCompetencias(a, b)
+                String(b.competencia || '').localeCompare(String(a.competencia || ''))
+                || String((lojas.find(x => Number(x.id) === Number(a.loja_id))?.codigo) || '').localeCompare(
+                    String((lojas.find(x => Number(x.id) === Number(b.loja_id))?.codigo) || ''),
+                    'pt-BR',
+                    {numeric:true, sensitivity:'base'}
+                )
                 || String(a.arquivo_nome || '').localeCompare(String(b.arquivo_nome || ''), 'pt-BR', {numeric:true, sensitivity:'base'})
                 || Number(a.id) - Number(b.id)
             );
 
-            let lojaAnterior = null;
-            const html = [];
-            lista.forEach(item => {
+            tabela.innerHTML = lista.map(item => {
                 const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
-                const lojaChave = chaveLoja(item) || 'SEM_LOJA';
-                if (lojaChave !== lojaAnterior) {
-                    const nomeLoja = loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada';
-                    html.push('<tr class="bg-slate-50 border-y border-slate-200"><td colspan="9" class="px-3 py-2.5">' +
-                        '<div class="flex items-center gap-2 text-slate-700">' +
-                        '<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-unisuperBlue text-white"><i class="fa-solid fa-store text-xs"></i></span>' +
-                        '<span class="text-xs font-bold uppercase tracking-wide">' + escapeHtml(nomeLoja) + '</span>' +
-                        '</div></td></tr>');
-                    lojaAnterior = lojaChave;
-                }
                 const pendencias = Number(item.pendencias || 0);
                 const statusClasse = pendencias > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700';
-                html.push('<tr class="bg-white hover:bg-slate-50">' +
-                    '<td class="p-3 pl-6 font-semibold text-slate-700">' + escapeHtml(loja ? (loja.codigo + ' - ' + loja.nome) : '—') + '</td>' +
+                return '<tr class="bg-white hover:bg-slate-50 border-b border-slate-100">' +
+                    '<td class="p-3 font-medium">' + escapeHtml(loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada') + '</td>' +
                     '<td class="p-3 font-semibold">' + escapeHtml(formatarCompetenciaFolhaISO(item.competencia)) + '</td>' +
                     '<td class="p-3">' + escapeHtml(item.arquivo_nome || '-') + '</td>' +
                     '<td class="p-3 text-center">' + Number(item.total_linhas || 0) + '</td>' +
@@ -2824,9 +2800,9 @@
                         '<button type="button" onclick="abrirRelatorioFolhaImportada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-900"><i class="fa-solid fa-file-lines"></i> Resumo</button>' +
                         '<button type="button" onclick="excluirFolhaImportada(' + Number(item.id) + ')" class="inline-flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-700"><i class="fa-solid fa-trash"></i> Excluir</button>' +
                     '</div></td>' +
-                '</tr>');
-            });
-            tabela.innerHTML = html.join('');
+                '</tr>';
+            }).join('');
+
         }
 
         function calcularResumoFolhaImportada(item) {
