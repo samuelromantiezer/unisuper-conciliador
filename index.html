@@ -4135,7 +4135,6 @@ function converterValorLancamentoFolha(valor) {
 
             const resumoInss = resumoInssFolhaAtual || gerarResumoInssFolha();
             if (resumoInss) {
-                inserirLinhaInssResumo('Segurados', resumoInss.segurados, 'credito');
                 inserirLinhaInssResumo('Contribuintes', resumoInss.contribuintes, 'credito');
                 inserirLinhaInssResumo('Empresa', resumoInss.empresa, 'debito');
                 inserirLinhaInssResumo('RAT', resumoInss.rat, 'debito');
