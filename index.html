@@ -985,6 +985,9 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                             <span id="folha-lancamento-contagem" class="bg-slate-100 border border-slate-200 rounded-full px-3 py-1">0 lançamentos</span>
+                            <button type="button" id="btn-validar-totais-folha" onclick="abrirValidacaoTotaisFolha()" class="hidden inline-flex items-center gap-2 bg-blue-100 text-blue-800 border border-blue-300 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-200 transition">
+                                <i class="fa-solid fa-scale-balanced"></i> Validar Totais
+                            </button>
                             <button type="button" id="btn-verificar-pendencias-folha" onclick="abrirPendenciasFolha()" class="hidden inline-flex items-center gap-2 bg-amber-100 text-amber-800 border border-amber-300 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-amber-200 transition">
                                 <i class="fa-solid fa-triangle-exclamation"></i> Verificar Pendências
                             </button>
@@ -3019,6 +3022,101 @@ function converterValorLancamentoFolha(valor) {
             }
         }
 
+        let validacaoTotaisFolha = null;
+
+        function normalizarNumeroFolha(valor) {
+            if (typeof valor === 'number') return valor;
+            const texto = String(valor ?? '').trim().replace(/\./g, '').replace(',', '.');
+            const numero = Number(texto.replace(/[^0-9.-]/g, ''));
+            return Number.isFinite(numero) ? numero : 0;
+        }
+
+        function extrairTotaisFolhaPlanilha() {
+            let totalProventos = null;
+            let totalDescontos = null;
+            let encontrouProventos = false;
+            let encontrouDescontos = false;
+
+            for (const linha of (dadosFolhaImportados || [])) {
+                const textoAB = String((linha || [])[27] ?? '').trim().toUpperCase();
+                if (textoAB !== 'TOTAL') continue;
+
+                // Os dois TOTAL da coluna AB são sequenciais: o primeiro é Proventos,
+                // o segundo é Descontos. O valor do total é obtido da própria coluna de valores.
+                const valor = normalizarNumeroFolha((linha || [])[32]);
+                if (!encontrouProventos) {
+                    totalProventos = valor;
+                    encontrouProventos = true;
+                } else if (!encontrouDescontos) {
+                    totalDescontos = valor;
+                    encontrouDescontos = true;
+                }
+            }
+
+            return { totalProventos, totalDescontos, encontrouProventos, encontrouDescontos };
+        }
+
+        function calcularTotaisImportadosFolha() {
+            let proventos = 0;
+            let descontos = 0;
+
+            for (const linha of (dadosFolhaImportados || [])) {
+                if (linhaFolhaEhInformativaPorColunaAM(linha)) continue;
+                const codigo = String((linha || [])[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
+                if (!/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
+                const rubrica = localizarRubricaFolha(codigo);
+                if (!rubrica) continue;
+                const tipo = String(rubrica.tipo || '').trim().toLowerCase();
+                if (tipo !== 'provento' && tipo !== 'desconto') continue;
+                const valor = normalizarNumeroFolha((linha || [])[32]) / 100;
+                if (tipo === 'provento') proventos += valor;
+                if (tipo === 'desconto') descontos += valor;
+            }
+
+            return { proventos, descontos };
+        }
+
+        function abrirValidacaoTotaisFolha() {
+            if (!dadosFolhaImportados?.length) return alert('Carregue a planilha da folha antes de validar os totais.');
+
+            const planilha = extrairTotaisFolhaPlanilha();
+            const calculado = calcularTotaisImportadosFolha();
+            const tolerancia = 0.005;
+            const divergenciaProventos = planilha.encontrouProventos && Math.abs(planilha.totalProventos - calculado.proventos) > tolerancia;
+            const divergenciaDescontos = planilha.encontrouDescontos && Math.abs(planilha.totalDescontos - calculado.descontos) > tolerancia;
+            const divergencia = !planilha.encontrouProventos || !planilha.encontrouDescontos || divergenciaProventos || divergenciaDescontos;
+            validacaoTotaisFolha = { planilha, calculado, divergencia };
+
+            let popup = document.getElementById('popup-validacao-totais-folha');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'popup-validacao-totais-folha';
+                popup.className = 'fixed inset-0 z-[95] bg-slate-900/60 flex items-center justify-center p-4';
+                popup.innerHTML = '<div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">' +
+                    '<div id="validacao-totais-cabecalho" class="p-5 border-b"><h3 class="text-lg font-bold">Validação dos Totais da Folha</h3><p class="text-xs text-slate-500 mt-1">Comparação entre os totais da planilha e o conteúdo importado.</p></div>' +
+                    '<div id="validacao-totais-conteudo" class="p-5"></div>' +
+                    '<div class="p-4 border-t flex justify-end"><button type="button" onclick="fecharValidacaoTotaisFolha()" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-semibold">Fechar</button></div>' +
+                    '</div>';
+                document.body.appendChild(popup);
+            }
+            const conteudo = popup.querySelector('#validacao-totais-conteudo');
+            conteudo.innerHTML =
+                '<div class="rounded-xl border p-4 mb-4 ' + (divergencia ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50') + '">' +
+                '<div class="font-bold ' + (divergencia ? 'text-red-700' : 'text-emerald-700') + '">' +
+                (divergencia ? 'Lançamento com Divergências' : 'Lançamento conferido com sucesso') + '</div>' +
+                '<div class="text-sm mt-1 ' + (divergencia ? 'text-red-600' : 'text-emerald-600') + '">' +
+                (divergencia ? 'Os valores da planilha não conferem com o conteúdo importado.' : 'Os totais de proventos e descontos estão conferindo.') + '</div></div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                '<div class="border rounded-xl p-4"><b>Proventos</b><div class="text-sm mt-2">Planilha: <strong>' + (planilha.encontrouProventos ? planilha.totalProventos.toFixed(2) : 'TOTAL não encontrado') + '</strong></div><div class="text-sm">Importado: <strong>' + calculado.proventos.toFixed(2) + '</strong></div></div>' +
+                '<div class="border rounded-xl p-4"><b>Descontos</b><div class="text-sm mt-2">Planilha: <strong>' + (planilha.encontrouDescontos ? planilha.totalDescontos.toFixed(2) : 'TOTAL não encontrado') + '</strong></div><div class="text-sm">Importado: <strong>' + calculado.descontos.toFixed(2) + '</strong></div></div>' +
+                '</div>';
+            popup.classList.remove('hidden');
+        }
+
+        function fecharValidacaoTotaisFolha() {
+            document.getElementById('popup-validacao-totais-folha')?.remove();
+        }
+
         function carregarArquivoFolhaPagamento(input) {
             const file = input.files?.[0];
             if (!file) return;
@@ -3035,6 +3133,7 @@ function converterValorLancamentoFolha(valor) {
                     const planilha = workbook.Sheets[primeiraAba];
                     dadosFolhaImportados = XLSX.utils.sheet_to_json(planilha, {header:1, defval:''});
                     if (!dadosFolhaImportados.length) throw new Error('A planilha está vazia.');
+                    document.getElementById('btn-validar-totais-folha')?.classList.remove('hidden');
                     conferirRubricasFolhaImportada();
                 } catch (e) {
                     alert('Erro ao ler a planilha da folha de pagamento: ' + (e.message || e));
