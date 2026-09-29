@@ -3825,12 +3825,28 @@ function converterValorLancamentoFolha(valor) {
 
         function localizarValorResumoInssFolha(rotulo) {
             const alvo = String(rotulo || '').trim().toLowerCase();
+            let encontrouRotulo = false;
+
             for (const linha of (Array.isArray(dadosFolhaImportados) ? dadosFolhaImportados : [])) {
                 if (!Array.isArray(linha)) continue;
+
                 const texto = String(linha[0] ?? '').trim().toLowerCase();
-                if (texto === alvo) return normalizarNumeroInssFolha(linha[11]);
+                if (texto !== alvo) continue;
+
+                encontrouRotulo = true;
+
+                // O Resumo da Folha possui várias ocorrências do mesmo rótulo.
+                // Algumas são apenas cabeçalhos e têm a coluna L vazia.
+                // Ignora essas ocorrências e usa a primeira linha que realmente
+                // possui um valor na coluna L.
+                const valorColunaL = linha[11];
+                if (valorColunaL !== null && valorColunaL !== undefined &&
+                    String(valorColunaL).trim() !== '') {
+                    return normalizarNumeroInssFolha(valorColunaL);
+                }
             }
-            return 0;
+
+            return encontrouRotulo ? 0 : 0;
         }
 
         function gerarResumoInssFolha() {
