@@ -2951,14 +2951,24 @@ function converterValorLancamentoFolha(valor) {
 
             const conferenciaRubricas = [];
             const conferenciaPorCodigo = new Map();
+            let encontrouInformativa = false;
+            let informativasIgnoradas = 0;
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
-                if (linhaFolhaEhInformativa(linha)) break;
+                if (linhaFolhaEhInformativa(linha)) {
+                    encontrouInformativa = true;
+                    informativasIgnoradas = 0;
+                    continue;
+                }
                 const rubricaBruta = linha[0];
                 const textoRubrica = String(rubricaBruta ?? '').trim();
                 const rubricaCodigo = textoRubrica.replace(/^["']|["']$/g, '').trim();
                 const somenteNumeros = rubricaCodigo.replace(/\D/g, '');
+                if (encontrouInformativa && somenteNumeros && /^\d+(?:[.,]\d+)?$/.test(rubricaCodigo) && informativasIgnoradas < 4) {
+                    informativasIgnoradas++;
+                    continue;
+                }
 
                 // A coluna A define as rubricas. Cabeçalhos e textos são ignorados.
                 if (!rubricaCodigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(rubricaCodigo)) continue;
@@ -3039,10 +3049,16 @@ function converterValorLancamentoFolha(valor) {
             const conferenciaPorCodigo = new Map();
             let totalProventos = 0;
             let totalDescontos = 0;
+            let encontrouInformativa = false;
+            let informativasIgnoradas = 0;
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
-                if (linhaFolhaEhInformativa(linha)) break;
+                if (linhaFolhaEhInformativa(linha)) {
+                    encontrouInformativa = true;
+                    informativasIgnoradas = 0;
+                    continue;
+                }
                 const rubricaBruta = linha[0];
 
                 // A coluna A define se a linha é uma rubrica válida.
@@ -3187,11 +3203,21 @@ function converterValorLancamentoFolha(valor) {
 
             // Soma os valores por descrição para formar os totalizadores.
             const valoresImpostos = new Map();
+            let encontrouInformativaImpostos = false;
+            let informativasIgnoradasImpostos = 0;
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
-                if (linhaFolhaEhInformativa(linha)) break;
+                if (linhaFolhaEhInformativa(linha)) {
+                    encontrouInformativaImpostos = true;
+                    informativasIgnoradasImpostos = 0;
+                    continue;
+                }
                 const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
                 const somenteNumeros = codigo.replace(/\D/g, '');
+                if (encontrouInformativaImpostos && somenteNumeros && /^\d+(?:[.,]\d+)?$/.test(codigo) && informativasIgnoradasImpostos < 4) {
+                    informativasIgnoradasImpostos++;
+                    continue;
+                }
                 if (!codigo || !somenteNumeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
 
                 const rubrica = localizarRubricaFolha(codigo);
