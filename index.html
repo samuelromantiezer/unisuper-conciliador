@@ -4137,6 +4137,37 @@ function converterValorLancamentoFolha(valor) {
                 return encontrados[0] || null;
             };
 
+            const localizarRubricaInssPorTotalizador = descricao => {
+                const alvo = normalizarDescricaoRubricaFolha(descricao)
+                    .replace(/[.:]/g, '')
+                    .replace(/^inss\\s+/, '')
+                    .replace(/^totalizador\\s+/, '')
+                    .replace(/\\s+totalizador$/, '');
+
+                const aliases = {
+                    empresa: ['empresa', 'inss empresa', 'inss empresa e rat', 'empresa e rat'],
+                    terceiros: ['terceiros', 'inss terceiros'],
+                    contribuintes: ['contribuintes', 'inss contribuintes'],
+                    rat: ['rat', 'inss rat']
+                };
+
+                const candidatos = aliases[alvo] || [alvo];
+                const rubricasTotalizadorasInss = rubricasCadastradas.filter(r =>
+                    String(r.tipo || '').trim().toLowerCase() === 'totalizador'
+                );
+
+                const encontrados = rubricasTotalizadorasInss.filter(r => {
+                    const d = normalizarDescricaoRubricaFolha(r.descricao)
+                        .replace(/[.:]/g, '')
+                        .replace(/^inss\\s+/, '')
+                        .replace(/^totalizador\\s+/, '')
+                        .replace(/\\s+totalizador$/, '');
+                    return candidatos.includes(d);
+                });
+
+                return encontrados[0] || null;
+            };
+
             const inserirLinhaInssResumo = (descricao, valor) => {
                 if (!Number.isFinite(valor) || valor <= 0) return;
 
@@ -4167,14 +4198,50 @@ function converterValorLancamentoFolha(valor) {
                 });
             };
 
+            const inserirLinhaTotalizadorInss = (descricao, valor) => {
+                if (!Number.isFinite(valor) || valor <= 0) return;
+
+                const rubricaTotalizador = localizarRubricaInssPorTotalizador(descricao);
+
+                if (!rubricaTotalizador) {
+                    inconsistencias.push(
+                        'Totalizador do INSS "' + descricao + '" não está cadastrado como Totalizador.'
+                    );
+                    return;
+                }
+
+                const contaTotalizador = localizarContaDeParaFolha(loja, rubricaTotalizador);
+                if (!contaTotalizador) {
+                    inconsistencias.push(
+                        'Não existe DePara para o totalizador do INSS "' + descricao +
+                        '" na loja "' + loja.codigo + '".'
+                    );
+                    return;
+                }
+
+                const valorTexto = valor.toFixed(2).replace('.', ',');
+                lancamentos.push({
+                    conta: contaTotalizador.codigo,
+                    debito: valorTexto,
+                    credito: '0,00',
+                    historico: loja.nome + ' - TOTALIZADOR INSS ' + descricao.toUpperCase() + ' - ' + competencia
+                });
+            };
+
+            const inserirImpostoInssComTotalizador = (descricao, valor) => {
+                inserirLinhaInssResumo(descricao, valor);
+                inserirLinhaTotalizadorInss(descricao, valor);
+            };
+
             const resumoInss = resumoInssFolhaAtual || gerarResumoInssFolha();
             if (resumoInss) {
-                // Cada valor do Resumo Geral das bases de INSS gera uma linha.
+                // Cada imposto do Resumo Geral das bases de INSS gera sua própria linha.
+                // Logo abaixo de cada imposto é gerado o seu respectivo Totalizador.
                 // Empresa NÃO é calculada como RAT + Terceiros.
-                inserirLinhaInssResumo('Empresa', Number(resumoInss.empresa || 0));
-                inserirLinhaInssResumo('Terceiros', Number(resumoInss.terceiros || 0));
-                inserirLinhaInssResumo('Contribuintes', Number(resumoInss.contribuintes || 0));
-                inserirLinhaInssResumo('RAT', Number(resumoInss.rat || 0));
+                inserirImpostoInssComTotalizador('Empresa', Number(resumoInss.empresa || 0));
+                inserirImpostoInssComTotalizador('Terceiros', Number(resumoInss.terceiros || 0));
+                inserirImpostoInssComTotalizador('Contribuintes', Number(resumoInss.contribuintes || 0));
+                inserirImpostoInssComTotalizador('RAT', Number(resumoInss.rat || 0));
             }
 
             // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
