@@ -2768,22 +2768,38 @@
                 return;
             }
 
-            // Mantém as lojas organizadas por código e, dentro de cada loja, a competência mais recente primeiro.
-            lista.sort((a, b) => {
-                const lojaA = lojas.find(x => Number(x.id) === Number(a.loja_id));
-                const lojaB = lojas.find(x => Number(x.id) === Number(b.loja_id));
-                const codigoA = String(lojaA?.codigo || '999999');
-                const codigoB = String(lojaB?.codigo || '999999');
-                return codigoA.localeCompare(codigoB, undefined, {numeric:true})
-                    || String(b.competencia || '').localeCompare(String(a.competencia || ''))
-                    || Number(b.id) - Number(a.id);
-            });
+            // Ordem fixa: loja pelo código natural (1, 2, 3, 10...), depois competência
+            // da mais recente para a mais antiga. Em empate, usa nome do arquivo e ID.
+            const chaveLoja = (item) => {
+                const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
+                return String(loja?.codigo ?? '').trim();
+            };
+            const compararLojas = (a, b) => {
+                const ca = chaveLoja(a);
+                const cb = chaveLoja(b);
+                const na = Number(ca.replace(/[^0-9]/g, ''));
+                const nb = Number(cb.replace(/[^0-9]/g, ''));
+                if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+                return ca.localeCompare(cb, 'pt-BR', {numeric:true, sensitivity:'base'});
+            };
+            const compararCompetencias = (a, b) => {
+                const ca = String(a.competencia || '');
+                const cb = String(b.competencia || '');
+                return cb.localeCompare(ca);
+            };
+
+            lista.sort((a, b) =>
+                compararLojas(a, b)
+                || compararCompetencias(a, b)
+                || String(a.arquivo_nome || '').localeCompare(String(b.arquivo_nome || ''), 'pt-BR', {numeric:true, sensitivity:'base'})
+                || Number(a.id) - Number(b.id)
+            );
 
             let lojaAnterior = null;
             const html = [];
             lista.forEach(item => {
                 const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
-                const lojaChave = Number(item.loja_id || 0);
+                const lojaChave = chaveLoja(item) || 'SEM_LOJA';
                 if (lojaChave !== lojaAnterior) {
                     const nomeLoja = loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada';
                     html.push('<tr class="bg-slate-50 border-y border-slate-200"><td colspan="9" class="px-3 py-2.5">' +
@@ -2796,7 +2812,7 @@
                 const pendencias = Number(item.pendencias || 0);
                 const statusClasse = pendencias > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700';
                 html.push('<tr class="bg-white hover:bg-slate-50">' +
-                    '<td class="p-3 pl-6 text-slate-400">—</td>' +
+                    '<td class="p-3 pl-6 font-semibold text-slate-700">' + escapeHtml(loja ? (loja.codigo + ' - ' + loja.nome) : '—') + '</td>' +
                     '<td class="p-3 font-semibold">' + escapeHtml(formatarCompetenciaFolhaISO(item.competencia)) + '</td>' +
                     '<td class="p-3">' + escapeHtml(item.arquivo_nome || '-') + '</td>' +
                     '<td class="p-3 text-center">' + Number(item.total_linhas || 0) + '</td>' +
