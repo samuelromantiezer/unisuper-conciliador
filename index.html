@@ -2670,23 +2670,47 @@
             if (!popover) return;
             const abriu = popover.classList.contains('hidden');
             popover.classList.toggle('hidden');
-            if (abriu) renderizarListaCompetenciasFiscal();
+            if (abriu) renderizarAnosCompetenciaFiscal();
         }
 
-        function renderizarListaCompetenciasFiscal() {
+        function renderizarAnosCompetenciaFiscal() {
             const lista = document.getElementById('fiscal-competencia-lista');
             if (!lista) return;
 
-            const ano = Number(String(competenciaFiscalSelecionada || '').split('-')[0]) || new Date().getFullYear();
-            const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            const anoAtual = Number(String(competenciaFiscalSelecionada || '').split('-')[0]) || new Date().getFullYear();
+            const anos = [];
+            for (let ano = anoAtual - 2; ano <= anoAtual + 2; ano++) anos.push(ano);
 
-            lista.innerHTML = nomes.map((nome, indice) => {
-                const valor = ano + '-' + String(indice + 1).padStart(2, '0');
-                const ativo = valor === competenciaFiscalSelecionada ? ' ativo' : '';
-                return '<button type="button" class="fiscal-competencia-item' + ativo + '" onclick="selecionarCompetenciaFiscal(\'' + valor + '\')">' +
-                    nome + '/' + ano +
-                '</button>';
-            }).join('');
+            lista.innerHTML =
+                '<div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Escolha o ano</div>' +
+                '<div class="grid grid-cols-1 gap-1">' +
+                    anos.map(ano =>
+                        '<button type="button" class="fiscal-competencia-item' + (ano === anoAtual ? ' ativo' : '') + '" onclick="renderizarMesesCompetenciaFiscal(' + ano + ')">' +
+                            ano +
+                        '</button>'
+                    ).join('') +
+                '</div>';
+        }
+
+        function renderizarMesesCompetenciaFiscal(ano) {
+            const lista = document.getElementById('fiscal-competencia-lista');
+            if (!lista) return;
+
+            const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            const mesAtual = String(competenciaFiscalSelecionada || '').slice(5, 7);
+
+            lista.innerHTML =
+                '<div class="flex items-center justify-between mb-2">' +
+                    '<button type="button" class="competencia-ano-btn" onclick="renderizarAnosCompetenciaFiscal()"><i class="fa-solid fa-arrow-left"></i></button>' +
+                    '<span class="competencia-ano-label">' + ano + '</span>' +
+                    '<span class="w-7"></span>' +
+                '</div>' +
+                '<div class="competencia-meses">' +
+                    nomes.map((nome, indice) => {
+                        const valor = ano + '-' + String(indice + 1).padStart(2, '0');
+                        return '<button type="button" class="competencia-mes-btn' + (valor === competenciaFiscalSelecionada ? ' ativo' : '') + '" onclick="selecionarCompetenciaFiscal(\'' + valor + '\')">' + nome + '</button>';
+                    }).join('') +
+                '</div>';
         }
 
         function selecionarCompetenciaFiscal(valor) {
