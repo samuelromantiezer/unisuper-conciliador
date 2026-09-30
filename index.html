@@ -2723,50 +2723,131 @@
         }
 
         async function consultarConciliacaoFiscal() {
-            atualizarCompetenciaFiscalSelecionada();
+            const competencia = atualizarCompetenciaFiscalSelecionada();
             document.getElementById('fiscal-competencia-popover')?.classList.add('hidden');
+
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
 
-            // A consulta real será conectada ao SELECT fiscal.
-            // Enquanto o SELECT não estiver definido, a estrutura da grade permanece fixa.
-            if (!dadosConciliacaoFiscal.length) {
-                renderizarConciliacaoFiscal(estruturaConciliacaoFiscal);
+            if (!/^\\d{4}-\\d{2}$/.test(competencia)) {
+                alert('Selecione uma competência fiscal válida.');
+                return;
             }
 
-            // PONTO DE INTEGRAÇÃO DO SELECT FISCAL:
-            // dadosConciliacaoFiscal = await consultarDadosFiscais();
-            //
-            // Quando o SELECT for conectado, esta função será chamada:
-            // 1) automaticamente ao abrir a aba Fiscal;
-            // 2) pelo botão Consultar;
-            // 3) pelo botão Executar para atualizar os dados.
-            //
-            // A tabela nunca é removida da tela.
+            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Consultando dados fiscais...</td></tr>';
 
-            if (!dadosConciliacaoFiscal.length) {
-                renderizarConciliacaoFiscal(estruturaConciliacaoFiscal);
-            } else {
+            try {
+                const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-conciliacao-fiscal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ competencia })
+                });
+
+                const textoResposta = await resposta.text();
+                console.log('Resposta recebida do servidor Fiscal:', textoResposta);
+
+                let resultado;
+                try {
+                    resultado = JSON.parse(textoResposta);
+                } catch (erroJSON) {
+                    throw new Error('O servidor fiscal não retornou JSON. Resposta: ' + textoResposta.substring(0, 300));
+                }
+
+                if (!resposta.ok || resultado.sucesso === false) {
+                    throw new Error(resultado.erro || resultado.message || `Erro HTTP ${resposta.status} ao consultar o fiscal.`);
+                }
+
+                const linhas = Array.isArray(resultado.dados)
+                    ? resultado.dados
+                    : Array.isArray(resultado.resultados)
+                        ? resultado.resultados
+                        : [];
+
+                if (!linhas.length) {
+                    dadosConciliacaoFiscal = [];
+                    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500">Nenhum lançamento fiscal encontrado para a competência selecionada.</td></tr>';
+                    return;
+                }
+
+                const mapaLojas = new Map();
+
+                linhas.forEach(linha => {
+                    const loja = String(
+                        linha.loja ??
+                        linha.nome_loja ??
+                        linha.nomeLoja ??
+                        linha.loja_nome ??
+                        'Sem loja'
+                    ).trim() || 'Sem loja';
+
+                    const cfopOriginal = String(linha.cfop ?? '').trim();
+                    const cfopNumerico = cfopOriginal.replace(/\\./g, '');
+                    const valor = Number(
+                        linha.total_fiscal ??
+                        linha.valor ??
+                        linha.total ??
+                        0
+                    ) || 0;
+
+                    if (!mapaLojas.has(loja)) {
+                        mapaLojas.set(loja, {
+                            conta: '252',
+                            contaAnalitica: '',
+                            grupo: '',
+                            descricao: 'REVENDA DE MERCADORIAS',
+                            loja,
+                            debito: null,
+                            credito: null,
+                            destaque: 'credito',
+                            azulEscuro: false,
+                            itens: [
+                                { cfop: '5.101', valor: 0, comparativo: null },
+                                { cfop: '5.102', valor: 0, comparativo: null },
+                                { cfop: '5.405', valor: 0, comparativo: null },
+                                { cfop: '6.101', valor: 0, comparativo: null },
+                                { cfop: '6.102', valor: 0, comparativo: null },
+                                { cfop: '6.401', valor: 0, comparativo: null },
+                                { cfop: '6.403', valor: 0, comparativo: null },
+                                { cfop: 'TOTAL', valor: 0, comparativo: null }
+                            ]
+                        });
+                    }
+
+                    const grupo = mapaLojas.get(loja);
+                    const item = grupo.itens.find(x => x.cfop.replace(/\\./g, '') === cfopNumerico);
+
+                    if (item) {
+                        item.valor = valor;
+                    }
+                });
+
+                mapaLojas.forEach(grupo => {
+                    grupo.itens[7].valor = grupo.itens
+                        .slice(0, 7)
+                        .reduce((total, item) => total + (Number(item.valor) || 0), 0);
+                });
+
+                dadosConciliacaoFiscal = Array.from(mapaLojas.values());
                 renderizarConciliacaoFiscal(dadosConciliacaoFiscal);
+
+            } catch (erro) {
+                console.error('Erro ao consultar conciliação fiscal:', erro);
+                dadosConciliacaoFiscal = [];
+                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-red-500 font-semibold">' +
+                    escapeHtml(erro.message || 'Erro desconhecido ao consultar o fiscal.') +
+                    '</td></tr>';
+                alert('Erro ao consultar o Fiscal: ' + (erro.message || 'Erro desconhecido.'));
             }
         }
 
         async function executarConciliacaoFiscalSalvando() {
-            // Executar = atualizar os dados da consulta atual.
-            // A grade continua fixa na tela; somente o conteúdo é renovado.
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
-
-            const indicador = tbody.querySelector('td');
-            if (indicador && !dadosConciliacaoFiscal.length) {
-                indicador.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Atualizando conciliação fiscal...';
-                indicador.className = 'p-8 text-center text-blue-600 font-semibold';
-            }
 
             try {
                 await consultarConciliacaoFiscal();
             } catch (erro) {
-                console.error('Erro ao atualizar conciliação fiscal:', erro);
+                console.error('Erro ao executar conciliação fiscal:', erro);
             }
         }
 
