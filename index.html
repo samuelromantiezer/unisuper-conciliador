@@ -4481,7 +4481,9 @@ function converterValorLancamentoFolha(valor) {
 
             // O totalizador a crédito fecha exatamente com a soma dos débitos
             // de FGTS efetivamente lançados.
-            inserirCreditoFgts(lancamentosFgts.reduce((total, item) => {\n                return total + normalizarNumeroInssFolha(item.debito);\n            }, 0));
+            inserirCreditoFgts(lancamentosFgts.reduce((total, item) => {
+                return total + normalizarNumeroInssFolha(item.debito);
+            }, 0));
 
             // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
             lancamentos.push(...lancamentosImpostos);
