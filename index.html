@@ -913,21 +913,21 @@
                         <p class="text-sm text-slate-600 mt-1">Competências salvas para consulta. Os lançamentos ficam bloqueados para edição.</p>
                     </div>
                     <button type="button" onclick="carregarFolhasGeradas(true)" class="inline-flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-slate-900">
-                        <i class="fa-solid fa-rotate"></i> Atualizar
+                        <i class="fa-solid fa-magnifying-glass"></i> Consultar
                     </button>
                 </div>
                 <div class="p-5">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Loja</label>
-                            <select id="filtro-folhas-geradas-loja" onchange="renderFolhasGeradas()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white w-full">
+                            <select id="filtro-folhas-geradas-loja" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white w-full">
                                 <option value="">Selecione a Loja</option>
                             </select>
                         </div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Competência</label>
-                            <input id="filtro-folhas-geradas-competencia" type="month" onchange="renderFolhasGeradas()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <input id="filtro-folhas-geradas-competencia" type="month" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
                         </div>
                         <div class="flex items-end">
                             <button type="button" onclick="limparFiltrosFolhasGeradas()" class="w-full border border-slate-300 bg-white text-slate-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-slate-100">
@@ -947,7 +947,11 @@
                                 </tr>
                             </thead>
                             <tbody id="tabela-folhas-geradas">
-                                <tr><td colspan="5" class="p-8 text-center text-slate-400">Carregando folhas geradas...</td></tr>
+                                <tr><td colspan="5" class="p-8 text-center text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass text-2xl mb-2"></i>
+                                    <div class="font-semibold text-slate-600">Nenhuma consulta realizada</div>
+                                    <div class="text-xs mt-1">Clique em "Consultar" para carregar as folhas geradas.</div>
+                                </td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -963,21 +967,21 @@
                         <p class="text-sm text-slate-500 mt-1">Consulte o processamento das planilhas por loja e competência.</p>
                     </div>
                     <button type="button" onclick="carregarFolhasImportadas(true)" class="inline-flex items-center gap-2 bg-unisuperBlue text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-blue-900">
-                        <i class="fa-solid fa-rotate"></i> Atualizar
+                        <i class="fa-solid fa-magnifying-glass"></i> Consultar
                     </button>
                 </div>
                 <div class="p-5">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Loja</label>
-                            <select id="filtro-folhas-importadas-loja" onchange="renderFolhasImportadas()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white w-full">
+                            <select id="filtro-folhas-importadas-loja" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white w-full">
                                 <option value="">Selecione a Loja</option>
                             </select>
                         </div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Competência</label>
-                            <input id="filtro-folhas-importadas-competencia" type="month" onchange="renderFolhasImportadas()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <input id="filtro-folhas-importadas-competencia" type="month" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
                         </div>
                         <div class="flex items-end">
                             <button type="button" onclick="limparFiltrosFolhasImportadas()" class="w-full border border-slate-300 bg-white text-slate-700 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-slate-100">
@@ -2658,6 +2662,8 @@
         let resumoInssFolhaAtual = null;
         let folhasGeradas = [];
         let folhasImportadas = [];
+        let folhasGeradasConsultadas = false;
+        let folhasImportadasConsultadas = false;
         let folhaGeradaVisualizando = null;
         let folhaImportadaVisualizando = null;
         let nomeArquivoFolhaImportadaAtual = '';
@@ -2753,9 +2759,10 @@
                     'competencia'
                 );
                 folhasImportadas.sort((a,b) => String(b.competencia).localeCompare(String(a.competencia)) || Number(b.id) - Number(a.id));
+                folhasImportadasConsultadas = true;
                 atualizarFiltrosFolhasImportadas();
                 renderFolhasImportadas();
-                if (mostrarMensagem) alert('Lista de folhas importadas atualizada.');
+                if (mostrarMensagem) alert('Consulta de folhas importadas concluída.');
             } catch (e) {
                 console.error('Erro ao carregar folhas importadas:', e);
                 if (tabela) tabela.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-red-500">Erro ao carregar folhas importadas: ' + escapeHtml(e.message || e) + '</td></tr>';
@@ -2765,6 +2772,10 @@
         function renderFolhasImportadas() {
             const tabela = document.getElementById('tabela-folhas-importadas');
             if (!tabela) return;
+            if (!folhasImportadasConsultadas) {
+                tabela.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400"><i class="fa-solid fa-magnifying-glass text-2xl mb-2"></i><div class="font-semibold text-slate-600">Nenhuma consulta realizada</div><div class="text-xs mt-1">Selecione os filtros, se quiser, e clique em "Consultar".</div></td></tr>';
+                return;
+            }
             const filtroLoja = document.getElementById('filtro-folhas-importadas-loja')?.value || '';
             const filtroCompetencia = document.getElementById('filtro-folhas-importadas-competencia')?.value || '';
             const lojas = lerListaCadastro('lojas');
@@ -2811,6 +2822,54 @@
                 '</tr>';
             }).join('');
 
+        }
+
+        async function excluirFolhaImportada(id) {
+            const item = localizarFolhaImportada(id);
+            if (!item) {
+                alert('Folha importada não encontrada.');
+                return;
+            }
+
+            const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
+            const identificacao = (loja ? loja.codigo + ' - ' + loja.nome : 'Loja não encontrada')
+                + ' / ' + formatarCompetenciaFolhaISO(item.competencia);
+
+            const confirmar = confirm(
+                'Deseja excluir a folha importada de ' + identificacao + '?\n\n' +
+                'O arquivo e todos os dados armazenados dessa importação serão removidos.'
+            );
+            if (!confirmar) return;
+
+            if (!supabaseClient) {
+                alert('Supabase não está conectado. Faça login e tente novamente.');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('folhas_importadas')
+                    .delete()
+                    .eq('id', Number(item.id));
+
+                if (error) throw error;
+
+                folhasImportadas = folhasImportadas.filter(x => Number(x.id) !== Number(item.id));
+
+                if (folhaImportadaVisualizando && Number(folhaImportadaVisualizando.id) === Number(item.id)) {
+                    fecharRelatorioFolhaImportada();
+                }
+
+                renderFolhasImportadas();
+                alert('Folha importada excluída com sucesso.');
+            } catch (e) {
+                console.error('Erro ao excluir folha importada:', e);
+                alert(
+                    'Erro ao excluir a folha importada: ' +
+                    (e.message || e) +
+                    '\n\nSe o banco informar falta de permissão, verifique a política DELETE da tabela folhas_importadas.'
+                );
+            }
         }
 
         function calcularResumoFolhaImportada(item) {
@@ -3216,8 +3275,9 @@
                     'competencia'
                 );
                 folhasGeradas.sort((a,b) => String(b.competencia).localeCompare(String(a.competencia)) || Number(b.id) - Number(a.id));
+                folhasGeradasConsultadas = true;
                 renderFolhasGeradas();
-                if (mostrarMensagem) alert('Lista de folhas geradas atualizada.');
+                if (mostrarMensagem) alert('Consulta de folhas geradas concluída.');
             } catch (e) {
                 console.error('Erro ao carregar folhas geradas:', e);
                 if (tabela) tabela.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Erro ao carregar folhas geradas: ' + escapeHtml(e.message || e) + '</td></tr>';
@@ -3240,6 +3300,10 @@
         function renderFolhasGeradas() {
             const tabela = document.getElementById('tabela-folhas-geradas');
             if (!tabela) return;
+            if (!folhasGeradasConsultadas) {
+                tabela.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400"><i class="fa-solid fa-magnifying-glass text-2xl mb-2"></i><div class="font-semibold text-slate-600">Nenhuma consulta realizada</div><div class="text-xs mt-1">Selecione os filtros, se quiser, e clique em "Consultar".</div></td></tr>';
+                return;
+            }
             const filtroLoja = document.getElementById('filtro-folhas-geradas-loja')?.value || '';
             const filtroCompetencia = document.getElementById('filtro-folhas-geradas-competencia')?.value || '';
             const lista = folhasGeradas.filter(item => {
