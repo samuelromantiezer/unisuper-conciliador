@@ -4361,12 +4361,7 @@ function converterValorLancamentoFolha(valor) {
                 }
             }
 
-            // Soma somente os débitos de FGTS que foram efetivamente lançados.
-            const totalFgtsDebito = lancamentosFgts.reduce((total, item) => {
-                return total + normalizarNumeroInssFolha(item.debito);
-            }, 0);
-
-            // O crédito do FGTS será lançado diretamente na conta 178,
+            // O crédito do FGTS será lançado diretamente na conta 178.
             // usando a soma dos débitos de FGTS que foram efetivamente lançados.
             // Não depende de cadastro de rubrica Totalizador/DePara.
             const inserirCreditoFgts = totalFgtsDebito => {
@@ -4383,7 +4378,7 @@ function converterValorLancamentoFolha(valor) {
 
             // O totalizador a crédito fecha exatamente com a soma dos débitos
             // de FGTS efetivamente lançados.
-            inserirCreditoFgts(totalFgtsDebito);
+            inserirCreditoFgts(lancamentosFgts.reduce((total, item) => {\n                return total + normalizarNumeroInssFolha(item.debito);\n            }, 0));
 
             // Impostos detalhados da folha continuam depois das linhas-resumo do INSS.
             lancamentos.push(...lancamentosImpostos);
