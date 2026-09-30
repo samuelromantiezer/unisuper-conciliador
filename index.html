@@ -2316,7 +2316,7 @@
                 }
                 return;
             } else if (tipo === 'fiscal-icms') {
-                renderizarConciliacaoFiscal();
+                executarConciliacaoFiscalSalvando();
             }
         }
 
@@ -2325,6 +2325,20 @@
             {conta:'000261',contaAnalitica:'3.1.02.02.000022',grupo:'Teste do ICMS',descricao:'ICMS',debito:'49.184,31',credito:'-',destaque:'debito',azulEscuro:true,itens:[{cfop:'5.101',valor:'-',comparativo:'-'},{cfop:'5.102',valor:'49.184,31',comparativo:'-'},{cfop:'5.405',valor:'-',comparativo:'-'},{cfop:'5.910',valor:'-',comparativo:'-'}]},
             {conta:'000255',contaAnalitica:'3.1.02.01.00010',grupo:'',descricao:'(-)DEVOLUCAO DE VENDAS',debito:'1.023,28',credito:'-',destaque:'debito',azulEscuro:false,itens:[{cfop:'1.202',valor:'674,54',comparativo:'-'},{cfop:'1.411',valor:'348,74',comparativo:'-'}]}
         ];
+
+        let conciliacaoFiscalAtualId = null;
+
+        function fiscalNumero(valor) {
+            if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
+            const normalizado = String(valor).replace(/\\./g,'').replace(',','.');
+            const numero = Number(normalizado);
+            return Number.isFinite(numero) ? numero : null;
+        }
+
+        function fiscalFormato(valor) {
+            if (valor === null || valor === undefined || valor === '') return '-';
+            return Number(valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+        }
 
         function fiscalLinhaValor(valor,destaque,azulEscuro) {
             const texto = valor === null || valor === undefined || valor === '' ? '-' : String(valor);
@@ -2339,34 +2353,166 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
                 return;
             }
-            const linhas = [];
-            dados.forEach((item, indice) => {
+
+            const grupos = [];
+            dados.forEach(item => {
                 const itens = Array.isArray(item.itens) && item.itens.length ? item.itens : [{cfop:'-',valor:'-',comparativo:'-'}];
-                const debitoDestaque = item.destaque === 'debito';
-                const creditoDestaque = item.destaque === 'credito';
-                linhas.push(
+                grupos.push(
                     '<tr>' +
                         '<td class="fiscal-conta-cell"><div class="fiscal-conta-codigo">' + escapeHtml(item.conta || '') + '</div><div class="fiscal-conta-analitica">' + escapeHtml(item.contaAnalitica || '') + '</div></td>' +
                         '<td class="fiscal-descricao-cell">' + (item.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(item.grupo) + '</span>' : '') + '<span class="fiscal-descricao">' + escapeHtml(item.descricao || '') + '</span></td>' +
-                        '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.debito,debitoDestaque,item.azulEscuro) + '</td>' +
-                        '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.credito,creditoDestaque,item.azulEscuro) + '</td>' +
+                        '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.debito,item.destaque === 'debito',item.azulEscuro) + '</td>' +
+                        '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.credito,item.destaque === 'credito',item.azulEscuro) + '</td>' +
                         '<td class="fiscal-cfop-cell">' + itens.map(x => '<div class="fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('') + '</td>' +
                         '<td class="fiscal-valor-cell">' + itens.map(x => '<div class="fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('') + '</td>' +
-                        '<td class="fiscal-comparativo-cell">' + itens.map((x,i) => '<div class="fiscal-comparativo-item ' + (i === itens.length - 1 ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') + '</td>' +
+                        '<td class="fiscal-comparativo-cell">' + itens.map(x => '<div class="fiscal-comparativo-item ' + (x.comparativo && x.comparativo !== '-' ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') + '</td>' +
                     '</tr>'
                 );
-                if (indice < dados.length - 1) {
-                    linhas.push('<tr class="fiscal-separador-grupo"><td colspan="6"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
-                }
+                grupos.push('<tr class="fiscal-separador-grupo"><td colspan="6"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
             });
-            tbody.innerHTML = linhas.join('');
+            grupos.pop();
+            tbody.innerHTML = grupos.join('');
         }
 
-        function consultarConciliacaoFiscal() {
+        async function salvarConciliacaoFiscal(dados, status = 'Consultada') {
+            if (!supabaseClient) throw new Error('Supabase ainda não está conectado.');
+            if (!Array.isArray(dados) || !dados.length) throw new Error('Não há dados fiscais para salvar.');
+
+            const totais = dados.reduce((acc,item) => {
+                acc.debito += fiscalNumero(item.debito) || 0;
+                acc.credito += fiscalNumero(item.credito) || 0;
+                return acc;
+            },{debito:0,credito:0});
+
+            const { data: cabecalho, error: erroCabecalho } = await supabaseClient
+                .from('conciliacoes_fiscais')
+                .insert({
+                    tipo:'ICMS',
+                    status,
+                    total_debito:totais.debito,
+                    total_credito:totais.credito
+                })
+                .select('id')
+                .single();
+
+            if (erroCabecalho) throw erroCabecalho;
+
+            const itensParaSalvar = [];
+            let ordem = 0;
+            dados.forEach(item => {
+                const itens = Array.isArray(item.itens) && item.itens.length ? item.itens : [{cfop:'-',valor:null,comparativo:null}];
+                itens.forEach(sub => {
+                    itensParaSalvar.push({
+                        conciliacao_id:cabecalho.id,
+                        ordem:ordem++,
+                        conta:item.conta || '',
+                        conta_analitica:item.contaAnalitica || null,
+                        grupo:item.grupo || null,
+                        descricao:item.descricao || '',
+                        debito:fiscalNumero(item.debito),
+                        credito:fiscalNumero(item.credito),
+                        destaque:item.destaque || null,
+                        azul_escuro:!!item.azulEscuro,
+                        cfop:sub.cfop || '-',
+                        valor:fiscalNumero(sub.valor),
+                        comparativo:fiscalNumero(sub.comparativo),
+                        comparativo_status:(sub.comparativo && sub.comparativo !== '-') ? 'ok' : null
+                    });
+                });
+            });
+
+            const { error: erroItens } = await supabaseClient
+                .from('conciliacoes_fiscais_itens')
+                .insert(itensParaSalvar);
+
+            if (erroItens) {
+                await supabaseClient.from('conciliacoes_fiscais').delete().eq('id',cabecalho.id);
+                throw erroItens;
+            }
+
+            conciliacaoFiscalAtualId = cabecalho.id;
+            return cabecalho.id;
+        }
+
+        async function carregarUltimaConciliacaoFiscal() {
+            if (!supabaseClient) throw new Error('Supabase ainda não está conectado.');
+
+            const { data: cabecalho, error: erroCabecalho } = await supabaseClient
+                .from('conciliacoes_fiscais')
+                .select('id,status,created_at,total_debito,total_credito')
+                .eq('tipo','ICMS')
+                .order('created_at',{ascending:false})
+                .limit(1)
+                .maybeSingle();
+
+            if (erroCabecalho) throw erroCabecalho;
+            if (!cabecalho) return null;
+
+            const { data: itens, error: erroItens } = await supabaseClient
+                .from('conciliacoes_fiscais_itens')
+                .select('ordem,conta,conta_analitica,grupo,descricao,debito,credito,destaque,azul_escuro,cfop,valor,comparativo,comparativo_status')
+                .eq('conciliacao_id',cabecalho.id)
+                .order('ordem',{ascending:true});
+
+            if (erroItens) throw erroItens;
+
+            const agrupado = [];
+            (itens || []).forEach(linha => {
+                let grupo = agrupado.find(x => x.conta === linha.conta);
+                if (!grupo) {
+                    grupo = {
+                        conta:linha.conta,
+                        contaAnalitica:linha.conta_analitica || '',
+                        grupo:linha.grupo || '',
+                        descricao:linha.descricao || '',
+                        debito:linha.debito == null ? '-' : fiscalFormato(linha.debito),
+                        credito:linha.credito == null ? '-' : fiscalFormato(linha.credito),
+                        destaque:linha.destaque || null,
+                        azulEscuro:!!linha.azul_escuro,
+                        itens:[]
+                    };
+                    agrupado.push(grupo);
+                }
+                grupo.itens.push({
+                    cfop:linha.cfop || '-',
+                    valor:linha.valor == null ? '-' : fiscalFormato(linha.valor),
+                    comparativo:linha.comparativo == null ? '-' : fiscalFormato(linha.comparativo)
+                });
+            });
+
+            conciliacaoFiscalAtualId = cabecalho.id;
+            return agrupado;
+        }
+
+        async function consultarConciliacaoFiscal() {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Consultando conciliação fiscal...</td></tr>';
-            setTimeout(() => renderizarConciliacaoFiscal(), 250);
+            tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Consultando conciliação fiscal salva...</td></tr>';
+            try {
+                let dados = await carregarUltimaConciliacaoFiscal();
+                if (!dados || !dados.length) {
+                    await salvarConciliacaoFiscal(dadosModeloConciliacaoFiscal,'Consultada');
+                    dados = await carregarUltimaConciliacaoFiscal();
+                }
+                renderizarConciliacaoFiscal(dados || []);
+            } catch (erro) {
+                console.error('Erro ao consultar conciliação fiscal:',erro);
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-500">Erro ao consultar: ' + escapeHtml(erro.message || erro) + '</td></tr>';
+            }
+        }
+
+        async function executarConciliacaoFiscalSalvando() {
+            const tbody = document.getElementById('tabela-fiscal-icms');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Salvando conciliação fiscal...</td></tr>';
+            try {
+                await salvarConciliacaoFiscal(dadosModeloConciliacaoFiscal,'Executada');
+                renderizarConciliacaoFiscal(dadosModeloConciliacaoFiscal);
+                alert('Conciliação fiscal executada e salva no Supabase.');
+            } catch (erro) {
+                console.error('Erro ao salvar conciliação fiscal:',erro);
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-500">Erro ao salvar: ' + escapeHtml(erro.message || erro) + '</td></tr>';
+                alert('Erro ao salvar a conciliação fiscal: ' + (erro.message || erro));
+            }
         }
 
         const titulosAbas = {
