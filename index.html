@@ -2538,7 +2538,7 @@
             // A consulta real será conectada ao SELECT fiscal.
             // Enquanto o SELECT não estiver definido, a estrutura da grade permanece fixa.
             if (!dadosConciliacaoFiscal.length) {
-                renderizarConciliacaoFiscal([]);
+                renderizarConciliacaoFiscal(estruturaConciliacaoFiscal);
             }
 
             // PONTO DE INTEGRAÇÃO DO SELECT FISCAL:
@@ -2552,7 +2552,7 @@
             // A tabela nunca é removida da tela.
 
             if (!dadosConciliacaoFiscal.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Aguardando os dados do SELECT da conciliação fiscal.</td></tr>';
+                renderizarConciliacaoFiscal(estruturaConciliacaoFiscal);
             } else {
                 renderizarConciliacaoFiscal(dadosConciliacaoFiscal);
             }
