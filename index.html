@@ -381,6 +381,12 @@
         .fiscal-separador-grupo td { height:29px; border-bottom:2px solid #111827; background:#fff; }
         .fiscal-separador-grupo td .fiscal-comparativo-item { background:#dcfce7; color:#166534; min-height:29px; }
         .fiscal-cabecalho-acoes { background:#f8fafc; border:1px solid #cbd5e1; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .fiscal-competencia-wrap { position:relative; }
+        .fiscal-competencia-btn { min-height:34px; border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:.375rem; padding:0 .75rem; display:inline-flex; align-items:center; gap:.45rem; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+        .fiscal-competencia-btn:hover { background:#f8fafc; border-color:#94a3b8; }
+        .fiscal-competencia-popover { position:absolute; right:0; top:calc(100% + 6px); z-index:30; width:220px; padding:10px; background:#fff; border:1px solid #cbd5e1; border-radius:.5rem; box-shadow:0 10px 30px rgba(15,23,42,.12); }
+        .fiscal-competencia-input { width:100%; height:34px; border:1px solid #cbd5e1; border-radius:.375rem; padding:0 .5rem; font-size:12px; color:#334155; background:#fff; }
+        .fiscal-competencia-popover.hidden { display:none; }
         .fiscal-status-consulta { font-size:11px; color:#64748b; }
         @media (max-width:900px) { .fiscal-conciliacao-table { min-width:900px; } }
     </style>
@@ -678,6 +684,18 @@
                                         <p class="fiscal-status-consulta mt-0.5">Conferência das contas contábeis com os valores fiscais por CFOP.</p>
                                     </div>
                                     <div class="flex items-center gap-2">
+                                        <div class="fiscal-competencia-wrap">
+                                            <button type="button" onclick="alternarCompetenciaFiscal()" class="fiscal-competencia-btn">
+                                                <i class="fa-solid fa-calendar-days"></i>
+                                                <span id="fiscal-competencia-label">Competência: 09/2026</span>
+                                                <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                                            </button>
+                                            <div id="fiscal-competencia-popover" class="fiscal-competencia-popover hidden">
+                                                <label for="fiscal-competencia" class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Competência</label>
+                                                <input id="fiscal-competencia" type="month" class="fiscal-competencia-input">
+                                                <p class="text-[10px] text-slate-400 mt-1">A alteração só será aplicada ao clicar em Consultar ou Executar.</p>
+                                            </div>
+                                        </div>
                                         <button type="button" onclick="consultarConciliacaoFiscal()" class="bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-900 transition shadow flex items-center gap-2">
                                             <i class="fa-solid fa-magnifying-glass"></i><span>Consultar</span>
                                         </button>
@@ -2372,7 +2390,8 @@
         ];
 
         let dadosConciliacaoFiscal = [];
-                let conciliacaoFiscalAtualId = null;
+        let conciliacaoFiscalAtualId = null;
+        let competenciaFiscalSelecionada = new Date().toISOString().slice(0,7);
 
         function fiscalNumero(valor) {
             if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
@@ -2531,7 +2550,50 @@
             return agrupado;
         }
 
+        function alternarCompetenciaFiscal() {
+            const popover = document.getElementById('fiscal-competencia-popover');
+            if (!popover) return;
+            popover.classList.toggle('hidden');
+        }
+
+        function atualizarCompetenciaFiscalSelecionada() {
+            const campo = document.getElementById('fiscal-competencia');
+            const label = document.getElementById('fiscal-competencia-label');
+            if (!campo) return competenciaFiscalSelecionada;
+            if (campo.value) {
+                competenciaFiscalSelecionada = campo.value;
+                if (label) {
+                    const [ano, mes] = competenciaFiscalSelecionada.split('-');
+                    label.textContent = 'Competência: ' + mes + '/' + ano;
+                }
+            }
+            return competenciaFiscalSelecionada;
+        }
+
+        function inicializarCompetenciaFiscal() {
+            const campo = document.getElementById('fiscal-competencia');
+            if (!campo) return;
+            campo.value = competenciaFiscalSelecionada;
+            campo.addEventListener('change', () => {
+                // A seleção é apenas preparada. A grade só é atualizada em Consultar/Executar.
+                const label = document.getElementById('fiscal-competencia-label');
+                if (campo.value && label) {
+                    const [ano, mes] = campo.value.split('-');
+                    label.textContent = 'Competência: ' + mes + '/' + ano;
+                }
+            });
+        }
+
+        document.addEventListener('click', (evento) => {
+            const wrap = document.querySelector('.fiscal-competencia-wrap');
+            if (wrap && !wrap.contains(evento.target)) {
+                document.getElementById('fiscal-competencia-popover')?.classList.add('hidden');
+            }
+        });
+
         async function consultarConciliacaoFiscal() {
+            atualizarCompetenciaFiscalSelecionada();
+            document.getElementById('fiscal-competencia-popover')?.classList.add('hidden');
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
 
@@ -2625,9 +2687,9 @@
                 carregarDivergenciasFornecedores();
             }
             if (subTabId === 'fiscal') {
-                // Ao abrir o Fiscal, a consulta é carregada automaticamente.
-                // A tela permanece montada; apenas os dados são atualizados.
-                setTimeout(() => consultarConciliacaoFiscal(), 0);
+                // A tela fiscal não consulta nem atualiza automaticamente ao abrir a aba.
+                // A atualização ocorre somente pelos botões Consultar ou Executar.
+                inicializarCompetenciaFiscal();
             }
         }
 
