@@ -2320,11 +2320,9 @@
             }
         }
 
-        const dadosModeloConciliacaoFiscal = [
-            {conta:'000252',contaAnalitica:'3.1.01.01.0001',grupo:'Teste de Faturamento',descricao:'REVENDA DE MERCADORIAS',debito:'-',credito:'1.062.173,33',destaque:'credito',azulEscuro:false,itens:[{cfop:'5.101',valor:'-',comparativo:'-'},{cfop:'5.102',valor:'652.486,56',comparativo:'-'},{cfop:'5.405',valor:'409.686,77',comparativo:'-'}]},
-            {conta:'000261',contaAnalitica:'3.1.02.02.000022',grupo:'Teste do ICMS',descricao:'ICMS',debito:'49.184,31',credito:'-',destaque:'debito',azulEscuro:true,itens:[{cfop:'5.101',valor:'-',comparativo:'-'},{cfop:'5.102',valor:'49.184,31',comparativo:'-'},{cfop:'5.405',valor:'-',comparativo:'-'},{cfop:'5.910',valor:'-',comparativo:'-'}]},
-            {conta:'000255',contaAnalitica:'3.1.02.01.00010',grupo:'',descricao:'(-)DEVOLUCAO DE VENDAS',debito:'1.023,28',credito:'-',destaque:'debito',azulEscuro:false,itens:[{cfop:'1.202',valor:'674,54',comparativo:'-'},{cfop:'1.411',valor:'348,74',comparativo:'-'}]}
-        ];
+        // Os dados da conciliação fiscal serão fornecidos pela consulta SQL/SELECT do usuário.
+        // Não existem valores fixos ou dados de demonstração nesta tela.
+        let dadosConciliacaoFiscal = [];
 
         let conciliacaoFiscalAtualId = null;
 
@@ -2346,7 +2344,7 @@
             return '<div class="' + classe + '">' + escapeHtml(texto) + '</div>';
         }
 
-        function renderizarConciliacaoFiscal(dados = dadosModeloConciliacaoFiscal) {
+        function renderizarConciliacaoFiscal(dados = dadosConciliacaoFiscal) {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
             if (!Array.isArray(dados) || !dados.length) {
@@ -2487,26 +2485,22 @@
         async function consultarConciliacaoFiscal() {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Consultando conciliação fiscal salva...</td></tr>';
-            try {
-                let dados = await carregarUltimaConciliacaoFiscal();
-                if (!dados || !dados.length) {
-                    await salvarConciliacaoFiscal(dadosModeloConciliacaoFiscal,'Consultada');
-                    dados = await carregarUltimaConciliacaoFiscal();
-                }
-                renderizarConciliacaoFiscal(dados || []);
-            } catch (erro) {
-                console.error('Erro ao consultar conciliação fiscal:',erro);
-                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-500">Erro ao consultar: ' + escapeHtml(erro.message || erro) + '</td></tr>';
-            }
+            tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500">Aguardando a consulta SQL/SELECT da conciliação fiscal.</td></tr>';
+            // A consulta real será conectada aqui quando o SELECT for definido.
+            // Nenhum valor de exemplo é inserido ou carregado automaticamente.
+            dadosConciliacaoFiscal = [];
+            renderizarConciliacaoFiscal(dadosConciliacaoFiscal);
         }
 
         async function executarConciliacaoFiscalSalvando() {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Salvando conciliação fiscal...</td></tr>';
             try {
-                await salvarConciliacaoFiscal(dadosModeloConciliacaoFiscal,'Executada');
-                renderizarConciliacaoFiscal(dadosModeloConciliacaoFiscal);
+                if (!dadosConciliacaoFiscal.length) {
+                    throw new Error('Nenhum dado fiscal foi retornado pela consulta SQL/SELECT.');
+                }
+                await salvarConciliacaoFiscal(dadosConciliacaoFiscal,'Executada');
+                renderizarConciliacaoFiscal(dadosConciliacaoFiscal);
                 alert('Conciliação fiscal executada e salva no Supabase.');
             } catch (erro) {
                 console.error('Erro ao salvar conciliação fiscal:',erro);
