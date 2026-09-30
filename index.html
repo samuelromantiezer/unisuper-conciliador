@@ -719,7 +719,7 @@
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-fiscal-icms">
-                                            <tr><td colspan="7" class="p-8 text-center text-slate-400">Clique em <strong>Consultar</strong> para carregar a conciliação fiscal.</td></tr>
+                                            <tr><td colspan="8" class="p-8 text-center text-slate-400">Selecione a competência e clique em <strong>Consultar</strong> para atualizar os valores.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2743,6 +2743,12 @@
             document.querySelectorAll('.conciliacao-aba-' + modulo).forEach(el => el.classList.add('hidden'));
             const alvo = document.getElementById(prefixo + '-' + aba);
             if (alvo) alvo.classList.remove('hidden');
+
+            // Ao entrar na aba Fiscal, a grade completa já fica montada na tela.
+            // A consulta continua responsável apenas por atualizar os valores.
+            if (modulo === 'fiscal' && aba === 'icms' && typeof renderizarConciliacaoFiscal === 'function') {
+                renderizarConciliacaoFiscal(estruturaConciliacaoFiscal);
+            }
 
             document.querySelectorAll('#subtab-' + modulo + ' .conciliacao-tab-btn').forEach(btn => {
                 btn.classList.remove('border-unisuperBlue', 'text-unisuperBlue');
