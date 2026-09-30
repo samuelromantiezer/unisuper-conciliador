@@ -1204,6 +1204,47 @@
         </div>
     </div>
 
+    <script>
+        // Fallback de login: garante que o formulário consiga chamar o login
+        // mesmo se alguma parte posterior do JavaScript falhar ao carregar.
+        if (typeof window.fazerLogin !== 'function') {
+            window.fazerLogin = async function () {
+                const emailEl = document.getElementById('login-email');
+                const senhaEl = document.getElementById('login-senha');
+                const errorDiv = document.getElementById('auth-error');
+                const email = emailEl ? emailEl.value.trim() : '';
+                const senha = senhaEl ? senhaEl.value : '';
+
+                if (errorDiv) errorDiv.classList.add('hidden');
+
+                try {
+                    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+                        throw new Error('Biblioteca do Supabase não carregou. Recarregue a página com Ctrl+F5.');
+                    }
+
+                    const url = 'https://ikhutmmeeemkzkakpmal.supabase.co';
+                    const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraHV0bW1lZWVta3prYWtwbWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MTg4OTgsImV4cCI6MjEwNTA5NDg5OH0.2ELvpYAmnP9bo9CrDjMpGJ0ORgb8p-yQvC8jCCDjPW4';
+                    const client = window.supabase.createClient(url, key);
+                    const { error } = await client.auth.signInWithPassword({ email, password: senha });
+
+                    if (error) throw error;
+
+                    if (typeof window.mostrarApp === 'function') {
+                        window.mostrarApp();
+                    } else {
+                        window.location.reload();
+                    }
+                } catch (err) {
+                    console.error('Erro no login:', err);
+                    if (errorDiv) {
+                        errorDiv.innerText = 'Erro ao entrar: ' + (err.message || 'não foi possível autenticar.');
+                        errorDiv.classList.remove('hidden');
+                    }
+                }
+            };
+        }
+    </script>
+
     <!-- JAVASCRIPT -->
     <script>
         const SUPABASE_URL = 'https://ikhutmmeeemkzkakpmal.supabase.co';
