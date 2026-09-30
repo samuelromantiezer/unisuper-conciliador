@@ -4304,6 +4304,68 @@ function converterValorLancamentoFolha(valor) {
                 return flexiveis[0] || null;
             };
 
+            const inserirLinhaFgts = (descricaoFonte, valor) => {
+                if (!Number.isFinite(valor) || valor <= 0) return null;
+
+                const rubricaFgts = localizarRubricaFgtsPorDescricao(descricaoFonte);
+                if (!rubricaFgts) {
+                    inconsistencias.push(
+                        'Rubrica de FGTS "' + descricaoFonte +
+                        '" não está cadastrada como Imposto.'
+                    );
+                    return null;
+                }
+
+                const contaFgts = localizarContaDeParaFolha(loja, rubricaFgts);
+                if (!contaFgts) {
+                    inconsistencias.push(
+                        'Não existe DePara para o FGTS "' + descricaoFonte +
+                        '" na loja "' + loja.codigo + '".'
+                    );
+                    return null;
+                }
+
+                const valorTexto = valor.toFixed(2).replace('.', ',');
+                const lancamentoFgts = {
+                    conta: contaFgts.codigo,
+                    debito: valorTexto,
+                    credito: '0,00',
+                    historico: loja.nome + ' - DESPESA FOLHA - FGTS - ' + competencia
+                };
+
+                lancamentos.push(lancamentoFgts);
+                return lancamentoFgts;
+            };
+
+            const localizarValorFgtsFolha = linha => {
+                if (!Array.isArray(linha)) return 0;
+                const valor = linha[33]; // Coluna AH
+                if (valor === null || valor === undefined || String(valor).trim() === '') return 0;
+                return normalizarNumeroInssFolha(valor);
+            };
+
+            const lancamentosFgts = [];
+            for (const linha of (Array.isArray(dadosFolhaImportados) ? dadosFolhaImportados : [])) {
+                if (!Array.isArray(linha)) continue;
+
+                const descricaoFonte = String(linha[17] ?? '').trim();
+                if (!/^valor\s+.*fgts/i.test(descricaoFonte)) continue;
+
+                const lancamentoFgts = inserirLinhaFgts(
+                    descricaoFonte,
+                    localizarValorFgtsFolha(linha)
+                );
+
+                if (lancamentoFgts) {
+                    lancamentosFgts.push(lancamentoFgts);
+                }
+            }
+
+            // Soma somente os débitos de FGTS que foram efetivamente lançados.
+            const totalFgtsDebito = lancamentosFgts.reduce((total, item) => {
+                return total + normalizarNumeroInssFolha(item.debito);
+            }, 0);
+
             // O crédito do FGTS será lançado diretamente na conta 178,
             // usando a soma dos débitos de FGTS que foram efetivamente lançados.
             // Não depende de cadastro de rubrica Totalizador/DePara.
