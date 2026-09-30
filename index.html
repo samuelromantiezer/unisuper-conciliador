@@ -5139,7 +5139,7 @@ async function importarDeParaFolhaTXT(input){
         async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
         function abrirCopiarDeParaFolha(){
             if(!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
-            const lojas=lerListaCadastro('lojas');
+            const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));
             if(lojas.length<2) return alert('É necessário ter pelo menos duas lojas cadastradas para copiar o DePara.');
             const origem=document.getElementById('copiar-depara-origem');
             const destino=document.getElementById('copiar-depara-destino');
