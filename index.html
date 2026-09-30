@@ -2320,11 +2320,60 @@
             }
         }
 
-        // Os dados da conciliação fiscal serão fornecidos pela consulta SQL/SELECT do usuário.
-        // Não existem valores fixos ou dados de demonstração nesta tela.
-        let dadosConciliacaoFiscal = [];
+        // Estrutura fixa da conciliação fiscal.
+        // Os campos numéricos (Débito, Crédito, Valor e Comparativo) ficam
+        // sem valores fixos e serão preenchidos exclusivamente pelo SELECT SQL.
+        // Conta, descrição e CFOP permanecem como campos da grade para preservar o layout.
+        const estruturaConciliacaoFiscal = [
+            {
+                conta: '',
+                contaAnalitica: '',
+                grupo: 'Teste de Faturamento',
+                descricao: 'REVENDA DE MERCADORIAS',
+                debito: null,
+                credito: null,
+                destaque: 'credito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '', valor: null, comparativo: null },
+                    { cfop: '', valor: null, comparativo: null },
+                    { cfop: '', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '',
+                contaAnalitica: '',
+                grupo: 'Teste do ICMS',
+                descricao: 'ICMS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: true,
+                itens: [
+                    { cfop: '', valor: null, comparativo: null },
+                    { cfop: '', valor: null, comparativo: null },
+                    { cfop: '', valor: null, comparativo: null },
+                    { cfop: '', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: '(-) DEVOLUÇÃO DE VENDAS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '', valor: null, comparativo: null },
+                    { cfop: '', valor: null, comparativo: null }
+                ]
+            }
+        ];
 
-        let conciliacaoFiscalAtualId = null;
+        let dadosConciliacaoFiscal = [];
+                let conciliacaoFiscalAtualId = null;
 
         function fiscalNumero(valor) {
             if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
@@ -2344,7 +2393,7 @@
             return '<div class="' + classe + '">' + escapeHtml(texto) + '</div>';
         }
 
-        function renderizarConciliacaoFiscal(dados = dadosConciliacaoFiscal) {
+        function renderizarConciliacaoFiscal(dados = dadosConciliacaoFiscal.length ? dadosConciliacaoFiscal : estruturaConciliacaoFiscal) {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
             if (!Array.isArray(dados) || !dados.length) {
