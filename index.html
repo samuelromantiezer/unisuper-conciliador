@@ -689,12 +689,12 @@
                                 <div class="fiscal-conciliacao-wrap">
                                     <table class="fiscal-conciliacao-table">
                                         <colgroup>
-                                            <col style="width:12%"><col style="width:30%"><col style="width:10%"><col style="width:10%">
-                                            <col style="width:10%"><col style="width:14%"><col style="width:14%">
+                                            <col style="width:10%"><col style="width:24%"><col style="width:16%"><col style="width:10%"><col style="width:10%">
+                                            <col style="width:10%"><col style="width:10%"><col style="width:10%">
                                         </colgroup>
                                         <thead>
                                             <tr>
-                                                <th>Conta</th><th>Descrição</th><th>Débito</th><th>Crédito</th><th class="col-cfop">CFOP</th><th class="col-valor">Valor</th><th>Comparativo</th>
+                                                <th>Conta</th><th>Descrição</th><th>Loja</th><th>Débito</th><th>Crédito</th><th class="col-cfop">CFOP</th><th class="col-valor">Valor</th><th>Comparativo</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-fiscal-icms">
@@ -2396,7 +2396,7 @@
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
             if (!Array.isArray(dados) || !dados.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
                 return;
             }
 
@@ -2407,6 +2407,7 @@
                     '<tr>' +
                         '<td class="fiscal-conta-cell"><div class="fiscal-conta-codigo">' + escapeHtml(item.conta || '') + '</div><div class="fiscal-conta-analitica">' + escapeHtml(item.contaAnalitica || '') + '</div></td>' +
                         '<td class="fiscal-descricao-cell">' + (item.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(item.grupo) + '</span>' : '') + '<span class="fiscal-descricao">' + escapeHtml(item.descricao || '') + '</span></td>' +
+                        '<td class="fiscal-loja-cell"><span class="fiscal-loja-nome">' + escapeHtml(item.loja || item.nomeLoja || item.nome_loja || item.loja_nome || '-') + '</span></td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.debito,item.destaque === 'debito',item.azulEscuro) + '</td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.credito,item.destaque === 'credito',item.azulEscuro) + '</td>' +
                         '<td class="fiscal-cfop-cell">' + itens.map(x => '<div class="fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('') + '</td>' +
@@ -2414,7 +2415,7 @@
                         '<td class="fiscal-comparativo-cell">' + itens.map(x => '<div class="fiscal-comparativo-item ' + (x.comparativo && x.comparativo !== '-' ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') + '</td>' +
                     '</tr>'
                 );
-                grupos.push('<tr class="fiscal-separador-grupo"><td colspan="6"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
+                grupos.push('<tr class="fiscal-separador-grupo"><td colspan="7"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
             });
             grupos.pop();
             tbody.innerHTML = grupos.join('');
