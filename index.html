@@ -1265,16 +1265,32 @@
             const errorDiv = document.getElementById('auth-error');
             errorDiv.classList.add('hidden');
 
+            if (!supabaseClient) {
+                errorDiv.innerText = "Supabase não foi inicializado. Recarregue a página e tente novamente.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
             try {
-                const { error } = await supabaseClient.auth.signInWithPassword({ email: email, password: senha });
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
                 if (error) {
                     errorDiv.innerText = "Erro ao entrar: " + error.message;
                     errorDiv.classList.remove('hidden');
-                } else {
+                    return;
+                }
+
+                // A autenticação foi concluída. Erros da montagem da tela não devem
+                // ser apresentados como se fossem erro de senha/conexão.
+                try {
                     mostrarApp();
+                } catch (err) {
+                    console.error("Erro ao abrir o sistema após o login:", err);
+                    errorDiv.innerText = "Login realizado, mas ocorreu um erro ao abrir o sistema. Recarregue a página.";
+                    errorDiv.classList.remove('hidden');
                 }
             } catch (err) {
-                errorDiv.innerText = "Erro de conexão com o Supabase.";
+                console.error("Erro no login:", err);
+                errorDiv.innerText = "Não foi possível conectar ao serviço de autenticação.";
                 errorDiv.classList.remove('hidden');
             }
         }
@@ -1350,6 +1366,9 @@
                 const { data, error } = await supabaseClient.from('cadastros_depara').select('*').order('id', { ascending: true });
                 if (error) throw error;
                 const lista = document.getElementById('lista-cadastros');
+                // Esta tabela pertence à tela antiga de DePara e não existe mais na interface atual.
+                // Não deixe sua ausência interferir no fluxo de login.
+                if (!lista) return;
                 if (data && data.length > 0) {
                     lista.innerHTML = '';
                     data.forEach(item => {
