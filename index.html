@@ -2330,7 +2330,7 @@
 
         function fiscalNumero(valor) {
             if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
-            const normalizado = String(valor).replace(/\\./g,'').replace(',','.');
+            const normalizado = String(valor).replace(/\./g,'').replace(',','.');
             const numero = Number(normalizado);
             return Number.isFinite(numero) ? numero : null;
         }
