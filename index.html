@@ -903,6 +903,27 @@
                     <button id="btn-cancelar-edicao-depara" type="button" onclick="cancelarEdicaoDeParaFolha()" class="hidden px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" title="Cancelar edição"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </form>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div>
+                    <label for="filtro-depara-loja" class="block text-xs font-bold text-slate-700 mb-1">Loja</label>
+                    <select id="filtro-depara-loja" onchange="renderDeParaFolha()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white">
+                        <option value="">Todas as Lojas</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filtro-depara-rubrica" class="block text-xs font-bold text-slate-700 mb-1">Rubrica</label>
+                    <input id="filtro-depara-rubrica" type="text" oninput="renderDeParaFolha()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código ou descrição">
+                </div>
+                <div>
+                    <label for="filtro-depara-conta" class="block text-xs font-bold text-slate-700 mb-1">Conta Contábil</label>
+                    <input id="filtro-depara-conta" type="text" oninput="renderDeParaFolha()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código ou descrição">
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="limparFiltrosDeParaFolha()" class="w-full border border-slate-300 bg-white text-slate-700 px-3 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-100">
+                        <i class="fa-solid fa-filter-circle-xmark mr-1"></i> Limpar filtros
+                    </button>
+                </div>
+            </div>
             <div class="overflow-x-auto border border-slate-200 rounded-lg"><table class="w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase font-bold text-slate-700"><tr><th class="p-3">Loja</th><th class="p-3">Rubrica</th><th class="p-3">Descrição da Rubrica</th><th class="p-3">Conta Contábil</th><th class="p-3">Descrição da Conta</th><th class="p-3 text-center">Ações</th></tr></thead><tbody id="lista-depara-folha" class="divide-y divide-slate-100"></tbody></table></div>
         </div>
         <div id="folhatab-geradas" class="folhatab-content hidden p-5 space-y-5">
@@ -5187,10 +5208,47 @@ async function importarDeParaFolhaTXT(input){
                 alert('Erro ao copiar o DePara:\n'+e.message);
             }
         }
-        function renderDeParaFolha(){const el=document.getElementById('lista-depara-folha');if(!el)return;const l=lerListaCadastro('depara');el.innerHTML=l.length?l.map(x=>{const loja=lerListaCadastro('lojas').find(a=>a.id===x.loja_id),r=lerListaCadastro('rubricas').find(a=>a.id===x.rubrica_id),c=lerListaCadastro('plano').find(a=>a.id===x.conta_contabil_id);return `<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(c?c.codigo:'')}</td><td class="p-3">${escapeHtml(c?c.descricao:'')}</td><td class="p-3 text-center"><div class="inline-flex items-center gap-2">
+        function renderDeParaFolha(){
+            const el=document.getElementById('lista-depara-folha');
+            if(!el)return;
+            const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));
+            const rubricas=lerListaCadastro('rubricas');
+            const plano=lerListaCadastro('plano');
+            const l=lerListaCadastro('depara');
+            const filtroLoja=document.getElementById('filtro-depara-loja');
+            const filtroRubrica=(document.getElementById('filtro-depara-rubrica')?.value||'').trim().toLowerCase();
+            const filtroConta=(document.getElementById('filtro-depara-conta')?.value||'').trim().toLowerCase();
+            const valorLoja=filtroLoja?.value||'';
+            if(filtroLoja){
+                const atual=valorLoja;
+                filtroLoja.innerHTML='<option value="">Todas as Lojas</option>'+lojas.map(x=>'<option value="'+escapeHtml(String(x.id))+'">'+escapeHtml((x.codigo||'')+' - '+(x.nome||''))+'</option>').join('');
+                filtroLoja.value=atual;
+            }
+            const lista=l.map(x=>{
+                const loja=lojas.find(a=>Number(a.id)===Number(x.loja_id));
+                const r=rubricas.find(a=>Number(a.id)===Number(x.rubrica_id));
+                const conta=plano.find(a=>Number(a.id)===Number(x.conta_contabil_id));
+                return {x,loja,r,conta};
+            }).filter(item=>{
+                const lojaOk=!valorLoja||String(item.x.loja_id)===valorLoja;
+                const rubricaTexto=((item.r?.codigo||'')+' '+(item.r?.descricao||'')).toLowerCase();
+                const contaTexto=((item.conta?.codigo||'')+' '+(item.conta?.descricao||'')).toLowerCase();
+                return lojaOk && (!filtroRubrica||rubricaTexto.includes(filtroRubrica)) && (!filtroConta||contaTexto.includes(filtroConta));
+            });
+            el.innerHTML=lista.length?lista.map(({x,loja,r,conta})=>`<tr><td class="p-3">${escapeHtml(loja?loja.codigo:'')}</td><td class="p-3 font-medium">${escapeHtml(r?r.codigo:'')}</td><td class="p-3">${escapeHtml(r?r.descricao:'')}</td><td class="p-3 font-medium">${escapeHtml(conta?conta.codigo:'')}</td><td class="p-3">${escapeHtml(conta?conta.descricao:'')}</td><td class="p-3 text-center"><div class="inline-flex items-center gap-2">
                             <button type="button" onclick="editarDeParaFolha(${x.id})" class="text-blue-600 hover:text-blue-800" title="Editar conta contábil" aria-label="Editar conta contábil"><i class="fa-solid fa-pen-to-square"></i></button>
                             <button type="button" onclick="excluirDeParaFolha(${x.id})" class="text-red-500 hover:text-red-700" title="Excluir vínculo" aria-label="Excluir vínculo"><i class="fa-solid fa-trash"></i></button>
-                        </div></td></tr>`;}).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo cadastrado.</td></tr>';}
+                        </div></td></tr>`).join(''):'<tr><td colspan="6" class="p-6 text-center text-slate-400">Nenhum vínculo encontrado com os filtros selecionados.</td></tr>';
+        }
+        function limparFiltrosDeParaFolha(){
+            const loja=document.getElementById('filtro-depara-loja');
+            const rubrica=document.getElementById('filtro-depara-rubrica');
+            const conta=document.getElementById('filtro-depara-conta');
+            if(loja) loja.value='';
+            if(rubrica) rubrica.value='';
+            if(conta) conta.value='';
+            renderDeParaFolha();
+        }
         async function inicializarNovosCadastros(){const c=sessionStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=sessionStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
         inicializarNovosCadastros();
         setTimeout(() => {
