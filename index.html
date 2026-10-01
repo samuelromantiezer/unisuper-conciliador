@@ -372,6 +372,8 @@
         .fiscal-descricao-cell { vertical-align:top; padding:6px 8px !important; }
         .fiscal-grupo-titulo { display:block; text-align:center; font-weight:800; font-size:12px; margin-bottom:4px; }
         .fiscal-descricao { display:block; text-align:center; font-size:12px; white-space:nowrap; }
+        .fiscal-descricao-linhas { display:flex; flex-direction:column; }
+        .fiscal-descricao-item { min-height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; font-size:12px; white-space:nowrap; }
         .fiscal-valores-cell,.fiscal-cfop-cell,.fiscal-valor-cell,.fiscal-comparativo-cell { vertical-align:top; padding:6px 0 !important; }
         .fiscal-lancamento { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; }
         .fiscal-lancamento.destaque { min-height:29px; background:#f8fafc; color:#0f172a; font-weight:700; }
@@ -2397,23 +2399,23 @@
                 ]
             },
             {
-                conta: '',
+                conta: '261',
                 contaAnalitica: '',
-                grupo: 'Teste do ICMS',
+                grupo: '',
                 descricao: 'ICMS',
                 debito: null,
                 credito: null,
                 destaque: 'debito',
                 azulEscuro: true,
                 itens: [
-                    { cfop: '', valor: null, comparativo: null },
-                    { cfop: '', valor: null, comparativo: null },
-                    { cfop: '', valor: null, comparativo: null },
-                    { cfop: '', valor: null, comparativo: null }
+                    { cfop: '5.101', valor: null, comparativo: null },
+                    { cfop: '5.102', valor: null, comparativo: null },
+                    { cfop: '5.405', valor: null, comparativo: null },
+                    { cfop: '5.910', valor: null, comparativo: null }
                 ]
             },
             {
-                conta: '',
+                conta: '255',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: '(-) DEVOLUÇÃO DE VENDAS',
@@ -2422,8 +2424,246 @@
                 destaque: 'debito',
                 azulEscuro: false,
                 itens: [
-                    { cfop: '', valor: null, comparativo: null },
-                    { cfop: '', valor: null, comparativo: null }
+                    { cfop: '1.202', valor: null, comparativo: null },
+                    { cfop: '1.411', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '295',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'MERCADORIA PARA REVENDA',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '1.101', valor: null, comparativo: null },
+                    { cfop: '1.102', valor: null, comparativo: null },
+                    { cfop: '1.113', valor: null, comparativo: null },
+                    { cfop: '1.401', valor: null, comparativo: null },
+                    { cfop: '1.403', descricao: 'TIPO ENTRADA 329 - TROCA PRODUTOR RURAL', valor: null, comparativo: null },
+                    { cfop: '1.652', valor: null, comparativo: null },
+                    { cfop: '1.910', valor: null, comparativo: null },
+                    { cfop: '2.101', descricao: 'TIPO ENTRADA 174 - GAS', valor: null, comparativo: null },
+                    { cfop: '2.102', descricao: 'FRETE', valor: null, comparativo: null },
+                    { cfop: '2.113', descricao: 'Guia ST', valor: null, comparativo: null },
+                    { cfop: '2.401', valor: null, comparativo: null },
+                    { cfop: '2.403', valor: null, comparativo: null },
+                    { cfop: '2.910', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '387',
+                contaAnalitica: '5.1.05.01.00230',
+                grupo: '',
+                descricao: 'COMB. E LUBRIFICANTES',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '1.653', valor: null, comparativo: null },
+                    { cfop: '1.102', descricao: 'SIMPLES NACIONAL', valor: null, comparativo: null },
+                    { cfop: '1.113', valor: null, comparativo: null },
+                    { cfop: '1.401', valor: null, comparativo: null },
+                    { cfop: '1.403', valor: null, comparativo: null },
+                    { cfop: '1.910', valor: null, comparativo: null },
+                    { cfop: '2.101', valor: null, comparativo: null },
+                    { cfop: '2.102', valor: null, comparativo: null },
+                    { cfop: '2.401', valor: null, comparativo: null },
+                    { cfop: '2.403', valor: null, comparativo: null },
+                    { cfop: '2.910', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '301',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'DEV. DE MERC. PARA REVENDA',
+                debito: null,
+                credito: null,
+                destaque: 'credito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '5.202', valor: null, comparativo: null },
+                    { cfop: '5.411', valor: null, comparativo: null },
+                    { cfop: '6.202', descricao: 'ESTORNO DEVOLUÇÃO', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '527',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'CONTA TRANS. ESTOQUE LOJAS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '1.151', valor: null, comparativo: null },
+                    { cfop: '1.152', valor: null, comparativo: null },
+                    { cfop: '1.409', descricao: 'ESTOQUE EM TRANSITO', valor: null, comparativo: null },
+                    { cfop: '5.152', valor: null, comparativo: null },
+                    { cfop: '5.409', descricao: 'RECLASSIFICAÇÃO', valor: null, comparativo: null },
+                    { cfop: '5.151', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '3689',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'CONTA TRANS. DESPESA LOJAS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '1.557', valor: null, comparativo: null },
+                    { cfop: '5.557', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '366',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'ENERGIA ELETRICA',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '1.251', valor: null, comparativo: null },
+                    { cfop: '1.252', valor: null, comparativo: null },
+                    { cfop: '1.253', descricao: 'DESPESA ENERGIA ELÉTRICA', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '364',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'DESPESAS COM TELEFONIA',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '1.303', valor: null, comparativo: null }
+                ]
+            },
+            {
+                conta: '365',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'DESPESAS COM INTERNET',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: '-', valor: null, comparativo: null, descricao: 'NOTA DESPESA (ORIGEM OUTRAS DESPESAS)' }
+                ]
+            },
+            {
+                conta: '125',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'PREDIOS E BENFEITORIAS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '1.551', valor: null, comparativo: null }]
+            },
+            {
+                conta: '126',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'INSTALAÇÕES',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '1.552', valor: null, comparativo: null }]
+            },
+            {
+                conta: '127',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'MÁQUINAS E EQUIPAMENTOS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '1.406', valor: null, comparativo: null }]
+            },
+            {
+                conta: '128',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'VEÍCULOS E ACESSÓRIOS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '2.551', valor: null, comparativo: null }]
+            },
+            {
+                conta: '129',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'MÓVEIS E UTENSÍLIOS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '2.406', valor: null, comparativo: null }]
+            },
+            {
+                conta: '130',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'EQUIP. DE COMUNICAÇÃO',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '2.556', valor: null, comparativo: null }]
+            },
+            {
+                conta: '131',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'EQUIP. DE INFORMÁTICA',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '-', valor: null, comparativo: null }]
+            },
+            {
+                conta: '6028',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'BENF. EM BENS DE TERCEIROS EM ANDAMENTO',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [{ cfop: '-', valor: null, comparativo: null }]
+            },
+            {
+                conta: '132',
+                contaAnalitica: '',
+                grupo: '',
+                descricao: 'BENF. EM BENS DE TERCEIROS',
+                debito: null,
+                credito: null,
+                destaque: 'debito',
+                azulEscuro: false,
+                itens: [
+                    { cfop: 'ICMS DIFAL', valor: null, comparativo: null },
+                    { cfop: '-', valor: null, comparativo: null }
                 ]
             }
         ];
@@ -2464,7 +2704,7 @@
                 grupos.push(
                     '<tr>' +
                         '<td class="fiscal-conta-cell"><div class="fiscal-conta-codigo">' + escapeHtml(item.conta || '') + '</div><div class="fiscal-conta-analitica">' + escapeHtml(item.contaAnalitica || '') + '</div></td>' +
-                        '<td class="fiscal-descricao-cell">' + (item.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(item.grupo) + '</span>' : '') + '<span class="fiscal-descricao">' + escapeHtml(item.descricao || '') + '</span></td>' +
+                        '<td class="fiscal-descricao-cell">' + (item.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(item.grupo) + '</span>' : '') + '<div class="fiscal-descricao-linhas">' + itens.map((x, indice) => '<div class="fiscal-descricao-item">' + escapeHtml(x.descricao || (indice === 0 ? (item.descricao || '') : '')) + '</div>').join('') + '</div></td>' +
                         '<td class="fiscal-loja-cell"><span class="fiscal-loja-nome">' + escapeHtml(item.loja || item.nomeLoja || item.nome_loja || item.loja_nome || '-') + '</span></td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.debito,item.destaque === 'debito',item.azulEscuro) + '</td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.credito,item.destaque === 'credito',item.azulEscuro) + '</td>' +
@@ -2769,7 +3009,30 @@
                     return;
                 }
 
-                const mapaLojas = new Map();
+                const lojas = Array.from(new Set(linhas.map(linha => String(
+                    linha.loja ??
+                    linha.nome_loja ??
+                    linha.nomeLoja ??
+                    linha.loja_nome ??
+                    'Sem loja'
+                ).trim() || 'Sem loja')));
+
+                const normalizarCfop = valor => String(valor ?? '').trim().replace(/\\./g, '');
+                const gruposPorLoja = [];
+
+                lojas.forEach(loja => {
+                    estruturaConciliacaoFiscal.forEach(estrutura => {
+                        gruposPorLoja.push({
+                            ...estrutura,
+                            loja,
+                            itens: (estrutura.itens || []).map(item => ({
+                                ...item,
+                                valor: null,
+                                comparativo: null
+                            }))
+                        });
+                    });
+                });
 
                 linhas.forEach(linha => {
                     const loja = String(
@@ -2780,54 +3043,31 @@
                         'Sem loja'
                     ).trim() || 'Sem loja';
 
-                    const cfopOriginal = String(linha.cfop ?? '').trim();
-                    const cfopNumerico = cfopOriginal.replace(/\\./g, '');
-                    const valor = Number(
-                        linha.total_fiscal ??
-                        linha.valor ??
-                        linha.total ??
-                        0
-                    ) || 0;
+                    const cfopNumerico = normalizarCfop(linha.cfop);
+                    const valorBruto = linha.total_fiscal ?? linha.valor ?? linha.total;
+                    const valor = valorBruto === null || valorBruto === undefined || valorBruto === '' ? null : Number(valorBruto);
 
-                    if (!mapaLojas.has(loja)) {
-                        mapaLojas.set(loja, {
-                            conta: '252',
-                            contaAnalitica: '',
-                            grupo: '',
-                            descricao: 'REVENDA DE MERCADORIAS',
-                            loja,
-                            debito: null,
-                            credito: null,
-                            destaque: 'credito',
-                            azulEscuro: false,
-                            itens: [
-                                { cfop: '5.101', valor: 0, comparativo: null },
-                                { cfop: '5.102', valor: 0, comparativo: null },
-                                { cfop: '5.405', valor: 0, comparativo: null },
-                                { cfop: '6.101', valor: 0, comparativo: null },
-                                { cfop: '6.102', valor: 0, comparativo: null },
-                                { cfop: '6.401', valor: 0, comparativo: null },
-                                { cfop: '6.403', valor: 0, comparativo: null },
-                                { cfop: 'TOTAL', valor: 0, comparativo: null }
-                            ]
+                    if (!cfopNumerico || !Number.isFinite(valor)) return;
+
+                    gruposPorLoja
+                        .filter(grupo => grupo.loja === loja)
+                        .forEach(grupo => {
+                            const item = (grupo.itens || []).find(x => normalizarCfop(x.cfop) === cfopNumerico);
+                            if (item) item.valor = valor;
                         });
-                    }
+                });
 
-                    const grupo = mapaLojas.get(loja);
-                    const item = grupo.itens.find(x => x.cfop.replace(/\\./g, '') === cfopNumerico);
-
-                    if (item) {
-                        item.valor = valor;
+                gruposPorLoja.forEach(grupo => {
+                    const totalItem = grupo.itens?.find(x => normalizarCfop(x.cfop) === 'TOTAL');
+                    if (totalItem) {
+                        const valores = grupo.itens
+                            .filter(x => normalizarCfop(x.cfop) !== 'TOTAL')
+                            .map(x => Number(x.valor) || 0);
+                        totalItem.valor = valores.some(v => v !== 0) ? valores.reduce((total, v) => total + v, 0) : null;
                     }
                 });
 
-                mapaLojas.forEach(grupo => {
-                    grupo.itens[7].valor = grupo.itens
-                        .slice(0, 7)
-                        .reduce((total, item) => total + (Number(item.valor) || 0), 0);
-                });
-
-                dadosConciliacaoFiscal = Array.from(mapaLojas.values());
+                dadosConciliacaoFiscal = gruposPorLoja;
                 renderizarConciliacaoFiscal(dadosConciliacaoFiscal);
 
             } catch (erro) {
@@ -2839,7 +3079,6 @@
                 alert('Erro ao consultar o Fiscal: ' + (erro.message || 'Erro desconhecido.'));
             }
         }
-
         async function executarConciliacaoFiscalSalvando() {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
