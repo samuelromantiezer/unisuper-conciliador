@@ -3486,7 +3486,7 @@
             if (fim) fim.min = inicio?.value || '';
         }
 
-        async function consultarConciliacaoFiscal() {
+        async function executarConsultaFiscalNoBanco() {
             const modo = document.querySelector('input[name="fiscal-modo-periodo"]:checked')?.value || 'competencia';
             const competencia = String(document.getElementById('fiscal-competencia')?.value || '').trim();
             let dataInicial = String(document.getElementById('fiscal-data-inicial')?.value || '').trim();
@@ -3765,6 +3765,11 @@
 
                 dadosConciliacaoFiscal = gruposPorLoja;
                 atualizarFiltroLojasConciliacaoFiscal(lojasCadastro);
+
+                // Executar é o único botão que consulta o banco local/servidor
+                // e gera um novo resultado. Depois da execução, o resultado fica
+                // salvo no Supabase para ser recuperado pelo botão Consultar.
+                await salvarConciliacaoFiscal(dadosConciliacaoFiscal, 'Executada');
                 aplicarFiltrosConciliacaoFiscal();
             } catch (erro) {
                 console.error('Erro na consulta fiscal:', erro);
@@ -3773,12 +3778,44 @@
             }
         }
 
-        async function executarConciliacaoFiscalSalvando() {
+        async function consultarConciliacaoFiscal() {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
 
+            if (!supabaseClient) {
+                alert('Supabase não está conectado. Faça login e tente novamente.');
+                return;
+            }
+
+            tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Carregando última execução salva...</td></tr>';
+
             try {
-                await consultarConciliacaoFiscal();
+                // CONSULTAR não executa SQL e não chama o servidor de consulta.
+                // Apenas recupera do Supabase o último resultado já executado e salvo.
+                const dadosSalvos = await carregarUltimaConciliacaoFiscal();
+
+                if (!Array.isArray(dadosSalvos) || !dadosSalvos.length) {
+                    dadosConciliacaoFiscal = [];
+                    atualizarFiltroLojasConciliacaoFiscal();
+                    renderizarConciliacaoFiscal([]);
+                    alert('Nenhuma execução fiscal salva foi encontrada. Clique em Executar para gerar a primeira.');
+                    return;
+                }
+
+                dadosConciliacaoFiscal = dadosSalvos;
+                atualizarFiltroLojasConciliacaoFiscal();
+                aplicarFiltrosConciliacaoFiscal();
+            } catch (erro) {
+                console.error('Erro ao carregar conciliação fiscal salva:', erro);
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-600 font-semibold">' +
+                    escapeHtml(erro.message || 'Erro ao carregar a última execução fiscal salva.') + '</td></tr>';
+            }
+        }
+
+        async function executarConciliacaoFiscalSalvando() {
+            try {
+                // EXECUTAR é o único botão que gera uma nova consulta no banco.
+                await executarConsultaFiscalNoBanco();
             } catch (erro) {
                 console.error('Erro ao executar conciliação fiscal:', erro);
             }
