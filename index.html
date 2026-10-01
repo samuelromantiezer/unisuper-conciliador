@@ -2430,7 +2430,11 @@
                     const resposta = await fetch(`${URL_MAPA_RESUMO}/executar-mapa-resumo`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ dataInicial, dataFinal })
+                        body: JSON.stringify({
+                        dataInicial,
+                        dataFinal,
+                        idLoja: document.getElementById('fiscal-filtro-loja')?.value || null
+                    })
                     });
 
                     const textoResposta = await resposta.text();
@@ -2491,10 +2495,6 @@
                     { cfop: '5.101', valor: null, comparativo: null },
                     { cfop: '5.102', valor: null, comparativo: null },
                     { cfop: '5.405', valor: null, comparativo: null },
-                    { cfop: '6.101', valor: null, comparativo: null },
-                    { cfop: '6.102', valor: null, comparativo: null },
-                    { cfop: '6.401', valor: null, comparativo: null },
-                    { cfop: '6.403', valor: null, comparativo: null },
                     { cfop: 'TOTAL', valor: null, comparativo: null }
                 ]
             },
@@ -3574,37 +3574,96 @@
                 });
 
                 linhas.forEach(linha => {
-                    const lojaInformada = String(linha.nome_loja ?? linha.loja ?? '').trim();
-                    if (!lojaInformada) return;
+                    // O servidor deve retornar o ID real da loja. Priorizamos o ID
+                    // porque é ele que liga o resultado à loja correta no De/Para.
+                    const idLojaResposta = String(
+                        linha.loja_id ??
+                        linha.id_loja ??
+                        linha.codigo_loja ??
+                        linha.lojaId ??
+                        ''
+                    ).trim();
+
+                    const lojaInformada = String(
+                        linha.nome_loja ??
+                        linha.loja ??
+                        linha.loja_nome ??
+                        ''
+                    ).trim();
+
+                    // Não descarta a linha só porque o servidor não mandou o nome.
+                    // O ID é suficiente para localizar a loja no cadastro.
+                    if (!idLojaResposta && !lojaInformada) return;
 
                     let grupo = null;
-                    const cadastroResolvido = resolverCadastroLojaFiscal(linha, lojasCadastro);
-                    if (cadastroResolvido) {
-                        grupo = gruposPorLoja.find(item => String(item.lojaId) === String(cadastroResolvido.id)) || null;
+
+                    if (idLojaResposta) {
+                        grupo = gruposPorLoja.find(
+                            item => String(item.lojaId ?? '').trim() === idLojaResposta
+                        ) || null;
                     }
-                    if (!grupo) {
-                        grupo = gruposPorChaveLoja.get(normalizar(lojaInformada));
+
+                    const cadastroResolvido = resolverCadastroLojaFiscal(
+                        linha,
+                        lojasCadastro
+                    );
+
+                    if (!grupo && cadastroResolvido) {
+                        grupo = gruposPorLoja.find(
+                            item => String(item.lojaId ?? '').trim() === String(cadastroResolvido.id ?? '').trim()
+                        ) || null;
+                    }
+
+                    if (!grupo && lojaInformada) {
+                        grupo = gruposPorChaveLoja.get(
+                            normalizar(lojaInformada)
+                        ) || null;
                     }
 
                     // Se a loja retornada pelo servidor não estiver no cadastro local,
                     // ainda assim mostramos o resultado da consulta.
                     if (!grupo) {
+                        const nomeExibicao =
+                            nomeLojaFiscalPorId(idLojaResposta, lojaInformada) ||
+                            lojaInformada ||
+                            ('LOJA ' + idLojaResposta);
+
                         grupo = {
                             ...baseRevenda,
                             quadro: 'revenda_mercadorias',
                             quadroTitulo: 'REVENDA DE MERCADORIAS',
-                            itens: baseRevenda.itens.map(item => ({ ...item, valor: null, comparativo: null })),
-                            loja: lojaInformada,
-                            lojaId: lojaInformada,
+                            itens: baseRevenda.itens.map(item => ({
+                                ...item,
+                                valor: null,
+                                comparativo: null
+                            })),
+                            loja: nomeExibicao,
+                            lojaId: idLojaResposta || lojaInformada,
                             mapaResumo: null,
                             totalCreditoContabil: null,
                             totalDebitoContabil: null
                         };
+
                         gruposPorLoja.push(grupo);
-                        gruposPorChaveLoja.set(normalizar(lojaInformada), grupo);
+
+                        if (idLojaResposta) {
+                            gruposPorChaveLoja.set(
+                                normalizar(idLojaResposta),
+                                grupo
+                            );
+                        }
+
+                        if (lojaInformada) {
+                            gruposPorChaveLoja.set(
+                                normalizar(lojaInformada),
+                                grupo
+                            );
+                        }
                     }
 
-                    const tipo = String(linha.tipo_resumo || '').trim().toUpperCase();
+                    const tipo = String(
+                        linha.tipo_resumo || ''
+                    ).trim().toUpperCase();
                     const valorFiscal = numeroFiscalResposta(linha.valor_total_fiscal);
 
                     if (tipo === 'FISCAL_CFOP_DETALHE' && Number.isFinite(valorFiscal)) {
