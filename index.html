@@ -379,6 +379,8 @@
         .fiscal-quadro-grupo td { vertical-align:top; }
         .fiscal-quadro-linha { min-height:27px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
         .fiscal-quadro-sublinha { min-height:27px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
+        .fiscal-quadro-total td { border-top:2px solid #cbd5e1; font-weight:800; }
+        .fiscal-total-label, .fiscal-total-valor { font-weight:900; }
         .fiscal-valores-cell,.fiscal-cfop-cell,.fiscal-valor-cell,.fiscal-comparativo-cell { vertical-align:top; padding:6px 0 !important; }
         .fiscal-lancamento { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; }
         .fiscal-lancamento.destaque { min-height:29px; background:#f8fafc; color:#0f172a; font-weight:700; }
@@ -2684,6 +2686,19 @@
             }
         ];
 
+        estruturaConciliacaoFiscal.forEach(item => {
+            if (!item.quadro) {
+                const itens = Array.isArray(item.itens) ? item.itens : (item.itens = []);
+                let total = itens.find(x => String(x.cfop || '').toUpperCase() === 'TOTAL');
+                if (!total) {
+                    total = { cfop: 'TOTAL', descricao: 'TOTAL', valor: null, comparativo: null };
+                    itens.push(total);
+                } else if (!total.descricao) {
+                    total.descricao = 'TOTAL';
+                }
+            }
+        });
+
         let dadosConciliacaoFiscal = [];
         let conciliacaoFiscalAtualId = null;
         let competenciaFiscalSelecionada = new Date().toISOString().slice(0,7);
@@ -2736,9 +2751,14 @@
                             credito: conta.credito,
                             destaque: conta.destaque,
                             azulEscuro: conta.azulEscuro,
-                            itens: subitens
+                            itens: subitens.filter(x => String(x.cfop || '').toUpperCase() !== 'TOTAL')
                         };
                     });
+
+                    const totalQuadro = linhas
+                        .flatMap(l => l.itens)
+                        .reduce((soma, x) => soma + (Number.isFinite(fiscalNumero(x.valor)) ? fiscalNumero(x.valor) : 0), 0);
+                    const possuiValorTotalQuadro = linhas.flatMap(l => l.itens).some(x => Number.isFinite(fiscalNumero(x.valor)));
 
                     grupos.push(
                         '<tr class="fiscal-quadro-grupo">' +
@@ -2750,6 +2770,12 @@
                             '<td class="fiscal-cfop-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('')).join('') + '</td>' +
                             '<td class="fiscal-valor-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('')).join('') + '</td>' +
                             '<td class="fiscal-comparativo-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-comparativo-item ' + (fiscalNumero(x.comparativo) === 0 ? 'ok' : 'pendente') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('')).join('') + '</td>' +
+                        '</tr>' +
+                        '<tr class="fiscal-quadro-total">' +
+                            '<td colspan="5"></td>' +
+                            '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-cfop-item fiscal-total-label">TOTAL</div></td>' +
+                            '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-valor-item fiscal-total-valor">' + (possuiValorTotalQuadro ? escapeHtml(formatarMoedaFiscal(totalQuadro)) : '-') + '</div></td>' +
+                            '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
                         '</tr>'
                     );
                     grupos.push('<tr class="fiscal-separador-grupo"><td colspan="8"></td></tr>');
@@ -2766,7 +2792,7 @@
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.credito,item.destaque === 'credito',item.azulEscuro) + '</td>' +
                         '<td class="fiscal-cfop-cell">' + itens.map(x => '<div class="fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('') + '</td>' +
                         '<td class="fiscal-valor-cell">' + itens.map(x => '<div class="fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('') + '</td>' +
-                        '<td class="fiscal-comparativo-cell">' + itens.map(x => '<div class="fiscal-comparativo-item ' + (x.comparativo && x.comparativo !== '-' ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') + '</td>' +
+                        '<td class="fiscal-comparativo-cell">' + itens.map(x => '<div class="fiscal-comparativo-item ' + (fiscalNumero(x.comparativo) === 0 ? 'ok' : 'pendente') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') + '</td>' +
                     '</tr>'
                 );
                 grupos.push('<tr class="fiscal-separador-grupo"><td colspan="8"></td></tr>');
