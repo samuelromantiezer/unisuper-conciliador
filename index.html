@@ -383,6 +383,7 @@
         .fiscal-cfop-item,.fiscal-valor-item,.fiscal-comparativo-item { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; white-space:nowrap; }
         .fiscal-comparativo-item { min-height:29px; }
         .fiscal-comparativo-item.ok { background:#dcfce7; color:#166534; font-weight:800; }
+        .fiscal-comparativo-item.pendente { background:#fef9c3; color:#854d0e; font-weight:700; }
         .fiscal-separador-grupo td { height:29px; border-bottom:2px solid #111827; background:#fff; }
         .fiscal-separador-grupo td .fiscal-comparativo-item { background:#dcfce7; color:#166534; min-height:29px; }
         .fiscal-cabecalho-acoes { background:#f8fafc; border:1px solid #cbd5e1; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
@@ -2747,10 +2748,10 @@
                             '<td class="fiscal-valores-cell">' + linhas.map(l => '<div class="fiscal-quadro-linha">' + fiscalLinhaValor(l.credito,l.destaque === 'credito',l.azulEscuro) + '</div>').join('') + '</td>' +
                             '<td class="fiscal-cfop-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('')).join('') + '</td>' +
                             '<td class="fiscal-valor-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('')).join('') + '</td>' +
-                            '<td class="fiscal-comparativo-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-comparativo-item ' + (x.comparativo && x.comparativo !== '-' ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('')).join('') + '</td>' +
+                            '<td class="fiscal-comparativo-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-comparativo-item ' + (fiscalNumero(x.comparativo) === 0 ? 'ok' : 'pendente') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('')).join('') + '</td>' +
                         '</tr>'
                     );
-                    grupos.push('<tr class="fiscal-separador-grupo"><td colspan="7"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
+                    grupos.push('<tr class="fiscal-separador-grupo"><td colspan="8"></td></tr>');
                     indice = j - 1;
                     continue;
                 }
@@ -2767,7 +2768,7 @@
                         '<td class="fiscal-comparativo-cell">' + itens.map(x => '<div class="fiscal-comparativo-item ' + (x.comparativo && x.comparativo !== '-' ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') + '</td>' +
                     '</tr>'
                 );
-                grupos.push('<tr class="fiscal-separador-grupo"><td colspan="7"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
+                grupos.push('<tr class="fiscal-separador-grupo"><td colspan="8"></td></tr>');
             }
             grupos.pop();
             tbody.innerHTML = grupos.join('');
@@ -2814,7 +2815,7 @@
                         cfop:sub.cfop || '-',
                         valor:fiscalNumero(sub.valor),
                         comparativo:fiscalNumero(sub.comparativo),
-                        comparativo_status:(sub.comparativo && sub.comparativo !== '-') ? 'ok' : null
+                        comparativo_status:(fiscalNumero(sub.comparativo) === 0) ? 'ok' : 'pendente'
                     });
                 });
             });
