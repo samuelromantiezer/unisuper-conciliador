@@ -3386,8 +3386,8 @@
                 return;
             }
 
-            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dataInicial) ||
-                !/^\\d{4}-\\d{2}-\\d{2}$/.test(dataFinal)) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInicial) ||
+                !/^\d{4}-\d{2}-\d{2}$/.test(dataFinal)) {
                 alert('Informe um intervalo de datas fiscais válido.');
                 return;
             }
