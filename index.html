@@ -382,6 +382,10 @@
         .fiscal-quadro-total td { border-top:2px solid #94a3b8; border-bottom:2px solid #94a3b8; font-weight:900; }
         .fiscal-quadro-total { font-weight:900; }
         .fiscal-total-label, .fiscal-total-valor { font-weight:900; }
+        .fiscal-quadro-contabilidade td { border-bottom:1px solid #e2e8f0; }
+        .fiscal-quadro-diferenca td { border-bottom:2px solid #94a3b8; font-weight:900; }
+        .fiscal-quadro-contabilidade, .fiscal-quadro-diferenca { font-weight:800; }
+        .fiscal-quadro-diferenca .fiscal-total-label { color:#334155; }
         .fiscal-valores-cell,.fiscal-cfop-cell,.fiscal-valor-cell,.fiscal-comparativo-cell { vertical-align:top; padding:6px 0 !important; }
         .fiscal-lancamento { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; }
         .fiscal-lancamento.destaque { min-height:29px; background:#f8fafc; color:#0f172a; font-weight:700; }
@@ -2776,6 +2780,18 @@
                             '<td colspan="5"></td>' +
                             '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-cfop-item fiscal-total-label">TOTAL</div></td>' +
                             '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-valor-item fiscal-total-valor">' + (possuiValorTotalQuadro ? escapeHtml(formatarMoedaFiscal(totalQuadro)) : '-') + '</div></td>' +
+                            '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
+                        '</tr>' +
+                        '<tr class="fiscal-quadro-contabilidade">' +
+                            '<td colspan="5"></td>' +
+                            '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">CONTABILIDADE</div></td>' +
+                            '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">-</div></td>' +
+                            '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
+                        '</tr>' +
+                        '<tr class="fiscal-quadro-diferenca">' +
+                            '<td colspan="5"></td>' +
+                            '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">DIFERENÇAS</div></td>' +
+                            '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-diferenca-valor">-</div></td>' +
                             '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
                         '</tr>'
                     );
