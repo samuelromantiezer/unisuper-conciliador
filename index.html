@@ -3608,7 +3608,7 @@
                     ]
                 };
 
-                const gruposPorLoja = lojasCadastro.map(loja => ({
+                const gruposPorLoja = lojasCadastro.filter(loja => String(loja.id ?? '').trim() !== '999').map(loja => ({
                     ...baseRevenda,
                     quadro: 'revenda_mercadorias',
                     quadroTitulo: 'REVENDA DE MERCADORIAS',
@@ -3629,6 +3629,10 @@
                 });
 
                 linhas.forEach(linha => {
+                    // A loja 999 não participa da conciliação fiscal porque não possui movimento.
+                    const lojaRespostaBruta = linha.loja_id ?? linha.lojaId ?? linha.id_loja ?? linha.idLoja ?? '';
+                    if (String(lojaRespostaBruta).trim() === '999') return;
+
                     // O servidor deve retornar o ID real da loja. Priorizamos o ID
                     // porque é ele que liga o resultado à loja correta no De/Para.
                     const idLojaResposta = String(
