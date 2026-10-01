@@ -3570,8 +3570,8 @@
                 const numeroFiscalResposta = valor => {
                     if (valor === null || valor === undefined || valor === '') return null;
 
-                    // Os números vindos do banco estão em centavos.
-                    // A conversão para reais acontece EXATAMENTE UMA VEZ aqui.
+                    // O valor fiscal é usado exatamente como veio do banco.
+                    // Não dividir, multiplicar ou converter a escala do banco aqui.
                     let numero;
                     if (typeof valor === 'number') {
                         numero = valor;
@@ -3584,7 +3584,7 @@
                         numero = Number(normalizado);
                     }
 
-                    return Number.isFinite(numero) ? numero / 100 : null;
+                    return Number.isFinite(numero) ? numero : null;
                 };
 
                 const baseRevendaCadastro = estruturaConciliacaoFiscal.find(item =>
