@@ -2766,7 +2766,7 @@
                         id: loja.id,
                         codigo: String(loja.codigo ?? '').trim(),
                         nome: String(loja.nome ?? '').trim(),
-                        label: String(loja.nome ?? loja.codigo ?? '').trim() || 'Sem loja'
+                        label: [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') || 'Sem loja'
                     }));
 
             const valorAtual = select.value;
@@ -2791,12 +2791,19 @@
             const dadosFiltrados = dadosBase.filter(item => {
                 const lojaId = String(item.lojaId ?? '').trim();
                 const lojaNome = String(item.loja ?? item.nomeLoja ?? item.nome_loja ?? item.loja_nome ?? '').trim();
+                const lojaCadastro = lerListaCadastro('lojas').find(loja =>
+                    String(loja.id ?? '').trim() === lojaId ||
+                    String(loja.codigo ?? '').trim() === lojaNome ||
+                    String(loja.nome ?? '').trim() === lojaNome ||
+                    [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') === lojaNome
+                );
                 const conta = String(item.conta ?? '').trim().toLowerCase();
                 const descricao = String(item.descricao ?? '').trim().toLowerCase();
 
                 const lojaOk = !lojaSelecionada ||
                     lojaId === lojaSelecionada ||
-                    lojaNome === lojaSelecionada;
+                    lojaNome === lojaSelecionada ||
+                    (lojaCadastro && String(lojaCadastro.id) === lojaSelecionada);
 
                 const contaOk = !contaFiltro || conta.includes(contaFiltro);
                 const descricaoOk = !descricaoFiltro || descricao.includes(descricaoFiltro);
