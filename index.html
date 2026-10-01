@@ -2824,14 +2824,14 @@
 
             const lista = Array.isArray(lojas) && lojas.length
                 ? lojas
-                : ordenarCadastroNatural(lerListaCadastro('lojas'))
-                    .filter(loja => loja && (loja.nome || loja.codigo))
-                    .map(loja => ({
-                        id: loja.id,
-                        codigo: String(loja.codigo ?? '').trim(),
-                        nome: String(loja.nome ?? '').trim(),
-                        label: [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') || 'Sem loja'
-                    }));
+                : lerListaCadastro('lojas')
+                    .filter(loja => loja && (loja.descricao || loja.nome || loja.codigo))
+                    .map(loja => {
+                        const descricao = String(loja.descricao ?? '').trim();
+                        const nome = String(loja.nome ?? '').trim();
+                        const codigo = String(loja.codigo ?? '').trim();
+                        return { id: loja.id, codigo, nome: nome || descricao, descricao, label: descricao || nome || codigo || 'Sem loja' };
+                    });
 
             const valorAtual = select.value;
             select.innerHTML = '<option value="">Todas as Lojas</option>' +
@@ -2867,8 +2867,9 @@
                 const lojaCadastro = lerListaCadastro('lojas').find(loja =>
                     String(loja.id ?? '').trim() === lojaId ||
                     String(loja.codigo ?? '').trim() === lojaNome ||
+                    String(loja.descricao ?? '').trim() === lojaNome ||
                     String(loja.nome ?? '').trim() === lojaNome ||
-                    [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') === lojaNome
+                    String(loja.label ?? '').trim() === lojaNome
                 );
                 const conta = String(item.conta ?? '').trim().toLowerCase();
                 const descricao = String(item.descricao ?? '').trim().toLowerCase();
@@ -3432,14 +3433,14 @@
                 }
 
                 const linhas = Array.isArray(resultado.dados) ? resultado.dados : [];
-                const lojasCadastro = ordenarCadastroNatural(lerListaCadastro('lojas'))
-                    .filter(loja => loja && (loja.nome || loja.codigo))
-                    .map(loja => ({
-                        id: loja.id,
-                        codigo: String(loja.codigo ?? '').trim(),
-                        nome: String(loja.nome ?? '').trim(),
-                        label: [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') || 'Sem loja'
-                    }));
+                const lojasCadastro = lerListaCadastro('lojas')
+                    .filter(loja => loja && (loja.descricao || loja.nome || loja.codigo))
+                    .map(loja => {
+                        const descricao = String(loja.descricao ?? '').trim();
+                        const nome = String(loja.nome ?? '').trim();
+                        const codigo = String(loja.codigo ?? '').trim();
+                        return { id: loja.id, codigo, nome: nome || descricao, descricao, label: descricao || nome || codigo || 'Sem loja' };
+                    });
                 if (!lojasCadastro.length) throw new Error('Nenhuma loja encontrada no cadastro de lojas.');
 
                 const normalizar = valor => String(valor ?? '').trim().toLowerCase().replace(/\\s+/g, ' ');
@@ -3499,6 +3500,7 @@
                     let grupo = gruposPorChaveLoja.get(normalizar(lojaInformada));
                     if (!grupo) {
                         const cadastro = lojasCadastro.find(loja =>
+                            normalizar(loja.descricao) === normalizar(lojaInformada) ||
                             normalizar(loja.nome) === normalizar(lojaInformada) ||
                             normalizar(loja.codigo) === normalizar(lojaInformada) ||
                             normalizar(loja.label) === normalizar(lojaInformada)
