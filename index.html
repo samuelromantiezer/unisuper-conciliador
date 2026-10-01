@@ -2796,7 +2796,14 @@
 
         function fiscalNumero(valor) {
             if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
-            const normalizado = String(valor).replace(/\./g,'').replace(',','.');
+            if (typeof valor === 'number') {
+                return Number.isFinite(valor) ? valor : null;
+            }
+            const texto = String(valor).trim();
+            if (!texto) return null;
+            const normalizado = texto.includes(',')
+                ? texto.replace(/\./g, '').replace(',', '.')
+                : texto;
             const numero = Number(normalizado);
             return Number.isFinite(numero) ? numero : null;
         }
@@ -2813,7 +2820,8 @@
         }
 
         function fiscalLinhaValor(valor,destaque,azulEscuro) {
-            const texto = valor === null || valor === undefined || valor === '' ? '-' : String(valor);
+            const numero = fiscalNumero(valor);
+            const texto = Number.isFinite(numero) ? formatarMoedaFiscal(numero) : '0,00';
             const classe = destaque ? 'fiscal-lancamento destaque' + (azulEscuro ? ' azul-escuro' : '') : 'fiscal-lancamento';
             return '<div class="' + classe + '">' + escapeHtml(texto) + '</div>';
         }
