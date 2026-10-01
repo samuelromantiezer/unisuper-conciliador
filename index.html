@@ -396,6 +396,10 @@
         .fiscal-separador-grupo td { height:29px; border-bottom:2px solid #111827; background:#fff; }
         .fiscal-separador-grupo td .fiscal-comparativo-item { background:#dcfce7; color:#166534; min-height:29px; }
         .fiscal-periodo-consulta { display:flex; align-items:flex-end; gap:8px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:.55rem; background:#fff; }
+        .fiscal-modo-consulta { align-self:center; display:flex; flex-direction:column; gap:5px; padding:0 4px; font-size:9px; font-weight:800; color:#475569; white-space:nowrap; }
+        .fiscal-modo-consulta label { display:flex; align-items:center; gap:4px; cursor:pointer; }
+        .fiscal-modo-consulta input { margin:0; accent-color:#1e3a8a; }
+        .fiscal-data-input:disabled { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
         .fiscal-periodo-titulo { align-self:center; display:flex; align-items:center; gap:5px; margin-right:2px; font-size:10px; font-weight:800; color:#334155; white-space:nowrap; }
         .fiscal-periodo-titulo i { color:#1e3a8a; }
         .fiscal-periodo-separador { align-self:center; padding-top:15px; font-size:10px; font-weight:800; color:#64748b; }
@@ -744,20 +748,24 @@
                                         <h4 class="font-bold text-slate-700 text-sm">Conciliação Fiscal</h4>
                                         <p class="fiscal-status-consulta mt-0.5">Conferência das contas contábeis com os valores fiscais por CFOP.</p>
                                     </div>
-                                    <div class="fiscal-periodo-consulta" title="Informe o intervalo que será consultado no fiscal">
+                                    <div class="fiscal-periodo-consulta" title="Escolha uma competência mensal OU informe um período personalizado">
                                         <span class="fiscal-periodo-titulo"><i class="fa-solid fa-calendar-days"></i> Período da consulta</span>
+                                        <div class="fiscal-modo-consulta">
+                                            <label><input type="radio" name="fiscal-modo-periodo" value="competencia" checked onchange="alternarModoPeriodoFiscal('competencia')"> Competência</label>
+                                            <label><input type="radio" name="fiscal-modo-periodo" value="periodo" onchange="alternarModoPeriodoFiscal('periodo')"> Período</label>
+                                        </div>
                                         <div class="fiscal-data-wrap">
                                             <label for="fiscal-competencia">Competência</label>
                                             <input id="fiscal-competencia" type="month" class="fiscal-data-input" aria-label="Competência fiscal" onchange="selecionarCompetenciaFiscal(this.value)">
                                         </div>
                                         <div class="fiscal-data-wrap">
                                             <label for="fiscal-data-inicial">Data inicial</label>
-                                            <input id="fiscal-data-inicial" type="date" class="fiscal-data-input" required aria-label="Data inicial da consulta fiscal">
+                                            <input id="fiscal-data-inicial" type="date" class="fiscal-data-input" aria-label="Data inicial da consulta fiscal" disabled>
                                         </div>
                                         <span class="fiscal-periodo-separador">até</span>
                                         <div class="fiscal-data-wrap">
                                             <label for="fiscal-data-final">Data final</label>
-                                            <input id="fiscal-data-final" type="date" class="fiscal-data-input" required aria-label="Data final da consulta fiscal">
+                                            <input id="fiscal-data-final" type="date" class="fiscal-data-input" aria-label="Data final da consulta fiscal" disabled>
                                         </div>
                                         <button type="button" onclick="consultarConciliacaoFiscal()" class="bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-900 transition shadow flex items-center gap-2">
                                             <i class="fa-solid fa-magnifying-glass"></i><span>Consultar</span>
@@ -3175,9 +3183,34 @@
                 '</div>';
         }
 
+        function alternarModoPeriodoFiscal(modo) {
+            const competencia = document.getElementById('fiscal-competencia');
+            const inicio = document.getElementById('fiscal-data-inicial');
+            const fim = document.getElementById('fiscal-data-final');
+            const usarCompetencia = modo === 'competencia';
+
+            if (competencia) competencia.disabled = !usarCompetencia;
+            if (inicio) inicio.disabled = usarCompetencia;
+            if (fim) fim.disabled = usarCompetencia;
+
+            if (usarCompetencia) {
+                if (competencia && !competencia.value) {
+                    const hoje = new Date();
+                    competencia.value = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+                }
+                selecionarCompetenciaFiscal(competencia?.value || '');
+            } else {
+                competenciaFiscalSelecionada = '';
+                if (competencia) competencia.value = '';
+                if (inicio) inicio.value = dataInicialFiscalSelecionada || '';
+                if (fim) fim.value = dataFinalFiscalSelecionada || '';
+            }
+        }
+
         function selecionarCompetenciaFiscal(valor) {
             if (!/^\d{4}-\d{2}$/.test(valor)) return;
 
+            document.querySelector('input[name="fiscal-modo-periodo"][value="competencia"]')?.click();
             competenciaFiscalSelecionada = valor;
 
             const [ano, mes] = valor.split('-').map(Number);
@@ -3228,6 +3261,7 @@
         function inicializarCompetenciaFiscal() {
             const hoje = new Date();
             const valorCompetencia = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+            document.querySelector('input[name="fiscal-modo-periodo"][value="competencia"]')?.click();
             const competencia = document.getElementById('fiscal-competencia');
 
             if (competencia && !competencia.value) {
@@ -3255,8 +3289,26 @@
         }
 
         async function consultarConciliacaoFiscal() {
-            const dataInicial = String(document.getElementById('fiscal-data-inicial')?.value || '').trim();
-            const dataFinal = String(document.getElementById('fiscal-data-final')?.value || '').trim();
+            const modo = document.querySelector('input[name="fiscal-modo-periodo"]:checked')?.value || 'competencia';
+            const competencia = String(document.getElementById('fiscal-competencia')?.value || '').trim();
+            let dataInicial = String(document.getElementById('fiscal-data-inicial')?.value || '').trim();
+            let dataFinal = String(document.getElementById('fiscal-data-final')?.value || '').trim();
+
+            if (modo === 'competencia') {
+                if (!/^\d{4}-\d{2}$/.test(competencia)) {
+                    alert('Selecione uma competência fiscal válida.');
+                    return;
+                }
+
+                const [ano, mes] = competencia.split('-').map(Number);
+                dataInicial = ano + '-' + String(mes).padStart(2, '0') + '-01';
+                const ultimoDia = new Date(ano, mes, 0).getDate();
+                dataFinal = ano + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
+
+                document.getElementById('fiscal-data-inicial').value = dataInicial;
+                document.getElementById('fiscal-data-final').value = dataFinal;
+                competenciaFiscalSelecionada = competencia;
+            }
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
 
