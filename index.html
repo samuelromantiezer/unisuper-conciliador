@@ -747,6 +747,10 @@
                                     <div class="fiscal-periodo-consulta" title="Informe o intervalo que será consultado no fiscal">
                                         <span class="fiscal-periodo-titulo"><i class="fa-solid fa-calendar-days"></i> Período da consulta</span>
                                         <div class="fiscal-data-wrap">
+                                            <label for="fiscal-competencia">Competência</label>
+                                            <input id="fiscal-competencia" type="month" class="fiscal-data-input" aria-label="Competência fiscal" onchange="selecionarCompetenciaFiscal(this.value)">
+                                        </div>
+                                        <div class="fiscal-data-wrap">
                                             <label for="fiscal-data-inicial">Data inicial</label>
                                             <input id="fiscal-data-inicial" type="date" class="fiscal-data-input" required aria-label="Data inicial da consulta fiscal">
                                         </div>
@@ -3172,7 +3176,38 @@
 
         function selecionarCompetenciaFiscal(valor) {
             if (!/^\d{4}-\d{2}$/.test(valor)) return;
+
             competenciaFiscalSelecionada = valor;
+
+            const [ano, mes] = valor.split('-').map(Number);
+            const primeiroDia = new Date(ano, mes - 1, 1);
+            const ultimoDia = new Date(ano, mes, 0);
+
+            const formatarDataInput = data => {
+                const a = data.getFullYear();
+                const m = String(data.getMonth() + 1).padStart(2, '0');
+                const d = String(data.getDate()).padStart(2, '0');
+                return a + '-' + m + '-' + d;
+            };
+
+            const inicio = document.getElementById('fiscal-data-inicial');
+            const fim = document.getElementById('fiscal-data-final');
+            const competencia = document.getElementById('fiscal-competencia');
+
+            if (inicio) {
+                inicio.value = formatarDataInput(primeiroDia);
+                inicio.max = formatarDataInput(ultimoDia);
+            }
+
+            if (fim) {
+                fim.value = formatarDataInput(ultimoDia);
+                fim.min = formatarDataInput(primeiroDia);
+            }
+
+            if (competencia && competencia.value !== valor) {
+                competencia.value = valor;
+            }
+
             atualizarLabelCompetenciaFiscal();
             document.getElementById('fiscal-competencia-popover')?.classList.add('hidden');
         }
@@ -3191,6 +3226,13 @@
 
         function inicializarCompetenciaFiscal() {
             const hoje = new Date();
+            const valorCompetencia = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+            const competencia = document.getElementById('fiscal-competencia');
+
+            if (competencia && !competencia.value) {
+                competencia.value = valorCompetencia;
+            }
+
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
             const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
             const formatarDataInput = data => {
