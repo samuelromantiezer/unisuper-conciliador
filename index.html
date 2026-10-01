@@ -2801,6 +2801,12 @@
             return Number(valor).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
         }
 
+        function formatarMoedaFiscal(valor) {
+            const numero = fiscalNumero(valor);
+            if (!Number.isFinite(numero)) return '-';
+            return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
         function fiscalLinhaValor(valor,destaque,azulEscuro) {
             const texto = valor === null || valor === undefined || valor === '' ? '-' : String(valor);
             const classe = destaque ? 'fiscal-lancamento destaque' + (azulEscuro ? ' azul-escuro' : '') : 'fiscal-lancamento';
@@ -2898,14 +2904,14 @@
 
             const grupos = [];
 
-            function renderTotaisAnalitico(totalFiscal, possuiValorTotalFiscal) {
+            function renderTotaisAnalitico(conta, totalFiscal, possuiValorTotalFiscal) {
                 return (
                     '<tr class="fiscal-quadro-total">' +
                         '<td class="fiscal-conta-cell"></td>' +
                         '<td class="fiscal-descricao-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">TOTAL CONTABILIDADE</div></td>' +
                         '<td class="fiscal-loja-cell"></td>' +
-                        '<td class="fiscal-valores-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">-</div></td>' +
-                        '<td class="fiscal-valores-cell"></td>' +
+                        '<td class="fiscal-valores-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">' + escapeHtml(formatarMoedaFiscal(conta.debito)) + '</div></td>' +
+                        '<td class="fiscal-valores-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">' + escapeHtml(formatarMoedaFiscal(conta.credito)) + '</div></td>' +
                         '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">TOTAL FISCAL</div></td>' +
                         '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-valor-item fiscal-total-valor">' +
                             (possuiValorTotalFiscal ? escapeHtml(formatarMoedaFiscal(totalFiscal)) : '-') +
@@ -2960,7 +2966,7 @@
                             itensRender.map(x => '<div class="fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('') +
                         '</td>' +
                     '</tr>' +
-                    renderTotaisAnalitico(totalFiscal, possuiValorTotalFiscal) +
+                    renderTotaisAnalitico(conta, totalFiscal, possuiValorTotalFiscal) +
                     '<tr class="fiscal-separador-grupo"><td colspan="7"></td></tr>'
                 );
             }
