@@ -400,7 +400,10 @@
         .fiscal-filtro-campo label { display:block; margin-bottom:4px; font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; }
         .fiscal-filtro-campo input,.fiscal-filtro-campo select { width:100%; min-height:36px; border:1px solid #cbd5e1; border-radius:.45rem; background:#fff; color:#334155; padding:0 9px; font-size:11px; outline:none; }
         .fiscal-filtro-campo input:focus,.fiscal-filtro-campo select:focus { border-color:#93c5fd; box-shadow:0 0 0 2px rgba(59,130,246,.10); }
-        .fiscal-filtro-limpar { min-height:36px; border:1px solid #cbd5e1; border-radius:.45rem; background:#fff; color:#475569; padding:0 11px; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+        .fiscal-filtro-consultar,.fiscal-filtro-limpar { min-height:36px; border:1px solid #cbd5e1; border-radius:.45rem; background:#fff; color:#475569; padding:0 11px; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+        .fiscal-filtro-consultar { border:1px solid #1e3a8a; border-radius:.45rem; background:#1e3a8a; color:#fff; padding:0 11px; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+        .fiscal-filtro-consultar:hover { background:#172554; }
+        .fiscal-filtro-limpar { border:1px solid #cbd5e1; border-radius:.45rem; background:#fff; color:#475569; padding:0 11px; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
         .fiscal-filtro-limpar:hover { background:#f1f5f9; }
         @media (max-width:900px) { .fiscal-filtros { grid-template-columns:1fr 1fr; } .fiscal-filtro-descricao { grid-column:1 / -1; } }
         @media (max-width:560px) { .fiscal-filtros { grid-template-columns:1fr; } .fiscal-filtro-descricao { grid-column:auto; } .fiscal-filtro-limpar { width:100%; } }
@@ -755,18 +758,21 @@
                                 <div class="fiscal-filtros">
                                     <div class="fiscal-filtro-campo fiscal-filtro-loja">
                                         <label for="fiscal-filtro-loja">Loja</label>
-                                        <select id="fiscal-filtro-loja" onchange="aplicarFiltrosConciliacaoFiscal()">
+                                        <select id="fiscal-filtro-loja">
                                             <option value="">Todas as Lojas</option>
                                         </select>
                                     </div>
                                     <div class="fiscal-filtro-campo">
                                         <label for="fiscal-filtro-conta">Nº da Conta Contábil</label>
-                                        <input id="fiscal-filtro-conta" type="text" autocomplete="off" placeholder="Digite o número da conta" oninput="aplicarFiltrosConciliacaoFiscal()">
+                                        <input id="fiscal-filtro-conta" type="text" autocomplete="off" placeholder="Digite o número da conta">
                                     </div>
                                     <div class="fiscal-filtro-campo fiscal-filtro-descricao">
                                         <label for="fiscal-filtro-descricao">Descrição da Conta Contábil</label>
-                                        <input id="fiscal-filtro-descricao" type="text" autocomplete="off" placeholder="Digite a descrição da conta" oninput="aplicarFiltrosConciliacaoFiscal()">
+                                        <input id="fiscal-filtro-descricao" type="text" autocomplete="off" placeholder="Digite a descrição da conta">
                                     </div>
+                                    <button type="button" onclick="consultarContasConciliacaoFiscal()" class="fiscal-filtro-consultar">
+                                        <i class="fa-solid fa-magnifying-glass"></i> Consultar Contas
+                                    </button>
                                     <button type="button" onclick="limparFiltrosConciliacaoFiscal()" class="fiscal-filtro-limpar">
                                         <i class="fa-solid fa-filter-circle-xmark"></i> Limpar filtros
                                     </button>
@@ -2782,6 +2788,15 @@
             }
         }
 
+        function consultarContasConciliacaoFiscal() {
+            const dados = Array.isArray(dadosConciliacaoFiscal) ? dadosConciliacaoFiscal : [];
+            if (!dados.length) {
+                alert('Primeiro clique em Consultar para carregar as contas fiscais.');
+                return;
+            }
+            aplicarFiltrosConciliacaoFiscal();
+        }
+
         function aplicarFiltrosConciliacaoFiscal() {
             const lojaSelecionada = String(document.getElementById('fiscal-filtro-loja')?.value || '').trim();
             const contaFiltro = String(document.getElementById('fiscal-filtro-conta')?.value || '').trim().toLowerCase();
@@ -3216,7 +3231,7 @@
                         id: loja.id,
                         codigo: String(loja.codigo ?? '').trim(),
                         nome: String(loja.nome ?? '').trim(),
-                        label: String(loja.nome ?? loja.codigo ?? '').trim() || 'Sem loja'
+                        label: [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') || 'Sem loja'
                     }));
 
                 if (!lojasCadastro.length) {
@@ -6334,7 +6349,7 @@ async function importarDeParaFolhaTXT(input){
             if(conta) conta.value='';
             renderDeParaFolha();
         }
-        async function inicializarNovosCadastros(){const c=sessionStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=sessionStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();}
+        async function inicializarNovosCadastros(){const c=sessionStorage.getItem('unisuper_cadastrotab_atual');if(c)switchCadastroTab(c);const f=sessionStorage.getItem('unisuper_folhatab_atual');if(f)switchFolhaTab(f);document.getElementById('depara-loja')?.addEventListener('change',atualizarOpcoesDePara);if(supabaseClient)await carregarCadastrosSupabase();atualizarFiltroLojasConciliacaoFiscal();}
         inicializarNovosCadastros();
         setTimeout(() => {
             atualizarOpcoesLojas();
