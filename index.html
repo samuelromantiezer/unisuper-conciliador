@@ -2908,18 +2908,40 @@
             const select = document.getElementById('fiscal-filtro-loja');
             if (!select) return;
 
-            const lista = Array.isArray(lojas) && lojas.length
+            // A ordem da tela Fiscal deve ser exatamente a ordem usada nas outras
+            // telas do sistema: código da loja em ordem natural (5, 7, 12, 13...),
+            // e não a ordem em que o banco devolveu os registros.
+            const origem = Array.isArray(lojas) && lojas.length
                 ? lojas
-                : lerListaCadastro('lojas')
-                    .filter(loja => loja && (loja.descricao || loja.nome || loja.codigo))
-                    .map(loja => {
-                        const descricaoCadastro = String(loja.descricao ?? '').trim();
-                        const nomeCadastro = String(loja.nome ?? '').trim();
-                        const codigo = String(loja.codigo ?? '').trim();
-                        const descricao = nomeLojaFiscalPorId(loja.id, descricaoCadastro || nomeCadastro || codigo);
-                        const nome = descricao;
-                        return { id: loja.id, codigo, nome, descricao, label: descricao || codigo || 'Sem loja' };
-                    });
+                : lerListaCadastro('lojas');
+
+            const lista = origem
+                .filter(loja => loja && (loja.descricao || loja.nome || loja.codigo))
+                .map(loja => {
+                    const descricaoCadastro = String(loja.descricao ?? '').trim();
+                    const nomeCadastro = String(loja.nome ?? '').trim();
+                    const codigo = String(loja.codigo ?? '').trim();
+                    const descricao = nomeLojaFiscalPorId(
+                        loja.id,
+                        descricaoCadastro || nomeCadastro || codigo
+                    );
+                    return {
+                        id: loja.id,
+                        codigo,
+                        nome: descricao,
+                        descricao,
+                        label: descricao || codigo || 'Sem loja'
+                    };
+                })
+                .sort((a, b) => {
+                    const porCodigo = String(a.codigo || '').localeCompare(
+                        String(b.codigo || ''),
+                        'pt-BR',
+                        { numeric: true, sensitivity: 'base' }
+                    );
+                    if (porCodigo !== 0) return porCodigo;
+                    return Number(a.id || 0) - Number(b.id || 0);
+                });
 
             const valorAtual = select.value;
             select.innerHTML = '<option value="">Todas as Lojas</option>' +
@@ -3726,6 +3748,19 @@
                 gruposPorLoja.forEach(grupo => {
                     grupo.debito = grupo.totalDebitoContabil;
                     grupo.credito = grupo.totalCreditoContabil;
+                });
+
+                // Mantém a mesma ordem das lojas exibida nas demais telas do sistema.
+                gruposPorLoja.sort((a, b) => {
+                    const lojaA = lojasCadastro.find(x => String(x.id ?? '').trim() === String(a.lojaId ?? '').trim()) || {};
+                    const lojaB = lojasCadastro.find(x => String(x.id ?? '').trim() === String(b.lojaId ?? '').trim()) || {};
+                    const porCodigo = String(lojaA.codigo || '').localeCompare(
+                        String(lojaB.codigo || ''),
+                        'pt-BR',
+                        { numeric: true, sensitivity: 'base' }
+                    );
+                    if (porCodigo !== 0) return porCodigo;
+                    return Number(a.lojaId || 0) - Number(b.lojaId || 0);
                 });
 
                 dadosConciliacaoFiscal = gruposPorLoja;
