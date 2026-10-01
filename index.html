@@ -2796,16 +2796,20 @@
 
         function fiscalNumero(valor) {
             if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
+            let numero;
             if (typeof valor === 'number') {
-                return Number.isFinite(valor) ? valor : null;
+                numero = valor;
+            } else {
+                const texto = String(valor).trim();
+                if (!texto) return null;
+                const normalizado = texto.includes(',')
+                    ? texto.replace(/\./g, '').replace(',', '.')
+                    : texto;
+                numero = Number(normalizado);
             }
-            const texto = String(valor).trim();
-            if (!texto) return null;
-            const normalizado = texto.includes(',')
-                ? texto.replace(/\./g, '').replace(',', '.')
-                : texto;
-            const numero = Number(normalizado);
-            return Number.isFinite(numero) ? numero : null;
+            if (!Number.isFinite(numero)) return null;
+            // Os valores financeiros retornados pelo banco vêm em centavos.
+            return numero / 100;
         }
 
         function fiscalFormato(valor) {
