@@ -2433,7 +2433,7 @@
                         body: JSON.stringify({
                         dataInicial,
                         dataFinal,
-                        idLoja: document.getElementById('fiscal-filtro-loja')?.value || null
+                        idLoja: '1'
                     })
                     });
 
@@ -2945,16 +2945,15 @@
                 });
 
             const valorAtual = select.value;
-            select.innerHTML = '<option value="">Todas as Lojas</option>' +
+            select.innerHTML = '<option value="1">1 - LOJA 01</option>' +
                 lista.map(loja =>
                     '<option value="' + escapeHtml(String(loja.id ?? loja.label)) + '">' +
                     escapeHtml(String(loja.id ?? '')) + ' - ' + escapeHtml(loja.label) +
                     '</option>'
                 ).join('');
 
-            if (valorAtual && lista.some(loja => String(loja.id ?? loja.label) === valorAtual)) {
-                select.value = valorAtual;
-            }
+            // Nesta etapa do Fiscal, a consulta fica restrita à Loja 1.
+            select.value = '1';
         }
 
         function consultarContasConciliacaoFiscal() {
