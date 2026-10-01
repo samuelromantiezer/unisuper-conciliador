@@ -396,6 +396,19 @@
         .fiscal-separador-grupo td { height:29px; border-bottom:2px solid #111827; background:#fff; }
         .fiscal-separador-grupo td .fiscal-comparativo-item { background:#dcfce7; color:#166534; min-height:29px; }
         .fiscal-periodo-consulta { display:flex; align-items:flex-end; gap:8px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:.55rem; background:#fff; }
+        .fiscal-competencia-wrap { position:relative; }
+        .fiscal-competencia-btn { min-height:36px; min-width:128px; border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:.5rem; padding:0 .75rem; display:inline-flex; align-items:center; justify-content:center; gap:.45rem; font-size:11px; font-weight:800; cursor:pointer; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+        .fiscal-competencia-btn:hover { background:#f8fafc; border-color:#94a3b8; }
+        .fiscal-competencia-popover { position:absolute; right:0; top:calc(100% + 6px); z-index:50; width:280px; padding:12px; background:#fff; border:1px solid #cbd5e1; border-radius:.55rem; box-shadow:0 12px 32px rgba(15,23,42,.16); }
+        .fiscal-competencia-popover.hidden { display:none; }
+        .competencia-popover-cabecalho { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        .fiscal-competencia-popover .competencia-ano-btn { width:34px; height:34px; border:1px solid #e2e8f0; border-radius:.4rem; background:#fff; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+        .fiscal-competencia-popover .competencia-ano-btn:hover { background:#eff6ff; color:#1e3a8a; border-color:#bfdbfe; }
+        .fiscal-competencia-popover .competencia-ano-label { font-size:14px; font-weight:800; color:#334155; }
+        .fiscal-competencia-meses { grid-template-columns:repeat(3,1fr); gap:8px; }
+        .fiscal-competencia-mes-btn { min-height:42px; font-size:12px; border:1px solid #e2e8f0; border-radius:.4rem; background:#fff; color:#475569; font-weight:700; cursor:pointer; }
+        .fiscal-competencia-mes-btn:hover { background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a; }
+        .fiscal-competencia-mes-btn.ativo { background:#1e3a8a; border-color:#1e3a8a; color:#fff; }
         .fiscal-modo-consulta { align-self:center; display:flex; flex-direction:column; gap:5px; padding:0 4px; font-size:9px; font-weight:800; color:#475569; white-space:nowrap; }
         .fiscal-modo-consulta label { display:flex; align-items:center; gap:4px; cursor:pointer; }
         .fiscal-modo-consulta input { margin:0; accent-color:#1e3a8a; }
@@ -754,9 +767,22 @@
                                             <label><input type="radio" name="fiscal-modo-periodo" value="competencia" checked onchange="alternarModoPeriodoFiscal('competencia')"> Competência</label>
                                             <label><input type="radio" name="fiscal-modo-periodo" value="periodo" onchange="alternarModoPeriodoFiscal('periodo')"> Período</label>
                                         </div>
-                                        <div class="fiscal-data-wrap">
-                                            <label for="fiscal-competencia">Competência</label>
-                                            <input id="fiscal-competencia" type="month" class="fiscal-data-input" aria-label="Competência fiscal" onchange="selecionarCompetenciaFiscal(this.value)">
+                                        <div class="fiscal-data-wrap fiscal-competencia-wrap">
+                                            <label>Competência</label>
+                                            <button type="button" id="fiscal-competencia-btn" class="fiscal-competencia-btn" onclick="alternarCompetenciaFiscal()" title="Selecionar competência">
+                                                <i class="fa-solid fa-calendar-days"></i>
+                                                <span id="fiscal-competencia-label">09/2026</span>
+                                                <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                                            </button>
+                                            <div id="fiscal-competencia-popover" class="fiscal-competencia-popover hidden">
+                                                <div class="competencia-popover-cabecalho">
+                                                    <button type="button" class="competencia-ano-btn" onclick="alterarAnoCompetenciaFiscal(-1)" title="Ano anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                                                    <span id="fiscal-competencia-ano" class="competencia-ano-label">2026</span>
+                                                    <button type="button" class="competencia-ano-btn" onclick="alterarAnoCompetenciaFiscal(1)" title="Próximo ano"><i class="fa-solid fa-chevron-right"></i></button>
+                                                </div>
+                                                <div id="fiscal-competencia-lista" class="competencia-meses fiscal-competencia-meses"></div>
+                                            </div>
+                                            <input id="fiscal-competencia" type="hidden" value="2026-09">
                                         </div>
                                         <div class="fiscal-data-wrap">
                                             <label for="fiscal-data-inicial">Data inicial</label>
@@ -3183,6 +3209,34 @@
                 '</div>';
         }
 
+        function alternarCompetenciaFiscal() {
+            const popover = document.getElementById('fiscal-competencia-popover');
+            if (!popover) return;
+            const abriu = popover.classList.contains('hidden');
+            popover.classList.toggle('hidden');
+            if (abriu) renderizarMesesCompetenciaFiscal(Number(String(competenciaFiscalSelecionada || '').split('-')[0]) || new Date().getFullYear());
+        }
+
+        function alterarAnoCompetenciaFiscal(direcao) {
+            const atual = Number(String(competenciaFiscalSelecionada || '').split('-')[0]) || new Date().getFullYear();
+            renderizarMesesCompetenciaFiscal(atual + Number(direcao));
+        }
+
+        function renderizarMesesCompetenciaFiscal(ano) {
+            const lista = document.getElementById('fiscal-competencia-lista');
+            const anoLabel = document.getElementById('fiscal-competencia-ano');
+            if (!lista) return;
+
+            const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            if (anoLabel) anoLabel.textContent = ano;
+
+            lista.innerHTML = nomes.map((nome, indice) => {
+                const valor = ano + '-' + String(indice + 1).padStart(2, '0');
+                const ativo = valor === competenciaFiscalSelecionada ? ' ativo' : '';
+                return '<button type="button" class="fiscal-competencia-mes-btn' + ativo + '" onclick="selecionarCompetenciaFiscal(\'' + valor + '\')">' + nome + '</button>';
+            }).join('');
+        }
+
         function alternarModoPeriodoFiscal(modo) {
             const competencia = document.getElementById('fiscal-competencia');
             const inicio = document.getElementById('fiscal-data-inicial');
@@ -3213,6 +3267,14 @@
             const modoCompetencia = document.querySelector('input[name="fiscal-modo-periodo"][value="competencia"]');
             if (modoCompetencia) modoCompetencia.checked = true;
             competenciaFiscalSelecionada = valor;
+
+            const competenciaInput = document.getElementById('fiscal-competencia');
+            const competenciaLabel = document.getElementById('fiscal-competencia-label');
+            if (competenciaInput) competenciaInput.value = valor;
+            if (competenciaLabel) {
+                const [anoLabel, mesLabel] = valor.split('-');
+                competenciaLabel.textContent = mesLabel + '/' + anoLabel;
+            }
 
             const [ano, mes] = valor.split('-').map(Number);
             const primeiroDia = new Date(ano, mes - 1, 1);
@@ -3267,6 +3329,12 @@
 
             if (competencia && !competencia.value) {
                 competencia.value = valorCompetencia;
+            }
+            competenciaFiscalSelecionada = competencia?.value || valorCompetencia;
+            const competenciaLabel = document.getElementById('fiscal-competencia-label');
+            if (competenciaLabel) {
+                const [anoLabel, mesLabel] = competenciaFiscalSelecionada.split('-');
+                competenciaLabel.textContent = mesLabel + '/' + anoLabel;
             }
 
             const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
