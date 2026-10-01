@@ -2913,7 +2913,7 @@
             select.innerHTML = '<option value="">Todas as Lojas</option>' +
                 lista.map(loja =>
                     '<option value="' + escapeHtml(String(loja.id ?? loja.label)) + '">' +
-                    escapeHtml(loja.label) +
+                    escapeHtml(String(loja.id ?? '')) + ' - ' + escapeHtml(loja.label) +
                     '</option>'
                 ).join('');
 
