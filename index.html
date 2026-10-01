@@ -3210,7 +3210,8 @@
         function selecionarCompetenciaFiscal(valor) {
             if (!/^\d{4}-\d{2}$/.test(valor)) return;
 
-            document.querySelector('input[name="fiscal-modo-periodo"][value="competencia"]')?.click();
+            const modoCompetencia = document.querySelector('input[name="fiscal-modo-periodo"][value="competencia"]');
+            if (modoCompetencia) modoCompetencia.checked = true;
             competenciaFiscalSelecionada = valor;
 
             const [ano, mes] = valor.split('-').map(Number);
