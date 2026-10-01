@@ -3444,6 +3444,15 @@
 
                 const normalizar = valor => String(valor ?? '').trim().toLowerCase().replace(/\\s+/g, ' ');
                 const normalizarCfop = valor => String(valor ?? '').trim().replace(/\\./g, '');
+                const numeroFiscalResposta = valor => {
+                    if (valor === null || valor === undefined || valor === '') return null;
+                    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null;
+                    const texto = String(valor).trim();
+                    if (!texto) return null;
+                    const numero = Number(texto.replace(/\\./g, '').replace(',', '.'));
+                    return Number.isFinite(numero) ? numero : null;
+                };
+
                 const baseRevendaCadastro = estruturaConciliacaoFiscal.find(item =>
                     String(item.conta || '') === '252' ||
                     String(item.descricao || '').toUpperCase() === 'REVENDA DE MERCADORIAS'
@@ -3461,9 +3470,7 @@
                     itens: [
                         { cfop: '5.101', valor: null, comparativo: null },
                         { cfop: '5.102', valor: null, comparativo: null },
-                        { cfop: '5.405', valor: null, comparativo: null },
-                        { cfop: '6.102', valor: null, comparativo: null },
-                        { cfop: '6.403', valor: null, comparativo: null }
+                        { cfop: '5.405', valor: null, comparativo: null }
                     ]
                 };
 
@@ -3471,9 +3478,7 @@
                     ...baseRevenda,
                     quadro: 'revenda_mercadorias',
                     quadroTitulo: 'REVENDA DE MERCADORIAS',
-                    itens: (baseRevenda.itens || [])
-                        .filter(item => normalizarCfop(item.cfop) !== 'TOTAL')
-                        .map(item => ({ ...item, valor: null, comparativo: null })),
+                    itens: baseRevenda.itens.map(item => ({ ...item, valor: null, comparativo: null })),
                     loja: loja.label,
                     lojaId: loja.id,
                     mapaResumo: null,
@@ -3481,19 +3486,46 @@
                     totalDebitoContabil: null
                 }));
 
-                linhas.forEach(linha => {
-                    const lojaInformada = String(linha.nome_loja ?? '').trim();
-                    const cadastro = lojasCadastro.find(loja =>
-                        normalizar(loja.nome) === normalizar(lojaInformada) ||
-                        normalizar(loja.codigo) === normalizar(lojaInformada) ||
-                        normalizar(loja.label) === normalizar(lojaInformada)
-                    );
-                    if (!cadastro) return;
-                    const grupo = gruposPorLoja.find(item => String(item.lojaId) === String(cadastro.id));
-                    if (!grupo) return;
+                const gruposPorChaveLoja = new Map();
+                gruposPorLoja.forEach(grupo => {
+                    gruposPorChaveLoja.set(normalizar(grupo.loja), grupo);
+                    gruposPorChaveLoja.set(normalizar(String(grupo.lojaId)), grupo);
+                });
 
-                    const tipo = String(linha.tipo_resumo || '').trim();
-                    const valorFiscal = linha.valor_total_fiscal == null ? null : Number(linha.valor_total_fiscal);
+                linhas.forEach(linha => {
+                    const lojaInformada = String(linha.nome_loja ?? linha.loja ?? '').trim();
+                    if (!lojaInformada) return;
+
+                    let grupo = gruposPorChaveLoja.get(normalizar(lojaInformada));
+                    if (!grupo) {
+                        const cadastro = lojasCadastro.find(loja =>
+                            normalizar(loja.nome) === normalizar(lojaInformada) ||
+                            normalizar(loja.codigo) === normalizar(lojaInformada) ||
+                            normalizar(loja.label) === normalizar(lojaInformada)
+                        );
+                        if (cadastro) grupo = gruposPorLoja.find(item => String(item.lojaId) === String(cadastro.id));
+                    }
+
+                    // Se a loja retornada pelo servidor não estiver no cadastro local,
+                    // ainda assim mostramos o resultado da consulta.
+                    if (!grupo) {
+                        grupo = {
+                            ...baseRevenda,
+                            quadro: 'revenda_mercadorias',
+                            quadroTitulo: 'REVENDA DE MERCADORIAS',
+                            itens: baseRevenda.itens.map(item => ({ ...item, valor: null, comparativo: null })),
+                            loja: lojaInformada,
+                            lojaId: lojaInformada,
+                            mapaResumo: null,
+                            totalCreditoContabil: null,
+                            totalDebitoContabil: null
+                        };
+                        gruposPorLoja.push(grupo);
+                        gruposPorChaveLoja.set(normalizar(lojaInformada), grupo);
+                    }
+
+                    const tipo = String(linha.tipo_resumo || '').trim().toUpperCase();
+                    const valorFiscal = numeroFiscalResposta(linha.valor_total_fiscal);
 
                     if (tipo === 'FISCAL_CFOP_DETALHE' && Number.isFinite(valorFiscal)) {
                         const item = grupo.itens.find(x => normalizarCfop(x.cfop) === normalizarCfop(linha.codigo_referencia));
@@ -3501,8 +3533,8 @@
                     } else if (tipo === 'FISCAL_MAPA_RESUMO' && Number.isFinite(valorFiscal)) {
                         grupo.mapaResumo = valorFiscal;
                     } else if (tipo === 'CONTABIL') {
-                        grupo.totalDebitoContabil = linha.total_debito_contabil == null ? null : Number(linha.total_debito_contabil);
-                        grupo.totalCreditoContabil = linha.total_credito_contabil == null ? null : Number(linha.total_credito_contabil);
+                        grupo.totalDebitoContabil = numeroFiscalResposta(linha.total_debito_contabil);
+                        grupo.totalCreditoContabil = numeroFiscalResposta(linha.total_credito_contabil);
                     }
                 });
 
