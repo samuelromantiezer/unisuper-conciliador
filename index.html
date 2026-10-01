@@ -3052,7 +3052,12 @@
                         '</td>' +
                         '<td class="fiscal-valor-cell">' +
                             (Number.isFinite(fiscalNumero(conta.mapaResumo)) ? '<div class="fiscal-valor-item">' + escapeHtml(formatarMoedaFiscal(conta.mapaResumo)) + '</div>' : '') +
-                            itensRender.map(x => '<div class="fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('') +
+                            itensRender.map(x => {
+                                const numero = fiscalNumero(x.valor);
+                                return '<div class="fiscal-valor-item">' +
+                                    escapeHtml(Number.isFinite(numero) ? formatarMoedaFiscal(numero) : '-') +
+                                '</div>';
+                            }).join('') +
                         '</td>' +
                     '</tr>' +
                     renderTotaisAnalitico(conta, totalFiscal, possuiValorTotalFiscal) +
@@ -3495,7 +3500,11 @@
                 const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-conciliacao-fiscal`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dataInicial, dataFinal })
+                    body: JSON.stringify({
+                        dataInicial,
+                        dataFinal,
+                        idLoja: document.getElementById('fiscal-filtro-loja')?.value || null
+                    })
                 });
                 const textoResposta = await resposta.text();
                 let resultado;
@@ -3662,18 +3671,43 @@
                     }
 
                     const tipo = String(
-                        linha.tipo_resumo || ''
+                        linha.tipo_resumo || linha.tipo || ''
                     ).trim().toUpperCase();
-                    const valorFiscal = numeroFiscalResposta(linha.valor_total_fiscal);
+
+                    const codigoCfop = linha.codigo_referencia ??
+                        linha.cfop ??
+                        linha.codigo_cfop ??
+                        linha.cfop_codigo ??
+                        '';
+
+                    const valorFiscal = numeroFiscalResposta(
+                        linha.valor_total_fiscal ??
+                        linha.valor_fiscal ??
+                        linha.total_saida_item ??
+                        linha.valor
+                    );
 
                     if (tipo === 'FISCAL_CFOP_DETALHE' && Number.isFinite(valorFiscal)) {
-                        const item = grupo.itens.find(x => normalizarCfop(x.cfop) === normalizarCfop(linha.codigo_referencia));
-                        if (item) item.valor = valorFiscal;
+                        const item = grupo.itens.find(
+                            x => normalizarCfop(x.cfop) === normalizarCfop(codigoCfop)
+                        );
+                        if (item) {
+                            item.valor = valorFiscal;
+                            item.comparativo = valorFiscal;
+                        }
                     } else if (tipo === 'FISCAL_MAPA_RESUMO' && Number.isFinite(valorFiscal)) {
                         grupo.mapaResumo = valorFiscal;
                     } else if (tipo === 'CONTABIL') {
-                        grupo.totalDebitoContabil = numeroFiscalResposta(linha.total_debito_contabil);
-                        grupo.totalCreditoContabil = numeroFiscalResposta(linha.total_credito_contabil);
+                        grupo.totalDebitoContabil = numeroFiscalResposta(
+                            linha.total_debito_contabil ??
+                            linha.total_debito ??
+                            linha.debito
+                        );
+                        grupo.totalCreditoContabil = numeroFiscalResposta(
+                            linha.total_credito_contabil ??
+                            linha.total_credito ??
+                            linha.credito
+                        );
                     }
                 });
 
