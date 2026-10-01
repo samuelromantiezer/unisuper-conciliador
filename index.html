@@ -2808,8 +2808,9 @@
                 numero = Number(normalizado);
             }
             if (!Number.isFinite(numero)) return null;
-            // Os valores financeiros retornados pelo banco vêm em centavos.
-            return numero / 100;
+            // Aqui o valor já está em reais. A conversão de centavos para reais
+            // é feita uma única vez, na entrada da resposta do banco.
+            return numero;
         }
 
         function fiscalFormato(valor) {
@@ -3572,7 +3573,7 @@
                     const texto = String(valor).trim();
                     if (!texto) return null;
                     const numero = Number(texto.replace(/\\./g, '').replace(',', '.'));
-                    return Number.isFinite(numero) ? numero : null;
+                    return Number.isFinite(numero) ? numero / 100 : null;
                 };
 
                 const baseRevendaCadastro = estruturaConciliacaoFiscal.find(item =>
