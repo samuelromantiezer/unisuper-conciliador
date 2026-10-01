@@ -3113,22 +3113,35 @@
                     return;
                 }
 
-                const lojas = Array.from(new Set(linhas.map(linha => String(
-                    linha.loja ??
-                    linha.nome_loja ??
-                    linha.nomeLoja ??
-                    linha.loja_nome ??
-                    'Sem loja'
-                ).trim() || 'Sem loja')));
+                // A coluna Loja usa o cadastro oficial e sempre mostra todas as lojas,
+                // inclusive as que não possuem movimento fiscal na competência consultada.
+                const lojasCadastro = ordenarCadastroNatural(lerListaCadastro('lojas'))
+                    .filter(loja => loja && (loja.nome || loja.codigo))
+                    .map(loja => ({
+                        id: loja.id,
+                        codigo: String(loja.codigo ?? '').trim(),
+                        nome: String(loja.nome ?? '').trim(),
+                        label: String(loja.nome ?? loja.codigo ?? '').trim() || 'Sem loja'
+                    }));
 
-                const normalizarCfop = valor => String(valor ?? '').trim().replace(/\\./g, '');
+                if (!lojasCadastro.length) {
+                    throw new Error('Nenhuma loja encontrada no cadastro de lojas.');
+                }
+
+                const normalizarTextoLoja = valor => String(valor ?? '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, ' ');
+
+                const normalizarCfop = valor => String(valor ?? '').trim().replace(/\./g, '');
                 const gruposPorLoja = [];
 
-                lojas.forEach(loja => {
+                lojasCadastro.forEach(lojaCadastro => {
                     estruturaConciliacaoFiscal.forEach(estrutura => {
                         gruposPorLoja.push({
                             ...estrutura,
-                            loja,
+                            loja: lojaCadastro.label,
+                            lojaId: lojaCadastro.id,
                             itens: (estrutura.itens || []).map(item => ({
                                 ...item,
                                 valor: null,
@@ -3139,13 +3152,23 @@
                 });
 
                 linhas.forEach(linha => {
-                    const loja = String(
+                    const lojaInformada = String(
                         linha.loja ??
                         linha.nome_loja ??
                         linha.nomeLoja ??
                         linha.loja_nome ??
-                        'Sem loja'
-                    ).trim() || 'Sem loja';
+                        ''
+                    ).trim();
+
+                    const cadastroLoja = lojasCadastro.find(lojaCadastro =>
+                        normalizarTextoLoja(lojaCadastro.nome) === normalizarTextoLoja(lojaInformada) ||
+                        normalizarTextoLoja(lojaCadastro.codigo) === normalizarTextoLoja(lojaInformada) ||
+                        normalizarTextoLoja(lojaCadastro.label) === normalizarTextoLoja(lojaInformada)
+                    );
+
+                    if (!cadastroLoja) return;
+
+                    const loja = cadastroLoja.label;
 
                     const cfopNumerico = normalizarCfop(linha.cfop);
                     const valorBruto = linha.total_fiscal ?? linha.valor ?? linha.total;
