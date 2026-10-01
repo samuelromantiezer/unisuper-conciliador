@@ -3243,13 +3243,15 @@
 
                 const normalizar = valor => String(valor ?? '').trim().toLowerCase().replace(/\\s+/g, ' ');
                 const normalizarCfop = valor => String(valor ?? '').trim().replace(/\\./g, '');
-                const baseRevenda = estruturaConciliacaoFiscal.find(item =>
+                const baseRevendaCadastro = estruturaConciliacaoFiscal.find(item =>
                     String(item.conta || '') === '252' ||
                     String(item.descricao || '').toUpperCase() === 'REVENDA DE MERCADORIAS'
-                ) || {
-                    conta: '252',
-                    contaAnalitica: '',
-                    grupo: '',
+                ) || {};
+                const baseRevenda = {
+                    ...baseRevendaCadastro,
+                    conta: baseRevendaCadastro.conta || '252',
+                    contaAnalitica: baseRevendaCadastro.contaAnalitica || '',
+                    grupo: baseRevendaCadastro.grupo || '',
                     descricao: 'REVENDA DE MERCADORIAS',
                     debito: null,
                     credito: null,
