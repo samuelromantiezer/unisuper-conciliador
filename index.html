@@ -3569,10 +3569,21 @@
                 const normalizarCfop = valor => String(valor ?? '').trim().replace(/\\./g, '');
                 const numeroFiscalResposta = valor => {
                     if (valor === null || valor === undefined || valor === '') return null;
-                    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null;
-                    const texto = String(valor).trim();
-                    if (!texto) return null;
-                    const numero = Number(texto.replace(/\\./g, '').replace(',', '.'));
+
+                    // Os números vindos do banco estão em centavos.
+                    // A conversão para reais acontece EXATAMENTE UMA VEZ aqui.
+                    let numero;
+                    if (typeof valor === 'number') {
+                        numero = valor;
+                    } else {
+                        const texto = String(valor).trim();
+                        if (!texto) return null;
+                        const normalizado = texto.includes(',')
+                            ? texto.replace(/\\./g, '').replace(',', '.')
+                            : texto;
+                        numero = Number(normalizado);
+                    }
+
                     return Number.isFinite(numero) ? numero / 100 : null;
                 };
 
