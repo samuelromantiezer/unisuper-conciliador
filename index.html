@@ -374,6 +374,9 @@
         .fiscal-descricao { display:block; text-align:center; font-size:12px; white-space:nowrap; }
         .fiscal-descricao-linhas { display:flex; flex-direction:column; }
         .fiscal-descricao-item { min-height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; font-size:12px; white-space:nowrap; }
+        .fiscal-quadro-grupo td { vertical-align:top; }
+        .fiscal-quadro-linha { min-height:27px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
+        .fiscal-quadro-sublinha { min-height:27px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
         .fiscal-valores-cell,.fiscal-cfop-cell,.fiscal-valor-cell,.fiscal-comparativo-cell { vertical-align:top; padding:6px 0 !important; }
         .fiscal-lancamento { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; }
         .fiscal-lancamento.destaque { min-height:29px; background:#f8fafc; color:#0f172a; font-weight:700; }
@@ -2568,6 +2571,7 @@
             },
             {
                 conta: '125',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'PREDIOS E BENFEITORIAS',
@@ -2579,6 +2583,7 @@
             },
             {
                 conta: '126',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'INSTALAÇÕES',
@@ -2590,6 +2595,7 @@
             },
             {
                 conta: '127',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'MÁQUINAS E EQUIPAMENTOS',
@@ -2601,6 +2607,7 @@
             },
             {
                 conta: '128',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'VEÍCULOS E ACESSÓRIOS',
@@ -2612,6 +2619,7 @@
             },
             {
                 conta: '129',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'MÓVEIS E UTENSÍLIOS',
@@ -2623,6 +2631,7 @@
             },
             {
                 conta: '130',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'EQUIP. DE COMUNICAÇÃO',
@@ -2634,6 +2643,7 @@
             },
             {
                 conta: '131',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'EQUIP. DE INFORMÁTICA',
@@ -2645,6 +2655,7 @@
             },
             {
                 conta: '6028',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'BENF. EM BENS DE TERCEIROS EM ANDAMENTO',
@@ -2656,6 +2667,7 @@
             },
             {
                 conta: '132',
+                quadro: 'ativo_imobilizado',
                 contaAnalitica: '',
                 grupo: '',
                 descricao: 'BENF. EM BENS DE TERCEIROS',
@@ -2701,12 +2713,52 @@
             }
 
             const grupos = [];
-            dados.forEach(item => {
+            for (let indice = 0; indice < dados.length; indice++) {
+                const item = dados[indice];
                 const itens = Array.isArray(item.itens) && item.itens.length ? item.itens : [{cfop:'-',valor:'-',comparativo:'-'}];
+
+                if (item.quadro) {
+                    const bloco = [];
+                    let j = indice;
+                    while (j < dados.length && dados[j].quadro === item.quadro) {
+                        bloco.push(dados[j]);
+                        j++;
+                    }
+
+                    const linhas = bloco.map(conta => {
+                        const subitens = Array.isArray(conta.itens) && conta.itens.length ? conta.itens : [{cfop:'-',valor:'-',comparativo:'-'}];
+                        return {
+                            conta: conta.conta || '',
+                            descricao: conta.descricao || '',
+                            debito: conta.debito,
+                            credito: conta.credito,
+                            destaque: conta.destaque,
+                            azulEscuro: conta.azulEscuro,
+                            itens: subitens
+                        };
+                    });
+
+                    grupos.push(
+                        '<tr class="fiscal-quadro-grupo">' +
+                            '<td class="fiscal-conta-cell">' + linhas.map(l => '<div class="fiscal-quadro-linha fiscal-conta-codigo">' + escapeHtml(l.conta) + '</div>').join('') + '</td>' +
+                            '<td class="fiscal-descricao-cell">' + linhas.map(l => '<div class="fiscal-quadro-linha fiscal-descricao-item">' + escapeHtml(l.descricao) + '</div>').join('') + '</td>' +
+                            '<td class="fiscal-loja-cell"><span class="fiscal-loja-nome">' + escapeHtml(item.loja || item.nomeLoja || item.nome_loja || item.loja_nome || '-') + '</span></td>' +
+                            '<td class="fiscal-valores-cell">' + linhas.map(l => '<div class="fiscal-quadro-linha">' + fiscalLinhaValor(l.debito,l.destaque === 'debito',l.azulEscuro) + '</div>').join('') + '</td>' +
+                            '<td class="fiscal-valores-cell">' + linhas.map(l => '<div class="fiscal-quadro-linha">' + fiscalLinhaValor(l.credito,l.destaque === 'credito',l.azulEscuro) + '</div>').join('') + '</td>' +
+                            '<td class="fiscal-cfop-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('')).join('') + '</td>' +
+                            '<td class="fiscal-valor-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('')).join('') + '</td>' +
+                            '<td class="fiscal-comparativo-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-comparativo-item ' + (x.comparativo && x.comparativo !== '-' ? 'ok' : '') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('')).join('') + '</td>' +
+                        '</tr>'
+                    );
+                    grupos.push('<tr class="fiscal-separador-grupo"><td colspan="7"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
+                    indice = j - 1;
+                    continue;
+                }
+
                 grupos.push(
                     '<tr>' +
                         '<td class="fiscal-conta-cell"><div class="fiscal-conta-codigo">' + escapeHtml(item.conta || '') + '</div><div class="fiscal-conta-analitica">' + escapeHtml(item.contaAnalitica || '') + '</div></td>' +
-                        '<td class="fiscal-descricao-cell">' + (item.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(item.grupo) + '</span>' : '') + '<div class="fiscal-descricao-linhas">' + itens.map((x, indice) => '<div class="fiscal-descricao-item">' + escapeHtml(x.descricao || (indice === 0 ? (item.descricao || '') : '')) + '</div>').join('') + '</div></td>' +
+                        '<td class="fiscal-descricao-cell">' + (item.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(item.grupo) + '</span>' : '') + '<div class="fiscal-descricao-linhas">' + itens.map((x, indiceItem) => '<div class="fiscal-descricao-item">' + escapeHtml(x.descricao || (indiceItem === 0 ? (item.descricao || '') : '')) + '</div>').join('') + '</div></td>' +
                         '<td class="fiscal-loja-cell"><span class="fiscal-loja-nome">' + escapeHtml(item.loja || item.nomeLoja || item.nome_loja || item.loja_nome || '-') + '</span></td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.debito,item.destaque === 'debito',item.azulEscuro) + '</td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(item.credito,item.destaque === 'credito',item.azulEscuro) + '</td>' +
@@ -2716,11 +2768,10 @@
                     '</tr>'
                 );
                 grupos.push('<tr class="fiscal-separador-grupo"><td colspan="7"></td><td><div class="fiscal-comparativo-item ok">-</div></td></tr>');
-            });
+            }
             grupos.pop();
             tbody.innerHTML = grupos.join('');
         }
-
         async function salvarConciliacaoFiscal(dados, status = 'Consultada') {
             if (!supabaseClient) throw new Error('Supabase ainda não está conectado.');
             if (!Array.isArray(dados) || !dados.length) throw new Error('Não há dados fiscais para salvar.');
