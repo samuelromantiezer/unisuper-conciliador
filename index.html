@@ -393,8 +393,11 @@
         .competencia-ano-btn:hover { background:#eff6ff; color:#1e3a8a; }
         .competencia-ano-label { flex:1; text-align:center; font-size:12px; font-weight:800; color:#334155; }
         .competencia-meses { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
-  .fiscal-competencia-meses { grid-template-columns:repeat(3,1fr); gap:10px; }
-  .fiscal-competencia-mes-btn { min-height:52px; font-size:13px; font-weight:800; }
+  .fiscal-competencia-lista { display:block; width:100%; max-height:none; overflow:visible; }
+  .fiscal-competencia-ano-header { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .fiscal-competencia-ano-header .competencia-ano-label { flex:1; text-align:center; }
+  .fiscal-competencia-meses { width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .fiscal-competencia-mes-btn { width:100%; min-height:54px; font-size:13px; font-weight:800; } 
   .fiscal-competencia-popover { width:310px; }
   .fiscal-competencia-popover .competencia-ano-btn { width:38px; height:38px; flex:0 0 38px; }
   .fiscal-competencia-popover .competencia-ano-label { font-size:16px; }
@@ -2926,9 +2929,9 @@
             const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
             lista.innerHTML =
-                '<div class="flex items-center justify-between mb-3 px-1">' +
+                '<div class="fiscal-competencia-ano-header">' +
                     '<button type="button" class="competencia-ano-btn" title="Ano anterior" onclick="renderizarMesesCompetenciaFiscal(' + (ano - 1) + ')"><i class="fa-solid fa-chevron-left"></i></button>' +
-                    '<span class="competencia-ano-label text-sm">' + ano + '</span>' +
+                    '<span class="competencia-ano-label">' + ano + '</span>' +
                     '<button type="button" class="competencia-ano-btn" title="Próximo ano" onclick="renderizarMesesCompetenciaFiscal(' + (ano + 1) + ')"><i class="fa-solid fa-chevron-right"></i></button>' +
                 '</div>' +
                 '<div class="competencia-meses fiscal-competencia-meses">' +
