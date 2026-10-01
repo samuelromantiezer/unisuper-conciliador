@@ -383,13 +383,13 @@
         .fiscal-quadro-total { font-weight:900; }
         .fiscal-total-label, .fiscal-total-valor { font-weight:900; }
         .fiscal-quadro-contabilidade td { border-bottom:1px solid #e2e8f0; }
-        .fiscal-quadro-diferenca td { border-bottom:2px solid #94a3b8; font-weight:900; }
+        .fiscal-quadro-diferenca td { border-bottom:2px solid #94a3b8; font-weight:900; background:#fef9c3; color:#854d0e; }
         .fiscal-quadro-contabilidade, .fiscal-quadro-diferenca { font-weight:800; }
         .fiscal-quadro-diferenca .fiscal-total-label { color:#334155; }
         .fiscal-valores-cell,.fiscal-cfop-cell,.fiscal-valor-cell,.fiscal-comparativo-cell { vertical-align:top; padding:6px 0 !important; }
-        .fiscal-lancamento { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; }
+        .fiscal-lancamento { min-height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; font-variant-numeric:tabular-nums; }
         .fiscal-lancamento.destaque { min-height:29px; background:#f8fafc; color:#0f172a; font-weight:700; }
-        .fiscal-cfop-item,.fiscal-valor-item,.fiscal-comparativo-item { min-height:27px; display:flex; align-items:center; justify-content:flex-end; padding:0 8px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .fiscal-cfop-item,.fiscal-valor-item,.fiscal-comparativo-item { min-height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; font-variant-numeric:tabular-nums; white-space:nowrap; }
         .fiscal-comparativo-item { min-height:29px; }
         .fiscal-comparativo-item.ok { background:#dcfce7; color:#166534; font-weight:800; }
         .fiscal-comparativo-item.pendente { background:#fef9c3; color:#854d0e; font-weight:700; }
@@ -747,15 +747,15 @@
                                     <table class="fiscal-conciliacao-table">
                                         <colgroup>
                                             <col style="width:10%"><col style="width:24%"><col style="width:16%"><col style="width:10%"><col style="width:10%">
-                                            <col style="width:10%"><col style="width:10%"><col style="width:10%">
+                                            <col style="width:10%"><col style="width:10%">
                                         </colgroup>
                                         <thead>
                                             <tr>
-                                                <th>Conta</th><th>Descrição</th><th>Loja</th><th>Débito</th><th>Crédito</th><th class="col-cfop">CFOP</th><th class="col-valor">Valor</th><th>Comparativo</th>
+                                                <th>Conta</th><th>Descrição</th><th>Loja</th><th>Débito</th><th>Crédito</th><th class="col-cfop">CFOP</th><th class="col-valor">Valor</th>
                                             </tr>
                                         </thead>
                                         <tbody id="tabela-fiscal-icms">
-                                            <tr><td colspan="8" class="p-8 text-center text-slate-400">Selecione a competência e clique em <strong>Consultar</strong> para atualizar os valores.</td></tr>
+                                            <tr><td colspan="7" class="p-8 text-center text-slate-400">Selecione a competência e clique em <strong>Consultar</strong> para atualizar os valores.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2730,7 +2730,7 @@
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
             if (!Array.isArray(dados) || !dados.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
                 return;
             }
 
@@ -2748,24 +2748,22 @@
                         '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-valor-item fiscal-total-valor">' +
                             (possuiValorTotalFiscal ? escapeHtml(formatarMoedaFiscal(totalFiscal)) : '-') +
                         '</div></td>' +
-                        '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
                     '</tr>' +
                     '<tr class="fiscal-quadro-diferenca">' +
                         '<td colspan="5"></td>' +
                         '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">DIFERENÇAS</div></td>' +
                         '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-diferenca-valor">-</div></td>' +
-                        '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
                     '</tr>'
                 );
             }
 
-            function renderAnalitico(conta, itens, contextoQuadro = false) {
+            function renderAnalitico(conta, itens) {
                 const itensVisiveis = (Array.isArray(itens) ? itens : []).filter(
                     x => String(x.cfop || '').toUpperCase() !== 'TOTAL'
                 );
                 const itensRender = itensVisiveis.length
                     ? itensVisiveis
-                    : [{cfop:'-',valor:'-',comparativo:'-'}];
+                    : [{cfop:'-',valor:'-'}];
 
                 const totalFiscal = itensVisiveis.reduce((soma, x) => {
                     const numero = fiscalNumero(x.valor);
@@ -2774,7 +2772,7 @@
                 const possuiValorTotalFiscal = itensVisiveis.some(x => Number.isFinite(fiscalNumero(x.valor)));
 
                 grupos.push(
-                    '<tr class="' + (contextoQuadro ? 'fiscal-quadro-grupo' : '') + '">' +
+                    '<tr class="fiscal-quadro-grupo">' +
                         '<td class="fiscal-conta-cell"><div class="fiscal-conta-codigo">' + escapeHtml(conta.conta || '') + '</div><div class="fiscal-conta-analitica">' + escapeHtml(conta.contaAnalitica || '') + '</div></td>' +
                         '<td class="fiscal-descricao-cell">' +
                             (conta.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(conta.grupo) + '</span>' : '') +
@@ -2795,12 +2793,9 @@
                         '<td class="fiscal-valor-cell">' +
                             itensRender.map(x => '<div class="fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('') +
                         '</td>' +
-                        '<td class="fiscal-comparativo-cell">' +
-                            itensRender.map(x => '<div class="fiscal-comparativo-item ' + (fiscalNumero(x.comparativo) === 0 ? 'ok' : 'pendente') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('') +
-                        '</td>' +
                     '</tr>' +
                     renderTotaisAnalitico(totalFiscal, possuiValorTotalFiscal) +
-                    '<tr class="fiscal-separador-grupo"><td colspan="8"></td></tr>'
+                    '<tr class="fiscal-separador-grupo"><td colspan="7"></td></tr>'
                 );
             }
 
@@ -2808,7 +2803,7 @@
                 const item = dados[indice];
                 const itens = Array.isArray(item.itens) && item.itens.length
                     ? item.itens
-                    : [{cfop:'-',valor:'-',comparativo:'-'}];
+                    : [{cfop:'-',valor:'-'}];
 
                 if (item.quadro) {
                     const bloco = [];
@@ -2817,13 +2812,12 @@
                         bloco.push(dados[j]);
                         j++;
                     }
-
-                    bloco.forEach(conta => renderAnalitico(conta, conta.itens, true));
+                    bloco.forEach(conta => renderAnalitico(conta, conta.itens));
                     indice = j - 1;
                     continue;
                 }
 
-                renderAnalitico(item, itens, false);
+                renderAnalitico(item, itens);
             }
 
             if (grupos.length) grupos.pop();
