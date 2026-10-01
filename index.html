@@ -2818,6 +2818,80 @@
             return '<div class="' + classe + '">' + escapeHtml(texto) + '</div>';
         }
 
+        const DEPARA_LOJAS_FISCAL = Object.freeze({
+            5: 'LOJA 05',
+            7: 'LOJA 07',
+            12: 'LOJA 12',
+            1: 'LOJA 01',
+            4: 'LOJA 04',
+            10: 'LOJA 10',
+            9: 'LOJA 09',
+            3: 'LOJA 03',
+            8: 'LOJA 08',
+            13: 'LOJA 13',
+            6: 'LOJA 06',
+            14: 'CD',
+            15: 'LOJA 999',
+            16: 'LOJA 14',
+            17: 'LOJA 15',
+            18: 'LOJA 16',
+            19: 'LOJA 17',
+            20: 'LOJA 18',
+            11: 'LOJA 11',
+            2: 'LOJA 02',
+            21: 'LOJA 19',
+            22: 'LOJA 20'
+        });
+
+        function nomeLojaFiscalPorId(id, fallback = '') {
+            const chave = String(id ?? '').trim();
+            return DEPARA_LOJAS_FISCAL[chave] || fallback;
+        }
+
+        function normalizarLojaFiscal(valor) {
+            return String(valor ?? '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\\u0300-\\u036f]/g, '')
+                .replace(/\\s+/g, ' ');
+        }
+
+        function resolverCadastroLojaFiscal(linha, lojasCadastro) {
+            const idInformado = String(
+                linha?.loja_id ??
+                linha?.id_loja ??
+                linha?.codigo_loja ??
+                linha?.lojaId ??
+                ''
+            ).trim();
+
+            if (idInformado && DEPARA_LOJAS_FISCAL[idInformado]) {
+                const porId = lojasCadastro.find(loja => String(loja.id ?? '').trim() === idInformado);
+                if (porId) return porId;
+            }
+
+            const lojaInformada = String(linha?.nome_loja ?? linha?.loja ?? '').trim();
+            if (!lojaInformada) return null;
+
+            const normalizada = normalizarLojaFiscal(lojaInformada);
+            const depara = Object.entries(DEPARA_LOJAS_FISCAL).find(
+                ([, descricao]) => normalizarLojaFiscal(descricao) === normalizada
+            );
+
+            if (depara) {
+                const porId = lojasCadastro.find(loja => String(loja.id ?? '').trim() === String(depara[0]));
+                if (porId) return porId;
+            }
+
+            return lojasCadastro.find(loja =>
+                normalizarLojaFiscal(loja.descricao) === normalizada ||
+                normalizarLojaFiscal(loja.nome) === normalizada ||
+                normalizarLojaFiscal(loja.codigo) === normalizada ||
+                normalizarLojaFiscal(loja.label) === normalizada
+            ) || null;
+        }
+
         function atualizarFiltroLojasConciliacaoFiscal(lojas = null) {
             const select = document.getElementById('fiscal-filtro-loja');
             if (!select) return;
@@ -2827,10 +2901,12 @@
                 : lerListaCadastro('lojas')
                     .filter(loja => loja && (loja.descricao || loja.nome || loja.codigo))
                     .map(loja => {
-                        const descricao = String(loja.descricao ?? '').trim();
-                        const nome = String(loja.nome ?? '').trim();
+                        const descricaoCadastro = String(loja.descricao ?? '').trim();
+                        const nomeCadastro = String(loja.nome ?? '').trim();
                         const codigo = String(loja.codigo ?? '').trim();
-                        return { id: loja.id, codigo, nome: nome || descricao, descricao, label: descricao || nome || codigo || 'Sem loja' };
+                        const descricao = nomeLojaFiscalPorId(loja.id, descricaoCadastro || nomeCadastro || codigo);
+                        const nome = descricao;
+                        return { id: loja.id, codigo, nome, descricao, label: descricao || codigo || 'Sem loja' };
                     });
 
             const valorAtual = select.value;
@@ -3436,10 +3512,12 @@
                 const lojasCadastro = lerListaCadastro('lojas')
                     .filter(loja => loja && (loja.descricao || loja.nome || loja.codigo))
                     .map(loja => {
-                        const descricao = String(loja.descricao ?? '').trim();
-                        const nome = String(loja.nome ?? '').trim();
+                        const descricaoCadastro = String(loja.descricao ?? '').trim();
+                        const nomeCadastro = String(loja.nome ?? '').trim();
                         const codigo = String(loja.codigo ?? '').trim();
-                        return { id: loja.id, codigo, nome: nome || descricao, descricao, label: descricao || nome || codigo || 'Sem loja' };
+                        const descricao = nomeLojaFiscalPorId(loja.id, descricaoCadastro || nomeCadastro || codigo);
+                        const nome = descricao;
+                        return { id: loja.id, codigo, nome, descricao, label: descricao || codigo || 'Sem loja' };
                     });
                 if (!lojasCadastro.length) throw new Error('Nenhuma loja encontrada no cadastro de lojas.');
 
@@ -3491,21 +3569,21 @@
                 gruposPorLoja.forEach(grupo => {
                     gruposPorChaveLoja.set(normalizar(grupo.loja), grupo);
                     gruposPorChaveLoja.set(normalizar(String(grupo.lojaId)), grupo);
+                    const depara = nomeLojaFiscalPorId(grupo.lojaId, '');
+                    if (depara) gruposPorChaveLoja.set(normalizar(depara), grupo);
                 });
 
                 linhas.forEach(linha => {
                     const lojaInformada = String(linha.nome_loja ?? linha.loja ?? '').trim();
                     if (!lojaInformada) return;
 
-                    let grupo = gruposPorChaveLoja.get(normalizar(lojaInformada));
+                    let grupo = null;
+                    const cadastroResolvido = resolverCadastroLojaFiscal(linha, lojasCadastro);
+                    if (cadastroResolvido) {
+                        grupo = gruposPorLoja.find(item => String(item.lojaId) === String(cadastroResolvido.id)) || null;
+                    }
                     if (!grupo) {
-                        const cadastro = lojasCadastro.find(loja =>
-                            normalizar(loja.descricao) === normalizar(lojaInformada) ||
-                            normalizar(loja.nome) === normalizar(lojaInformada) ||
-                            normalizar(loja.codigo) === normalizar(lojaInformada) ||
-                            normalizar(loja.label) === normalizar(lojaInformada)
-                        );
-                        if (cadastro) grupo = gruposPorLoja.find(item => String(item.lojaId) === String(cadastro.id));
+                        grupo = gruposPorChaveLoja.get(normalizar(lojaInformada));
                     }
 
                     // Se a loja retornada pelo servidor não estiver no cadastro local,
