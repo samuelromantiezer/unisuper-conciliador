@@ -395,6 +395,15 @@
         .fiscal-comparativo-item.pendente { background:#fef9c3; color:#854d0e; font-weight:700; }
         .fiscal-separador-grupo td { height:29px; border-bottom:2px solid #111827; background:#fff; }
         .fiscal-separador-grupo td .fiscal-comparativo-item { background:#dcfce7; color:#166534; min-height:29px; }
+        .fiscal-filtros { display:grid; grid-template-columns:minmax(190px,1.1fr) minmax(180px,1fr) minmax(230px,1.4fr) auto; gap:10px; align-items:end; background:#f8fafc; border:1px solid #cbd5e1; border-top:0; padding:10px 12px; }
+        .fiscal-filtro-campo { min-width:0; }
+        .fiscal-filtro-campo label { display:block; margin-bottom:4px; font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; }
+        .fiscal-filtro-campo input,.fiscal-filtro-campo select { width:100%; min-height:36px; border:1px solid #cbd5e1; border-radius:.45rem; background:#fff; color:#334155; padding:0 9px; font-size:11px; outline:none; }
+        .fiscal-filtro-campo input:focus,.fiscal-filtro-campo select:focus { border-color:#93c5fd; box-shadow:0 0 0 2px rgba(59,130,246,.10); }
+        .fiscal-filtro-limpar { min-height:36px; border:1px solid #cbd5e1; border-radius:.45rem; background:#fff; color:#475569; padding:0 11px; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+        .fiscal-filtro-limpar:hover { background:#f1f5f9; }
+        @media (max-width:900px) { .fiscal-filtros { grid-template-columns:1fr 1fr; } .fiscal-filtro-descricao { grid-column:1 / -1; } }
+        @media (max-width:560px) { .fiscal-filtros { grid-template-columns:1fr; } .fiscal-filtro-descricao { grid-column:auto; } .fiscal-filtro-limpar { width:100%; } }
         .fiscal-cabecalho-acoes { background:#f8fafc; border:1px solid #cbd5e1; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
         .competencia-lista-wrap { position:relative; }
         .competencia-lista-btn { min-height:36px; border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:.5rem; padding:0 .75rem; display:inline-flex; align-items:center; justify-content:space-between; gap:.45rem; font-size:11px; font-weight:800; cursor:pointer; }
@@ -742,6 +751,25 @@
                                             <i class="fa-solid fa-play"></i><span>Executar</span>
                                         </button>
                                     </div>
+                                </div>
+                                <div class="fiscal-filtros">
+                                    <div class="fiscal-filtro-campo fiscal-filtro-loja">
+                                        <label for="fiscal-filtro-loja">Loja</label>
+                                        <select id="fiscal-filtro-loja" onchange="aplicarFiltrosConciliacaoFiscal()">
+                                            <option value="">Todas as Lojas</option>
+                                        </select>
+                                    </div>
+                                    <div class="fiscal-filtro-campo">
+                                        <label for="fiscal-filtro-conta">Nº da Conta Contábil</label>
+                                        <input id="fiscal-filtro-conta" type="text" autocomplete="off" placeholder="Digite o número da conta" oninput="aplicarFiltrosConciliacaoFiscal()">
+                                    </div>
+                                    <div class="fiscal-filtro-campo fiscal-filtro-descricao">
+                                        <label for="fiscal-filtro-descricao">Descrição da Conta Contábil</label>
+                                        <input id="fiscal-filtro-descricao" type="text" autocomplete="off" placeholder="Digite a descrição da conta" oninput="aplicarFiltrosConciliacaoFiscal()">
+                                    </div>
+                                    <button type="button" onclick="limparFiltrosConciliacaoFiscal()" class="fiscal-filtro-limpar">
+                                        <i class="fa-solid fa-filter-circle-xmark"></i> Limpar filtros
+                                    </button>
                                 </div>
                                 <div class="fiscal-conciliacao-wrap">
                                     <table class="fiscal-conciliacao-table">
@@ -2726,6 +2754,71 @@
             return '<div class="' + classe + '">' + escapeHtml(texto) + '</div>';
         }
 
+        function atualizarFiltroLojasConciliacaoFiscal(lojas = null) {
+            const select = document.getElementById('fiscal-filtro-loja');
+            if (!select) return;
+
+            const lista = Array.isArray(lojas) && lojas.length
+                ? lojas
+                : ordenarCadastroNatural(lerListaCadastro('lojas'))
+                    .filter(loja => loja && (loja.nome || loja.codigo))
+                    .map(loja => ({
+                        id: loja.id,
+                        codigo: String(loja.codigo ?? '').trim(),
+                        nome: String(loja.nome ?? '').trim(),
+                        label: String(loja.nome ?? loja.codigo ?? '').trim() || 'Sem loja'
+                    }));
+
+            const valorAtual = select.value;
+            select.innerHTML = '<option value="">Todas as Lojas</option>' +
+                lista.map(loja =>
+                    '<option value="' + escapeHtml(String(loja.id ?? loja.label)) + '">' +
+                    escapeHtml(loja.label) +
+                    '</option>'
+                ).join('');
+
+            if (valorAtual && lista.some(loja => String(loja.id ?? loja.label) === valorAtual)) {
+                select.value = valorAtual;
+            }
+        }
+
+        function aplicarFiltrosConciliacaoFiscal() {
+            const lojaSelecionada = String(document.getElementById('fiscal-filtro-loja')?.value || '').trim();
+            const contaFiltro = String(document.getElementById('fiscal-filtro-conta')?.value || '').trim().toLowerCase();
+            const descricaoFiltro = String(document.getElementById('fiscal-filtro-descricao')?.value || '').trim().toLowerCase();
+
+            const dadosBase = Array.isArray(dadosConciliacaoFiscal) ? dadosConciliacaoFiscal : [];
+            const dadosFiltrados = dadosBase.filter(item => {
+                const lojaId = String(item.lojaId ?? '').trim();
+                const lojaNome = String(item.loja ?? item.nomeLoja ?? item.nome_loja ?? item.loja_nome ?? '').trim();
+                const conta = String(item.conta ?? '').trim().toLowerCase();
+                const descricao = String(item.descricao ?? '').trim().toLowerCase();
+
+                const lojaOk = !lojaSelecionada ||
+                    lojaId === lojaSelecionada ||
+                    lojaNome === lojaSelecionada;
+
+                const contaOk = !contaFiltro || conta.includes(contaFiltro);
+                const descricaoOk = !descricaoFiltro || descricao.includes(descricaoFiltro);
+
+                return lojaOk && contaOk && descricaoOk;
+            });
+
+            renderizarConciliacaoFiscal(dadosFiltrados);
+        }
+
+        function limparFiltrosConciliacaoFiscal() {
+            const loja = document.getElementById('fiscal-filtro-loja');
+            const conta = document.getElementById('fiscal-filtro-conta');
+            const descricao = document.getElementById('fiscal-filtro-descricao');
+
+            if (loja) loja.value = '';
+            if (conta) conta.value = '';
+            if (descricao) descricao.value = '';
+
+            aplicarFiltrosConciliacaoFiscal();
+        }
+
         function renderizarConciliacaoFiscal(dados = dadosConciliacaoFiscal.length ? dadosConciliacaoFiscal : estruturaConciliacaoFiscal) {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
@@ -3107,13 +3200,8 @@
                         ? resultado.resultados
                         : [];
 
-                if (!linhas.length) {
-                    dadosConciliacaoFiscal = [];
-                    tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500">Nenhum lançamento fiscal encontrado para a competência selecionada.</td></tr>';
-                    return;
-                }
-
                 // A coluna Loja usa o cadastro oficial e sempre mostra todas as lojas,
+                // inclusive quando a competência não possui nenhum movimento fiscal.
                 // inclusive as que não possuem movimento fiscal na competência consultada.
                 const lojasCadastro = ordenarCadastroNatural(lerListaCadastro('lojas'))
                     .filter(loja => loja && (loja.nome || loja.codigo))
@@ -3195,7 +3283,8 @@
                 });
 
                 dadosConciliacaoFiscal = gruposPorLoja;
-                renderizarConciliacaoFiscal(dadosConciliacaoFiscal);
+                atualizarFiltroLojasConciliacaoFiscal(lojasCadastro);
+                aplicarFiltrosConciliacaoFiscal();
 
             } catch (erro) {
                 console.error('Erro ao consultar conciliação fiscal:', erro);
