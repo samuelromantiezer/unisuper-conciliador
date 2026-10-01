@@ -376,6 +376,8 @@
         .fiscal-descricao-item { justify-content:flex-start !important; text-align:left !important; }
         .fiscal-descricao-linhas { display:flex; flex-direction:column; }
         .fiscal-descricao-item { min-height:27px; display:flex; align-items:center; justify-content:center; padding:0 8px; font-size:12px; white-space:nowrap; }
+        .fiscal-quadro-titulo td { padding:0 !important; border-top:2px solid #111827; border-bottom:1px solid #111827; background:#f1f5f9; }
+        .fiscal-quadro-titulo-texto { min-height:36px; display:flex; align-items:center; justify-content:flex-start; padding:0 10px; font-size:12px; font-weight:900; letter-spacing:.03em; color:#0f172a; text-transform:uppercase; }
         .fiscal-quadro-grupo td { vertical-align:top; }
         .fiscal-quadro-linha { min-height:27px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
         .fiscal-quadro-sublinha { min-height:27px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
@@ -2906,6 +2908,13 @@
             }
 
             const grupos = [];
+            let quadroAtualRenderizado = null;
+
+            function renderCabecalhoQuadro(titulo) {
+                return '<tr class="fiscal-quadro-titulo"><td colspan="7">' +
+                    '<div class="fiscal-quadro-titulo-texto">' + escapeHtml(titulo || 'CONCILIAÇÃO FISCAL') + '</div>' +
+                    '</td></tr>';
+            }
 
             function renderTotaisAnalitico(conta, totalFiscal, possuiValorTotalFiscal) {
                 return (
@@ -2979,17 +2988,12 @@
                 const itens = Array.isArray(item.itens) && item.itens.length
                     ? item.itens
                     : [{cfop:'-',valor:'-'}];
+                const quadro = String(item.quadro || 'sem_quadro');
+                const tituloQuadro = item.quadroTitulo || item.descricao || 'CONCILIAÇÃO FISCAL';
 
-                if (item.quadro) {
-                    const bloco = [];
-                    let j = indice;
-                    while (j < dados.length && dados[j].quadro === item.quadro) {
-                        bloco.push(dados[j]);
-                        j++;
-                    }
-                    bloco.forEach(conta => renderAnalitico(conta, conta.itens));
-                    indice = j - 1;
-                    continue;
+                if (quadro !== quadroAtualRenderizado) {
+                    grupos.push(renderCabecalhoQuadro(tituloQuadro));
+                    quadroAtualRenderizado = quadro;
                 }
 
                 renderAnalitico(item, itens);
@@ -3455,6 +3459,7 @@
                     destaque: 'credito',
                     azulEscuro: false,
                     itens: [
+                        { cfop: '5.101', valor: null, comparativo: null },
                         { cfop: '5.102', valor: null, comparativo: null },
                         { cfop: '5.405', valor: null, comparativo: null },
                         { cfop: '6.102', valor: null, comparativo: null },
@@ -3464,6 +3469,8 @@
 
                 const gruposPorLoja = lojasCadastro.map(loja => ({
                     ...baseRevenda,
+                    quadro: 'revenda_mercadorias',
+                    quadroTitulo: 'REVENDA DE MERCADORIAS',
                     itens: (baseRevenda.itens || [])
                         .filter(item => normalizarCfop(item.cfop) !== 'TOTAL')
                         .map(item => ({ ...item, valor: null, comparativo: null })),
