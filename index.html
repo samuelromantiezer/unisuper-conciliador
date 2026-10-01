@@ -735,17 +735,13 @@
                                         <p class="fiscal-status-consulta mt-0.5">Conferência das contas contábeis com os valores fiscais por CFOP.</p>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <div class="fiscal-competencia-wrap">
-                                            <button type="button" onclick="alternarCompetenciaFiscal()" class="fiscal-competencia-btn" title="Selecionar competência">
-                                                <i class="fa-solid fa-calendar-days"></i>
-                                                <span id="fiscal-competencia-label">09/2026</span>
-                                                <i class="fa-solid fa-chevron-down text-[9px]"></i>
-                                            </button>
-                                            <div id="fiscal-competencia-popover" class="fiscal-competencia-popover hidden">
-                                                <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Competência</div>
-                                                <div class="fiscal-competencia-lista" id="fiscal-competencia-lista"></div>
-                                                <p class="text-[10px] text-slate-400 mt-2">A alteração só será aplicada ao clicar em Consultar ou Executar.</p>
-                                            </div>
+                                        <div class="fiscal-data-wrap">
+                                            <label for="fiscal-data-inicial" class="text-[10px] font-bold text-slate-500">Data inicial</label>
+                                            <input id="fiscal-data-inicial" type="date" class="fiscal-data-input">
+                                        </div>
+                                        <div class="fiscal-data-wrap">
+                                            <label for="fiscal-data-final" class="text-[10px] font-bold text-slate-500">Data final</label>
+                                            <input id="fiscal-data-final" type="date" class="fiscal-data-input">
                                         </div>
                                         <button type="button" onclick="consultarConciliacaoFiscal()" class="bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold hover:bg-slate-900 transition shadow flex items-center gap-2">
                                             <i class="fa-solid fa-magnifying-glass"></i><span>Consultar</span>
@@ -2740,7 +2736,7 @@
 
         let dadosConciliacaoFiscal = [];
         let conciliacaoFiscalAtualId = null;
-        let competenciaFiscalSelecionada = new Date().toISOString().slice(0,7);
+        let dataInicialFiscalSelecionada = '';\n        let dataFinalFiscalSelecionada = '';
 
         function fiscalNumero(valor) {
             if (valor === null || valor === undefined || valor === '' || valor === '-') return null;
@@ -2880,11 +2876,13 @@
                     ? itensVisiveis
                     : [{cfop:'-',valor:'-'}];
 
-                const totalFiscal = itensVisiveis.reduce((soma, x) => {
+                const totalItensFiscal = itensVisiveis.reduce((soma, x) => {
                     const numero = fiscalNumero(x.valor);
                     return soma + (Number.isFinite(numero) ? numero : 0);
                 }, 0);
-                const possuiValorTotalFiscal = itensVisiveis.some(x => Number.isFinite(fiscalNumero(x.valor)));
+                const mapaResumo = fiscalNumero(conta.mapaResumo) || 0;
+                const totalFiscal = totalItensFiscal + mapaResumo;
+                const possuiValorTotalFiscal = itensVisiveis.some(x => Number.isFinite(fiscalNumero(x.valor))) || Number.isFinite(fiscalNumero(conta.mapaResumo));
 
                 grupos.push(
                     '<tr class="fiscal-quadro-grupo">' +
@@ -2903,9 +2901,11 @@
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(conta.debito,conta.destaque === 'debito',conta.azulEscuro) + '</td>' +
                         '<td class="fiscal-valores-cell">' + fiscalLinhaValor(conta.credito,conta.destaque === 'credito',conta.azulEscuro) + '</td>' +
                         '<td class="fiscal-cfop-cell">' +
+                            (Number.isFinite(fiscalNumero(conta.mapaResumo)) ? '<div class="fiscal-cfop-item">MAPA RESUMO</div>' : '') +
                             itensRender.map(x => '<div class="fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('') +
                         '</td>' +
                         '<td class="fiscal-valor-cell">' +
+                            (Number.isFinite(fiscalNumero(conta.mapaResumo)) ? '<div class="fiscal-valor-item">' + escapeHtml(formatarMoedaFiscal(conta.mapaResumo)) + '</div>' : '') +
                             itensRender.map(x => '<div class="fiscal-valor-item">' + escapeHtml(x.valor || '-') + '</div>').join('') +
                         '</td>' +
                     '</tr>' +
@@ -3178,53 +3178,56 @@
         }
 
         function inicializarCompetenciaFiscal() {
-            atualizarLabelCompetenciaFiscal();
+            const hoje = new Date();
+            const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+            const formatarDataInput = data => {
+                const ano = data.getFullYear();
+                const mes = String(data.getMonth() + 1).padStart(2, '0');
+                const dia = String(data.getDate()).padStart(2, '0');
+                return ano + '-' + mes + '-' + dia;
+            };
+            const inicio = document.getElementById('fiscal-data-inicial');
+            const fim = document.getElementById('fiscal-data-final');
+            if (inicio && !inicio.value) inicio.value = formatarDataInput(primeiroDia);
+            if (fim && !fim.value) fim.value = formatarDataInput(ultimoDia);
         }
 
         async function consultarConciliacaoFiscal() {
-            const competencia = atualizarCompetenciaFiscalSelecionada();
-            document.getElementById('fiscal-competencia-popover')?.classList.add('hidden');
-
+            const dataInicial = String(document.getElementById('fiscal-data-inicial')?.value || '').trim();
+            const dataFinal = String(document.getElementById('fiscal-data-final')?.value || '').trim();
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
 
-            if (!/^\\d{4}-\\d{2}$/.test(competencia)) {
-                alert('Selecione uma competência fiscal válida.');
+            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dataInicial) ||
+                !/^\\d{4}-\\d{2}-\\d{2}$/.test(dataFinal) ||
+                dataInicial > dataFinal) {
+                alert('Informe uma data inicial e uma data final válidas.');
                 return;
             }
 
-            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Consultando dados fiscais...</td></tr>';
+            dataInicialFiscalSelecionada = dataInicial;
+            dataFinalFiscalSelecionada = dataFinal;
+            tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-blue-600 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Consultando Revenda de Mercadorias...</td></tr>';
 
             try {
                 const resposta = await fetch(`${URL_SERVIDOR_LOCAL}/executar-conciliacao-fiscal`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ competencia })
+                    body: JSON.stringify({ dataInicial, dataFinal })
                 });
-
                 const textoResposta = await resposta.text();
-                console.log('Resposta recebida do servidor Fiscal:', textoResposta);
-
                 let resultado;
                 try {
                     resultado = JSON.parse(textoResposta);
                 } catch (erroJSON) {
                     throw new Error('O servidor fiscal não retornou JSON. Resposta: ' + textoResposta.substring(0, 300));
                 }
-
                 if (!resposta.ok || resultado.sucesso === false) {
                     throw new Error(resultado.erro || resultado.message || `Erro HTTP ${resposta.status} ao consultar o fiscal.`);
                 }
 
-                const linhas = Array.isArray(resultado.dados)
-                    ? resultado.dados
-                    : Array.isArray(resultado.resultados)
-                        ? resultado.resultados
-                        : [];
-
-                // A coluna Loja usa o cadastro oficial e sempre mostra todas as lojas,
-                // inclusive quando a competência não possui nenhum movimento fiscal.
-                // inclusive as que não possuem movimento fiscal na competência consultada.
+                const linhas = Array.isArray(resultado.dados) ? resultado.dados : [];
                 const lojasCadastro = ordenarCadastroNatural(lerListaCadastro('lojas'))
                     .filter(loja => loja && (loja.nome || loja.codigo))
                     .map(loja => ({
@@ -3233,90 +3236,82 @@
                         nome: String(loja.nome ?? '').trim(),
                         label: [String(loja.codigo ?? '').trim(), String(loja.nome ?? '').trim()].filter(Boolean).join(' - ') || 'Sem loja'
                     }));
+                if (!lojasCadastro.length) throw new Error('Nenhuma loja encontrada no cadastro de lojas.');
 
-                if (!lojasCadastro.length) {
-                    throw new Error('Nenhuma loja encontrada no cadastro de lojas.');
-                }
+                const normalizar = valor => String(valor ?? '').trim().toLowerCase().replace(/\\s+/g, ' ');
+                const normalizarCfop = valor => String(valor ?? '').trim().replace(/\\./g, '');
+                const baseRevenda = estruturaConciliacaoFiscal.find(item =>
+                    String(item.conta || '') === '252' ||
+                    String(item.descricao || '').toUpperCase() === 'REVENDA DE MERCADORIAS'
+                ) || {
+                    conta: '252',
+                    contaAnalitica: '',
+                    grupo: '',
+                    descricao: 'REVENDA DE MERCADORIAS',
+                    debito: null,
+                    credito: null,
+                    destaque: 'credito',
+                    azulEscuro: false,
+                    itens: [
+                        { cfop: '5.102', valor: null, comparativo: null },
+                        { cfop: '5.405', valor: null, comparativo: null },
+                        { cfop: '6.102', valor: null, comparativo: null },
+                        { cfop: '6.403', valor: null, comparativo: null }
+                    ]
+                };
 
-                const normalizarTextoLoja = valor => String(valor ?? '')
-                    .trim()
-                    .toLowerCase()
-                    .replace(/\s+/g, ' ');
-
-                const normalizarCfop = valor => String(valor ?? '').trim().replace(/\./g, '');
-                const gruposPorLoja = [];
-
-                lojasCadastro.forEach(lojaCadastro => {
-                    estruturaConciliacaoFiscal.forEach(estrutura => {
-                        gruposPorLoja.push({
-                            ...estrutura,
-                            loja: lojaCadastro.label,
-                            lojaId: lojaCadastro.id,
-                            itens: (estrutura.itens || []).map(item => ({
-                                ...item,
-                                valor: null,
-                                comparativo: null
-                            }))
-                        });
-                    });
-                });
+                const gruposPorLoja = lojasCadastro.map(loja => ({
+                    ...baseRevenda,
+                    itens: (baseRevenda.itens || [])
+                        .filter(item => normalizarCfop(item.cfop) !== 'TOTAL')
+                        .map(item => ({ ...item, valor: null, comparativo: null })),
+                    loja: loja.label,
+                    lojaId: loja.id,
+                    mapaResumo: null,
+                    totalCreditoContabil: null,
+                    totalDebitoContabil: null
+                }));
 
                 linhas.forEach(linha => {
-                    const lojaInformada = String(
-                        linha.loja ??
-                        linha.nome_loja ??
-                        linha.nomeLoja ??
-                        linha.loja_nome ??
-                        ''
-                    ).trim();
-
-                    const cadastroLoja = lojasCadastro.find(lojaCadastro =>
-                        normalizarTextoLoja(lojaCadastro.nome) === normalizarTextoLoja(lojaInformada) ||
-                        normalizarTextoLoja(lojaCadastro.codigo) === normalizarTextoLoja(lojaInformada) ||
-                        normalizarTextoLoja(lojaCadastro.label) === normalizarTextoLoja(lojaInformada)
+                    const lojaInformada = String(linha.nome_loja ?? '').trim();
+                    const cadastro = lojasCadastro.find(loja =>
+                        normalizar(loja.nome) === normalizar(lojaInformada) ||
+                        normalizar(loja.codigo) === normalizar(lojaInformada) ||
+                        normalizar(loja.label) === normalizar(lojaInformada)
                     );
+                    if (!cadastro) return;
+                    const grupo = gruposPorLoja.find(item => String(item.lojaId) === String(cadastro.id));
+                    if (!grupo) return;
 
-                    if (!cadastroLoja) return;
+                    const tipo = String(linha.tipo_resumo || '').trim();
+                    const valorFiscal = linha.valor_total_fiscal == null ? null : Number(linha.valor_total_fiscal);
 
-                    const loja = cadastroLoja.label;
-
-                    const cfopNumerico = normalizarCfop(linha.cfop);
-                    const valorBruto = linha.total_fiscal ?? linha.valor ?? linha.total;
-                    const valor = valorBruto === null || valorBruto === undefined || valorBruto === '' ? null : Number(valorBruto);
-
-                    if (!cfopNumerico || !Number.isFinite(valor)) return;
-
-                    gruposPorLoja
-                        .filter(grupo => grupo.loja === loja)
-                        .forEach(grupo => {
-                            const item = (grupo.itens || []).find(x => normalizarCfop(x.cfop) === cfopNumerico);
-                            if (item) item.valor = valor;
-                        });
+                    if (tipo === 'FISCAL_CFOP_DETALHE' && Number.isFinite(valorFiscal)) {
+                        const item = grupo.itens.find(x => normalizarCfop(x.cfop) === normalizarCfop(linha.codigo_referencia));
+                        if (item) item.valor = valorFiscal;
+                    } else if (tipo === 'FISCAL_MAPA_RESUMO' && Number.isFinite(valorFiscal)) {
+                        grupo.mapaResumo = valorFiscal;
+                    } else if (tipo === 'CONTABIL') {
+                        grupo.totalDebitoContabil = linha.total_debito_contabil == null ? null : Number(linha.total_debito_contabil);
+                        grupo.totalCreditoContabil = linha.total_credito_contabil == null ? null : Number(linha.total_credito_contabil);
+                    }
                 });
 
                 gruposPorLoja.forEach(grupo => {
-                    const totalItem = grupo.itens?.find(x => normalizarCfop(x.cfop) === 'TOTAL');
-                    if (totalItem) {
-                        const valores = grupo.itens
-                            .filter(x => normalizarCfop(x.cfop) !== 'TOTAL')
-                            .map(x => Number(x.valor) || 0);
-                        totalItem.valor = valores.some(v => v !== 0) ? valores.reduce((total, v) => total + v, 0) : null;
-                    }
+                    grupo.debito = grupo.totalDebitoContabil;
+                    grupo.credito = grupo.totalCreditoContabil;
                 });
 
                 dadosConciliacaoFiscal = gruposPorLoja;
                 atualizarFiltroLojasConciliacaoFiscal(lojasCadastro);
                 aplicarFiltrosConciliacaoFiscal();
-
             } catch (erro) {
-                console.error('Erro ao consultar conciliação fiscal:', erro);
-                dadosConciliacaoFiscal = [];
-                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-red-500 font-semibold">' +
-                    escapeHtml(erro.message || 'Erro desconhecido ao consultar o fiscal.') +
-                    '</td></tr>';
-                alert('Erro ao consultar o Fiscal: ' + (erro.message || 'Erro desconhecido.'));
+                console.error('Erro na consulta fiscal:', erro);
+                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-600 font-semibold">' +
+                    escapeHtml(erro.message || 'Erro desconhecido na consulta fiscal.') + '</td></tr>';
             }
         }
+
         async function executarConciliacaoFiscalSalvando() {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
