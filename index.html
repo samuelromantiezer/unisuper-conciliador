@@ -2777,15 +2777,13 @@
                             '<td class="fiscal-comparativo-cell">' + linhas.map(l => l.itens.map(x => '<div class="fiscal-quadro-sublinha fiscal-comparativo-item ' + (fiscalNumero(x.comparativo) === 0 ? 'ok' : 'pendente') + '">' + escapeHtml(x.comparativo || '-') + '</div>').join('')).join('') + '</td>' +
                         '</tr>' +
                         '<tr class="fiscal-quadro-total">' +
-                            '<td colspan="5"></td>' +
-                            '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-cfop-item fiscal-total-label">TOTAL</div></td>' +
+                            '<td class="fiscal-conta-cell"></td>' +
+                            '<td class="fiscal-descricao-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">TOTAL CONTABILIDADE</div></td>' +
+                            '<td class="fiscal-loja-cell"></td>' +
+                            '<td class="fiscal-valores-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">-</div></td>' +
+                            '<td class="fiscal-valores-cell"></td>' +
+                            '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">TOTAL FISCAL</div></td>' +
                             '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-valor-item fiscal-total-valor">' + (possuiValorTotalQuadro ? escapeHtml(formatarMoedaFiscal(totalQuadro)) : '-') + '</div></td>' +
-                            '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
-                        '</tr>' +
-                        '<tr class="fiscal-quadro-contabilidade">' +
-                            '<td colspan="5"></td>' +
-                            '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">CONTABILIDADE</div></td>' +
-                            '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">-</div></td>' +
                             '<td class="fiscal-comparativo-cell"><div class="fiscal-quadro-sublinha fiscal-comparativo-item pendente">-</div></td>' +
                         '</tr>' +
                         '<tr class="fiscal-quadro-diferenca">' +
