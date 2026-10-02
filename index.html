@@ -3538,7 +3538,7 @@
                     body: JSON.stringify({
                         dataInicial,
                         dataFinal,
-                        idLoja: document.getElementById('fiscal-filtro-loja')?.value || null
+                        idLoja: null // Busca todas as lojas; o filtro seleciona a loja na tela
                     })
                 });
                 const textoResposta = await resposta.text();
