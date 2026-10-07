@@ -3039,113 +3039,146 @@
             aplicarFiltrosConciliacaoFiscal();
         }
 
+        function alternarRevendaFiscal(id) {
+            const bloco = document.getElementById(id);
+            const botao = document.querySelector('[data-revenda-toggle="' + id + '"]');
+            if (!bloco) return;
+            const fechado = bloco.classList.contains('hidden');
+            bloco.classList.toggle('hidden', !fechado);
+            if (botao) {
+                botao.innerHTML = fechado
+                    ? '<i class="fa-solid fa-chevron-up"></i> Recolher'
+                    : '<i class="fa-solid fa-chevron-down"></i> Expandir';
+            }
+        }
+
         function renderizarConciliacaoFiscal(dados = dadosConciliacaoFiscal.length ? dadosConciliacaoFiscal : estruturaConciliacaoFiscal) {
             const tbody = document.getElementById('tabela-fiscal-icms');
             if (!tbody) return;
+
             if (!Array.isArray(dados) || !dados.length) {
                 tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
                 return;
             }
 
-            const grupos = [];
-            let quadroAtualRenderizado = null;
+            const numero = valor => {
+                const n = fiscalNumero(valor);
+                return Number.isFinite(n) ? n : 0;
+            };
 
-            function renderCabecalhoQuadro(titulo) {
-                return '<tr class="fiscal-quadro-titulo"><td colspan="7">' +
-                    '<div class="fiscal-quadro-titulo-texto">' + escapeHtml(titulo || 'CONCILIAÇÃO FISCAL') + '</div>' +
-                    '</td></tr>';
-            }
+            const textoLoja = item =>
+                String(item?.loja || item?.nomeLoja || item?.nome_loja || item?.loja_nome || 'Sem loja').trim() || 'Sem loja';
 
-            function renderTotaisAnalitico(conta, totalFiscal, possuiValorTotalFiscal) {
-                return (
-                    '<tr class="fiscal-quadro-total">' +
-                        '<td class="fiscal-conta-cell"></td>' +
-                        '<td class="fiscal-descricao-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">TOTAL CONTABILIDADE</div></td>' +
-                        '<td class="fiscal-loja-cell"></td>' +
-                        '<td class="fiscal-valores-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">' + escapeHtml(formatarMoedaFiscal(conta.debito)) + '</div></td>' +
-                        '<td class="fiscal-valores-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-contabilidade-valor">' + escapeHtml(formatarMoedaFiscal(conta.credito)) + '</div></td>' +
-                        '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">TOTAL FISCAL</div></td>' +
-                        '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-valor-item fiscal-total-valor">' +
-                            (possuiValorTotalFiscal ? escapeHtml(formatarMoedaFiscal(totalFiscal)) : '-') +
-                        '</div></td>' +
-                    '</tr>' +
-                    '<tr class="fiscal-quadro-diferenca">' +
-                        '<td colspan="5"></td>' +
-                        '<td class="fiscal-cfop-cell"><div class="fiscal-quadro-sublinha fiscal-total-label">DIFERENÇAS</div></td>' +
-                        '<td class="fiscal-valor-cell"><div class="fiscal-quadro-sublinha fiscal-total-valor fiscal-diferenca-valor">-</div></td>' +
-                    '</tr>'
-                );
-            }
+            const totalFiscal = item => {
+                const itens = Array.isArray(item?.itens) ? item.itens : [];
+                return itens.reduce((s, x) => s + numero(x?.valor), 0) + numero(item?.mapaResumo);
+            };
 
-            function renderAnalitico(conta, itens) {
-                const itensVisiveis = (Array.isArray(itens) ? itens : []).filter(
-                    x => String(x.cfop || '').toUpperCase() !== 'TOTAL'
-                );
-                const itensRender = itensVisiveis.length
-                    ? itensVisiveis
-                    : [{cfop:'-',valor:'-'}];
+            const gruposPorLoja = new Map();
 
-                const totalItensFiscal = itensVisiveis.reduce((soma, x) => {
-                    const numero = fiscalNumero(x.valor);
-                    return soma + (Number.isFinite(numero) ? numero : 0);
-                }, 0);
-                const mapaResumo = fiscalNumero(conta.mapaResumo) || 0;
-                const totalFiscal = totalItensFiscal + mapaResumo;
-                const possuiValorTotalFiscal = itensVisiveis.some(x => Number.isFinite(fiscalNumero(x.valor))) || Number.isFinite(fiscalNumero(conta.mapaResumo));
+            dados.forEach((item, indice) => {
+                const quadro = String(item?.quadro || 'sem_quadro');
+                const loja = textoLoja(item);
+                const chave = quadro + '|' + loja;
 
-                grupos.push(
-                    '<tr class="fiscal-quadro-grupo">' +
-                        '<td class="fiscal-conta-cell"><div class="fiscal-conta-codigo">' + escapeHtml(conta.conta || '') + '</div><div class="fiscal-conta-analitica">' + escapeHtml(conta.contaAnalitica || '') + '</div></td>' +
-                        '<td class="fiscal-descricao-cell">' +
-                            (conta.grupo ? '<span class="fiscal-grupo-titulo">' + escapeHtml(conta.grupo) + '</span>' : '') +
-                            '<div class="fiscal-descricao-linhas">' +
-                                itensRender.map((x, indiceItem) =>
-                                    '<div class="fiscal-descricao-item">' +
-                                        escapeHtml(x.descricao || (indiceItem === 0 ? (conta.descricao || '') : '')) +
-                                    '</div>'
-                                ).join('') +
-                            '</div>' +
-                        '</td>' +
-                        '<td class="fiscal-loja-cell"><span class="fiscal-loja-nome">' + escapeHtml(conta.loja || conta.nomeLoja || conta.nome_loja || conta.loja_nome || '-') + '</span></td>' +
-                        '<td class="fiscal-valores-cell">' + fiscalLinhaValor(conta.debito,conta.destaque === 'debito',conta.azulEscuro) + '</td>' +
-                        '<td class="fiscal-valores-cell">' + fiscalLinhaValor(conta.credito,conta.destaque === 'credito',conta.azulEscuro) + '</td>' +
-                        '<td class="fiscal-cfop-cell">' +
-                            (Number.isFinite(fiscalNumero(conta.mapaResumo)) ? '<div class="fiscal-cfop-item">MAPA RESUMO</div>' : '') +
-                            itensRender.map(x => '<div class="fiscal-cfop-item">' + escapeHtml(x.cfop || '-') + '</div>').join('') +
-                        '</td>' +
-                        '<td class="fiscal-valor-cell">' +
-                            (Number.isFinite(fiscalNumero(conta.mapaResumo)) ? '<div class="fiscal-valor-item">' + escapeHtml(formatarMoedaFiscal(conta.mapaResumo)) + '</div>' : '') +
-                            itensRender.map(x => {
-                                const numero = fiscalNumero(x.valor);
-                                return '<div class="fiscal-valor-item">' +
-                                    escapeHtml(Number.isFinite(numero) ? formatarMoedaFiscal(numero) : '-') +
-                                '</div>';
-                            }).join('') +
-                        '</td>' +
-                    '</tr>' +
-                    renderTotaisAnalitico(conta, totalFiscal, possuiValorTotalFiscal) +
-                    '<tr class="fiscal-separador-grupo"><td colspan="7"></td></tr>'
-                );
-            }
-
-            for (let indice = 0; indice < dados.length; indice++) {
-                const item = dados[indice];
-                const itens = Array.isArray(item.itens) && item.itens.length
-                    ? item.itens
-                    : [{cfop:'-',valor:'-'}];
-                const quadro = String(item.quadro || 'sem_quadro');
-                const tituloQuadro = item.quadroTitulo || item.descricao || 'CONCILIAÇÃO FISCAL';
-
-                if (quadro !== quadroAtualRenderizado) {
-                    grupos.push(renderCabecalhoQuadro(tituloQuadro));
-                    quadroAtualRenderizado = quadro;
+                if (!gruposPorLoja.has(chave)) {
+                    gruposPorLoja.set(chave, {
+                        quadro,
+                        quadroTitulo: item?.quadroTitulo || item?.descricao || 'CONCILIAÇÃO FISCAL',
+                        loja,
+                        itens: [],
+                        debito: numero(item?.debito),
+                        credito: numero(item?.credito),
+                        mapaResumo: numero(item?.mapaResumo),
+                        conta: item?.conta || '252',
+                        contaAnalitica: item?.contaAnalitica || '',
+                        descricao: item?.descricao || 'REVENDA DE MERCADORIAS',
+                        indice
+                    });
                 }
 
-                renderAnalitico(item, itens);
-            }
+                const grupo = gruposPorLoja.get(chave);
+                grupo.debito += numero(item?.debito);
+                grupo.credito += numero(item?.credito);
+                grupo.mapaResumo += numero(item?.mapaResumo);
 
-            if (grupos.length) grupos.pop();
-            tbody.innerHTML = grupos.join('');
+                (Array.isArray(item?.itens) ? item.itens : []).forEach(sub => {
+                    const cfop = String(sub?.cfop || '').trim();
+                    if (!cfop || cfop.toUpperCase() === 'TOTAL') return;
+                    const existente = grupo.itens.find(x => String(x.cfop) === cfop);
+                    if (existente) {
+                        existente.valor += numero(sub?.valor);
+                    } else {
+                        grupo.itens.push({
+                            cfop,
+                            valor: numero(sub?.valor),
+                            comparativo: numero(sub?.comparativo)
+                        });
+                    }
+                });
+            });
+
+            const grupos = Array.from(gruposPorLoja.values());
+            const totalGeral = grupos.reduce((s, grupo) => s + grupo.itens.reduce((a, x) => a + numero(x.valor), 0) + numero(grupo.mapaResumo), 0);
+            const debitoGeral = grupos.reduce((s, grupo) => s + numero(grupo.debito), 0);
+            const creditoGeral = grupos.reduce((s, grupo) => s + numero(grupo.credito), 0);
+
+            const identificador = 'revenda-fiscal-' + Date.now();
+
+            let html = '';
+            html += '<tr class="fiscal-quadro-titulo">';
+            html += '<td colspan="7"><div class="fiscal-quadro-titulo-texto">REVENDA DE MERCADORIAS</div></td>';
+            html += '</tr>';
+
+            html += '<tr class="bg-slate-50 border-b-2 border-slate-400">';
+            html += '<td class="p-3 font-bold text-blue-700">252</td>';
+            html += '<td class="p-3 font-bold text-slate-800">REVENDA DE MERCADORIAS</td>';
+            html += '<td class="p-3 text-slate-500">TODAS AS LOJAS</td>';
+            html += '<td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(debitoGeral)) + '</td>';
+            html += '<td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(creditoGeral)) + '</td>';
+            html += '<td class="p-3 text-center font-bold">TOTAL</td>';
+            html += '<td class="p-3 text-right font-bold text-slate-800">';
+            html += '<div class="flex items-center justify-end gap-3">';
+            html += '<span>' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</span>';
+            html += '<button type="button" data-revenda-toggle="' + identificador + '" onclick="alternarRevendaFiscal(\'' + identificador + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 text-white text-[11px] font-bold hover:bg-slate-900"><i class="fa-solid fa-chevron-down"></i> Expandir</button>';
+            html += '</div></td></tr>';
+
+            html += '<tr><td colspan="7" class="p-0 border-0">';
+            html += '<div id="' + identificador + '" class="hidden bg-slate-50 p-3 space-y-2">';
+
+            grupos.forEach((grupo, i) => {
+                const lojaId = identificador + '-loja-' + i;
+                const totalLoja = grupo.itens.reduce((s, x) => s + numero(x.valor), 0) + numero(grupo.mapaResumo);
+
+                html += '<div class="border border-slate-300 rounded-lg overflow-hidden bg-white">';
+                html += '<div class="grid grid-cols-1 md:grid-cols-7 items-center gap-2 p-3">';
+                html += '<div class="md:col-span-2"><div class="text-[10px] uppercase font-bold text-slate-400">Loja</div><div class="font-bold text-slate-800">' + escapeHtml(grupo.loja) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Débito</div><div class="font-semibold">' + escapeHtml(formatarMoedaFiscal(grupo.debito)) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Crédito</div><div class="font-semibold">' + escapeHtml(formatarMoedaFiscal(grupo.credito)) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Revenda</div><div class="font-bold text-slate-800">' + escapeHtml(formatarMoedaFiscal(totalLoja)) + '</div></div>';
+                html += '<div class="md:col-span-2 flex justify-end"><button type="button" data-revenda-toggle="' + lojaId + '" onclick="alternarRevendaFiscal(\'' + lojaId + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 text-[11px] font-bold hover:bg-slate-50"><i class="fa-solid fa-chevron-down"></i> Expandir loja</button></div>';
+                html += '</div>';
+
+                html += '<div id="' + lojaId + '" class="hidden border-t border-slate-200">';
+                html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50">';
+                grupo.itens.forEach(sub => {
+                    html += '<div class="rounded-md border border-slate-200 bg-white px-3 py-2">';
+                    html += '<div class="text-[10px] font-bold text-slate-400 uppercase">CFOP</div>';
+                    html += '<div class="font-bold text-slate-700">' + escapeHtml(sub.cfop) + '</div>';
+                    html += '<div class="text-sm font-semibold mt-1">' + escapeHtml(formatarMoedaFiscal(sub.valor)) + '</div>';
+                    html += '</div>';
+                });
+                if (Number.isFinite(grupo.mapaResumo) && grupo.mapaResumo !== 0) {
+                    html += '<div class="rounded-md border border-slate-200 bg-white px-3 py-2"><div class="text-[10px] font-bold text-slate-400 uppercase">Mapa Resumo</div><div class="font-bold text-slate-700">MAPA RESUMO</div><div class="text-sm font-semibold mt-1">' + escapeHtml(formatarMoedaFiscal(grupo.mapaResumo)) + '</div></div>';
+                }
+                html += '</div></div>';
+                html += '</div>';
+            });
+
+            html += '</div></td></tr>';
+            html += '<tr class="fiscal-quadro-total"><td colspan="5"></td><td class="p-3 font-bold">TOTAL REVENDA</td><td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</td></tr>';
+
+            tbody.innerHTML = html;
         }
         async function salvarConciliacaoFiscal(dados, status = 'Consultada') {
             if (!supabaseClient) throw new Error('Supabase ainda não está conectado.');
@@ -7074,31 +7107,3 @@ async function importarDeParaFolhaTXT(input){
             </div>
         </div>
     </div>
-
-<div id="popup-consulta-cadastros" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo">
-        <div class="popup-card">
-            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3">
-                <div>
-                    <h3 id="popup-consulta-titulo" class="text-base font-bold text-slate-800">Consultar</h3>
-                    <p id="popup-consulta-subtitulo" class="text-xs text-slate-500 mt-1">Pesquise e selecione um cadastro.</p>
-                </div>
-                <button type="button" onclick="fecharPopupConsultaCadastro()" class="w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Fechar" aria-label="Fechar">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <div class="p-4 border-b border-slate-200 bg-slate-50">
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
-                    <input id="popup-consulta-busca" type="search" autocomplete="off" class="w-full text-sm border border-slate-300 rounded-lg p-3 pl-9 bg-white focus:ring-2 focus:ring-unisuperBlue focus:outline-none" placeholder="Pesquisar por código ou descrição">
-                </div>
-            </div>
-            <div id="popup-consulta-contador" class="px-4 py-2 text-xs font-semibold text-slate-500 border-b border-slate-100">0 registros</div>
-            <div id="popup-consulta-lista" class="popup-lista divide-y divide-slate-100"></div>
-            <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-                <button type="button" onclick="fecharPopupConsultaCadastro()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-700 text-white hover:bg-slate-800">Fechar</button>
-            </div>
-        </div>
-    </div>
-
-</body>
-</html>
