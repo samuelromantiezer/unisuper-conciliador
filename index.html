@@ -3122,6 +3122,7 @@
             const totalGeral = grupos.reduce((s, grupo) => s + grupo.itens.reduce((a, x) => a + numero(x.valor), 0) + numero(grupo.mapaResumo), 0);
             const debitoGeral = grupos.reduce((s, grupo) => s + numero(grupo.debito), 0);
             const creditoGeral = grupos.reduce((s, grupo) => s + numero(grupo.credito), 0);
+            const diferencaGeral = debitoGeral - creditoGeral;
 
             const identificador = 'revenda-fiscal-' + Date.now();
 
@@ -3133,15 +3134,19 @@
             html += '<tr class="bg-slate-50 border-b-2 border-slate-400">';
             html += '<td class="p-3 font-bold text-blue-700">252</td>';
             html += '<td class="p-3 font-bold text-slate-800">REVENDA DE MERCADORIAS</td>';
-            html += '<td class="p-3 text-slate-500">TODAS AS LOJAS</td>';
+            html += '<td colspan="3"></td>';
             html += '<td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(debitoGeral)) + '</td>';
             html += '<td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(creditoGeral)) + '</td>';
-            html += '<td class="p-3 text-center font-bold">TOTAL</td>';
             html += '<td class="p-3 text-right font-bold text-slate-800">';
             html += '<div class="flex items-center justify-end gap-3">';
             html += '<span>' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</span>';
             html += '<button type="button" data-revenda-toggle="' + identificador + '" onclick="alternarRevendaFiscal(\'' + identificador + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 text-white text-[11px] font-bold hover:bg-slate-900"><i class="fa-solid fa-chevron-down"></i> Expandir</button>';
             html += '</div></td></tr>';
+
+            html += '<tr class="fiscal-quadro-diferenca">';
+            html += '<td colspan="4" class="p-3 text-right font-bold text-slate-700">DIFERENÇA (DÉBITO - CRÉDITO)</td>';
+            html += '<td colspan="3" class="p-3 text-right font-extrabold"><span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 ' + (Math.abs(diferencaGeral) < 0.005 ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-800') + '"><i class="fa-solid ' + (Math.abs(diferencaGeral) < 0.005 ? 'fa-circle-check' : 'fa-triangle-exclamation') + '"></i>' + escapeHtml(formatarMoedaFiscal(diferencaGeral)) + '</span></td>';
+            html += '</tr>';
 
             html += '<tr><td colspan="7" class="p-0 border-0">';
             html += '<div id="' + identificador + '" class="hidden bg-slate-50 p-3 space-y-2">';
@@ -3151,11 +3156,13 @@
                 const totalLoja = grupo.itens.reduce((s, x) => s + numero(x.valor), 0) + numero(grupo.mapaResumo);
 
                 html += '<div class="border border-slate-300 rounded-lg overflow-hidden bg-white">';
+                const diferencaLoja = grupo.debito - grupo.credito;
                 html += '<div class="grid grid-cols-1 md:grid-cols-7 items-center gap-2 p-3">';
                 html += '<div class="md:col-span-2"><div class="text-[10px] uppercase font-bold text-slate-400">Loja</div><div class="font-bold text-slate-800">' + escapeHtml(grupo.loja) + '</div></div>';
                 html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Débito</div><div class="font-semibold">' + escapeHtml(formatarMoedaFiscal(grupo.debito)) + '</div></div>';
                 html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Crédito</div><div class="font-semibold">' + escapeHtml(formatarMoedaFiscal(grupo.credito)) + '</div></div>';
                 html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Revenda</div><div class="font-bold text-slate-800">' + escapeHtml(formatarMoedaFiscal(totalLoja)) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Diferença</div><div class="inline-flex items-center gap-1 px-2 py-1 rounded-md border ' + (Math.abs(diferencaLoja) < 0.005 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-800') + ' font-bold">' + escapeHtml(formatarMoedaFiscal(diferencaLoja)) + '</div></div>';
                 html += '<div class="md:col-span-2 flex justify-end"><button type="button" data-revenda-toggle="' + lojaId + '" onclick="alternarRevendaFiscal(\'' + lojaId + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 text-[11px] font-bold hover:bg-slate-50"><i class="fa-solid fa-chevron-down"></i> Expandir loja</button></div>';
                 html += '</div>';
 
@@ -7074,36 +7081,3 @@ async function importarDeParaFolhaTXT(input){
                     <div id="popup-conferencia-folha-resumo" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
                 </div>
                 <div id="popup-conferencia-folha-filtros" class="hidden px-5 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center gap-2">
-                    <span class="text-xs font-bold text-slate-500 mr-1">Filtrar:</span>
-                    <button type="button" id="filtro-pendencias-todas" onclick="filtrarPendenciasFolha('todas')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border bg-slate-800 text-white border-slate-800">Todas</button>
-                    <button type="button" id="filtro-pendencias-nao-cadastradas" onclick="filtrarPendenciasFolha('nao-cadastradas')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100">Não cadastrada</button>
-                    <button type="button" id="filtro-pendencias-sem-depara" onclick="filtrarPendenciasFolha('sem-depara')" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">Sem DePara</button>
-                </div>
-                <div id="popup-conferencia-folha-lista" class="popup-lista p-5 space-y-2"></div>
-                <div id="popup-conferencia-folha-extra" class="hidden px-5 py-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-600"></div>
-                <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-200 bg-white">
-                    <button type="button" onclick="fecharPopupConferenciaFolha()" class="bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-900">
-                        Fechar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-<div id="popup-detalhes-rubrica-folha" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-detalhes-rubrica-folha-titulo">
-        <div class="popup-card max-w-2xl">
-            <div class="p-5 border-b border-slate-200 flex items-center justify-between gap-3 bg-white">
-                <div>
-                    <h3 id="popup-detalhes-rubrica-folha-titulo" class="text-base font-bold text-slate-800">Rubrica</h3>
-                    <p class="text-xs text-slate-500 mt-1">Detalhes encontrados na planilha e no cadastro.</p>
-                </div>
-                <button type="button" onclick="fecharDetalhesRubricaFolha()" class="w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-100" title="Fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="popup-detalhes-rubrica-folha-conteudo" class="p-5 bg-slate-50 overflow-auto"></div>
-            <div class="p-4 border-t border-slate-200 bg-white flex flex-wrap justify-end gap-2">
-                <button type="button" onclick="fecharDetalhesRubricaFolha()" class="bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-300">Fechar</button>
-                <button type="button" id="btn-salvar-rubrica-popup" onclick="salvarRubricaPeloPopup()" class="bg-unisuperBlue text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-900">
-                    <i class="fa-solid fa-floppy-disk mr-2"></i>Cadastrar Rubrica
-                </button>
-            </div>
-        </div>
-    </div>
