@@ -2972,23 +2972,51 @@
             const descricaoFiltro = String(document.getElementById('fiscal-filtro-descricao')?.value || '').trim().toLowerCase();
 
             const dadosBase = Array.isArray(dadosConciliacaoFiscal) ? dadosConciliacaoFiscal : [];
+            const lojasCadastro = lerListaCadastro('lojas');
+            const lojaSelecionadaNormalizada = normalizarLojaFiscal(lojaSelecionada);
+
+            // Aceita ID, código, nome e De/Para da loja. Assim o resultado
+            // não desaparece quando o servidor e o cadastro usam identificadores diferentes.
             const dadosFiltrados = dadosBase.filter(item => {
-                const lojaId = String(item.lojaId ?? '').trim();
-                const lojaNome = String(item.loja ?? item.nomeLoja ?? item.nome_loja ?? item.loja_nome ?? '').trim();
-                const lojaCadastro = lerListaCadastro('lojas').find(loja =>
+                const lojaId = String(
+                    item.lojaId ?? item.loja_id ?? item.id_loja ?? item.idLoja ?? ''
+                ).trim();
+
+                const lojaNome = String(
+                    item.loja ??
+                    item.nomeLoja ??
+                    item.nome_loja ??
+                    item.loja_nome ??
+                    ''
+                ).trim();
+
+                const lojaCadastro = lojasCadastro.find(loja =>
                     String(loja.id ?? '').trim() === lojaId ||
-                    String(loja.codigo ?? '').trim() === lojaNome ||
-                    String(loja.descricao ?? '').trim() === lojaNome ||
-                    String(loja.nome ?? '').trim() === lojaNome ||
-                    String(loja.label ?? '').trim() === lojaNome
+                    String(loja.codigo ?? '').trim() === lojaId ||
+                    normalizarLojaFiscal(loja.nome) === normalizarLojaFiscal(lojaNome) ||
+                    normalizarLojaFiscal(loja.descricao) === normalizarLojaFiscal(lojaNome)
                 );
-                const conta = String(item.conta ?? '').trim().toLowerCase();
-                const descricao = String(item.descricao ?? '').trim().toLowerCase();
+
+                const aliasesLoja = [
+                    lojaId,
+                    lojaNome,
+                    lojaCadastro?.id,
+                    lojaCadastro?.codigo,
+                    lojaCadastro?.nome,
+                    lojaCadastro?.descricao,
+                    nomeLojaFiscalPorId(lojaId, '')
+                ]
+                    .filter(valor => valor !== null && valor !== undefined && String(valor).trim() !== '')
+                    .map(valor => String(valor).trim());
 
                 const lojaOk = !lojaSelecionada ||
-                    lojaId === lojaSelecionada ||
-                    lojaNome === lojaSelecionada ||
-                    (lojaCadastro && String(lojaCadastro.id) === lojaSelecionada);
+                    aliasesLoja.some(valor =>
+                        valor === lojaSelecionada ||
+                        normalizarLojaFiscal(valor) === lojaSelecionadaNormalizada
+                    );
+
+                const conta = String(item.conta ?? '').trim().toLowerCase();
+                const descricao = String(item.descricao ?? '').trim().toLowerCase();
 
                 const contaOk = !contaFiltro || conta.includes(contaFiltro);
                 const descricaoOk = !descricaoFiltro || descricao.includes(descricaoFiltro);
