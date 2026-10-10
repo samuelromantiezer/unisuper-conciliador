@@ -3087,9 +3087,9 @@
                         quadroTitulo: item?.quadroTitulo || item?.descricao || 'CONCILIAÇÃO FISCAL',
                         loja,
                         itens: [],
-                        debito: numero(item?.debito),
-                        credito: numero(item?.credito),
-                        mapaResumo: numero(item?.mapaResumo),
+                        debito: 0,
+                        credito: 0,
+                        mapaResumo: 0,
                         conta: item?.conta || '252',
                         contaAnalitica: item?.contaAnalitica || '',
                         descricao: item?.descricao || 'REVENDA DE MERCADORIAS',
@@ -3119,7 +3119,7 @@
             });
 
             const grupos = Array.from(gruposPorLoja.values());
-            const totalGeral = grupos.reduce((s, grupo) => s + grupo.itens.reduce((a, x) => a + numero(x.valor), 0) + numero(grupo.mapaResumo), 0);
+            const totalGeral = grupos.reduce((s, grupo) => s + grupo.itens.reduce((a, x) => a + numero(x.valor), 0), 0);
             const debitoGeral = grupos.reduce((s, grupo) => s + numero(grupo.debito), 0);
             const creditoGeral = grupos.reduce((s, grupo) => s + numero(grupo.credito), 0);
             const diferencaGeral = debitoGeral - creditoGeral;
@@ -3153,7 +3153,7 @@
 
             grupos.forEach((grupo, i) => {
                 const lojaId = identificador + '-loja-' + i;
-                const totalLoja = grupo.itens.reduce((s, x) => s + numero(x.valor), 0) + numero(grupo.mapaResumo);
+                const totalLoja = grupo.itens.reduce((s, x) => s + numero(x.valor), 0);
 
                 html += '<div class="border border-slate-300 rounded-lg overflow-hidden bg-white">';
                 const diferencaLoja = grupo.debito - grupo.credito;
@@ -3698,7 +3698,7 @@
 
                 linhas.forEach(linha => {
                     // A loja 999 não participa da conciliação fiscal porque não possui movimento.
-                    const lojaRespostaBruta = linha.loja_id ?? linha.lojaId ?? linha.id_loja ?? linha.idLoja ?? '';
+                    const lojaRespostaBruta = linha.loja_id ?? linha.lojaId ?? linha.id_loja ?? linha.idLoja ?? linha.id_unidade ?? '';
                     if (String(lojaRespostaBruta).trim() === '999') return;
 
                     // O servidor deve retornar o ID real da loja. Priorizamos o ID
@@ -3706,6 +3706,7 @@
                     const idLojaResposta = String(
                         linha.loja_id ??
                         linha.id_loja ??
+                        linha.id_unidade ??
                         linha.codigo_loja ??
                         linha.lojaId ??
                         ''
