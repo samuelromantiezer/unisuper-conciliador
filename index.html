@@ -3057,7 +3057,7 @@
             if (!tbody) return;
 
             if (!Array.isArray(dados) || !dados.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-400">Nenhum lançamento fiscal encontrado.</td></tr>';
                 return;
             }
 
@@ -3065,33 +3065,24 @@
                 const n = fiscalNumero(valor);
                 return Number.isFinite(n) ? n : 0;
             };
-
             const textoLoja = item =>
                 String(item?.loja || item?.nomeLoja || item?.nome_loja || item?.loja_nome || 'Sem loja').trim() || 'Sem loja';
 
-            const totalFiscal = item => {
-                const itens = Array.isArray(item?.itens) ? item.itens : [];
-                return itens.reduce((s, x) => s + numero(x?.valor), 0) + numero(item?.mapaResumo);
-            };
-
             const gruposPorLoja = new Map();
-
             dados.forEach((item, indice) => {
-                const quadro = String(item?.quadro || 'sem_quadro');
+                const quadro = String(item?.quadro || 'revenda_mercadorias');
                 const loja = textoLoja(item);
                 const chave = quadro + '|' + loja;
 
                 if (!gruposPorLoja.has(chave)) {
                     gruposPorLoja.set(chave, {
                         quadro,
-                        quadroTitulo: item?.quadroTitulo || item?.descricao || 'CONCILIAÇÃO FISCAL',
                         loja,
                         itens: [],
                         debito: 0,
                         credito: 0,
                         mapaResumo: 0,
                         conta: item?.conta || '252',
-                        contaAnalitica: item?.contaAnalitica || '',
                         descricao: item?.descricao || 'REVENDA DE MERCADORIAS',
                         indice
                     });
@@ -3109,81 +3100,66 @@
                     if (existente) {
                         existente.valor += numero(sub?.valor);
                     } else {
-                        grupo.itens.push({
-                            cfop,
-                            valor: numero(sub?.valor),
-                            comparativo: numero(sub?.comparativo)
-                        });
+                        grupo.itens.push({ cfop, valor: numero(sub?.valor) });
                     }
                 });
             });
 
             const grupos = Array.from(gruposPorLoja.values());
-            const totalGeral = grupos.reduce((s, grupo) => s + grupo.itens.reduce((a, x) => a + numero(x.valor), 0), 0);
+            const totalGeral = grupos.reduce((s, grupo) =>
+                s + grupo.itens.reduce((a, item) => a + numero(item.valor), 0), 0);
             const debitoGeral = grupos.reduce((s, grupo) => s + numero(grupo.debito), 0);
             const creditoGeral = grupos.reduce((s, grupo) => s + numero(grupo.credito), 0);
             const diferencaGeral = debitoGeral - creditoGeral;
-
             const identificador = 'revenda-fiscal-' + Date.now();
 
             let html = '';
-            html += '<tr class="fiscal-quadro-titulo">';
-            html += '<td colspan="7"><div class="fiscal-quadro-titulo-texto">REVENDA DE MERCADORIAS</div></td>';
+            html += '<tr class="fiscal-quadro-titulo"><td colspan="7"><div class="fiscal-quadro-titulo-texto">REVENDA DE MERCADORIAS</div></td></tr>';
+
+            // Exatamente sete células para coincidir com o cabeçalho da tabela.
+            html += '<tr class="bg-white border-b border-slate-200 hover:bg-slate-50">';
+            html += '<td class="px-2 py-2 font-bold text-blue-700 whitespace-nowrap">252</td>';
+            html += '<td class="px-2 py-2 font-semibold text-slate-800">REVENDA DE MERCADORIAS</td>';
+            html += '<td class="px-2 py-2 text-slate-500">Todas as lojas</td>';
+            html += '<td class="px-2 py-2 text-right font-semibold tabular-nums whitespace-nowrap">' + escapeHtml(formatarMoedaFiscal(debitoGeral)) + '</td>';
+            html += '<td class="px-2 py-2 text-right font-semibold tabular-nums whitespace-nowrap">' + escapeHtml(formatarMoedaFiscal(creditoGeral)) + '</td>';
+            html += '<td class="px-2 py-2 text-center text-slate-500">—</td>';
+            html += '<td class="px-2 py-2 text-right font-bold tabular-nums whitespace-nowrap"><div class="flex items-center justify-end gap-2"><span>' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</span><button type="button" data-revenda-toggle="' + identificador + '" onclick="alternarRevendaFiscal(\'' + identificador + '\')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700"><i class="fa-solid fa-chevron-down"></i> Expandir</button></div></td>';
             html += '</tr>';
 
-            html += '<tr class="bg-slate-50 border-b-2 border-slate-400">';
-            html += '<td class="p-3 font-bold text-blue-700">252</td>';
-            html += '<td class="p-3 font-bold text-slate-800">REVENDA DE MERCADORIAS</td>';
-            html += '<td colspan="3"></td>';
-            html += '<td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(debitoGeral)) + '</td>';
-            html += '<td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(creditoGeral)) + '</td>';
-            html += '<td class="p-3 text-right font-bold text-slate-800">';
-            html += '<div class="flex items-center justify-end gap-3">';
-            html += '<span>' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</span>';
-            html += '<button type="button" data-revenda-toggle="' + identificador + '" onclick="alternarRevendaFiscal(\'' + identificador + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 text-white text-[11px] font-bold hover:bg-slate-900"><i class="fa-solid fa-chevron-down"></i> Expandir</button>';
-            html += '</div></td></tr>';
+            html += '<tr class="bg-slate-50 border-b border-slate-200">';
+            html += '<td colspan="3" class="px-3 py-2 text-right text-xs font-semibold text-slate-600">Diferença (débito − crédito)</td>';
+            html += '<td colspan="2" class="px-2 py-2 text-right"><span class="inline-flex items-center gap-2 px-3 py-1 rounded-md ' + (Math.abs(diferencaGeral) < 0.005 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800') + ' text-sm font-bold tabular-nums">' + escapeHtml(formatarMoedaFiscal(diferencaGeral)) + '</span></td>';
+            html += '<td colspan="2"></td></tr>';
 
-            html += '<tr class="fiscal-quadro-diferenca">';
-            html += '<td colspan="4" class="p-3 text-right font-bold text-slate-700">DIFERENÇA (DÉBITO - CRÉDITO)</td>';
-            html += '<td colspan="3" class="p-3 text-right font-extrabold"><span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 ' + (Math.abs(diferencaGeral) < 0.005 ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-800') + '"><i class="fa-solid ' + (Math.abs(diferencaGeral) < 0.005 ? 'fa-circle-check' : 'fa-triangle-exclamation') + '"></i>' + escapeHtml(formatarMoedaFiscal(diferencaGeral)) + '</span></td>';
-            html += '</tr>';
-
-            html += '<tr><td colspan="7" class="p-0 border-0">';
-            html += '<div id="' + identificador + '" class="hidden bg-slate-50 p-3 space-y-2">';
+            html += '<tr><td colspan="7" class="p-0 border-0"><div id="' + identificador + '" class="hidden bg-slate-50 p-2 space-y-2">';
 
             grupos.forEach((grupo, i) => {
                 const lojaId = identificador + '-loja-' + i;
-                const totalLoja = grupo.itens.reduce((s, x) => s + numero(x.valor), 0);
-
-                html += '<div class="border border-slate-300 rounded-lg overflow-hidden bg-white">';
+                const totalLoja = grupo.itens.reduce((s, item) => s + numero(item.valor), 0);
                 const diferencaLoja = grupo.debito - grupo.credito;
-                html += '<div class="grid grid-cols-1 md:grid-cols-7 items-center gap-2 p-3">';
-                html += '<div class="md:col-span-2"><div class="text-[10px] uppercase font-bold text-slate-400">Loja</div><div class="font-bold text-slate-800">' + escapeHtml(grupo.loja) + '</div></div>';
-                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Débito</div><div class="font-semibold">' + escapeHtml(formatarMoedaFiscal(grupo.debito)) + '</div></div>';
-                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Crédito</div><div class="font-semibold">' + escapeHtml(formatarMoedaFiscal(grupo.credito)) + '</div></div>';
-                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Revenda</div><div class="font-bold text-slate-800">' + escapeHtml(formatarMoedaFiscal(totalLoja)) + '</div></div>';
-                html += '<div><div class="text-[10px] uppercase font-bold text-slate-400">Diferença</div><div class="inline-flex items-center gap-1 px-2 py-1 rounded-md border ' + (Math.abs(diferencaLoja) < 0.005 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-800') + ' font-bold">' + escapeHtml(formatarMoedaFiscal(diferencaLoja)) + '</div></div>';
-                html += '<div class="md:col-span-2 flex justify-end"><button type="button" data-revenda-toggle="' + lojaId + '" onclick="alternarRevendaFiscal(\'' + lojaId + '\')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 text-[11px] font-bold hover:bg-slate-50"><i class="fa-solid fa-chevron-down"></i> Expandir loja</button></div>';
+
+                html += '<div class="border border-slate-200 rounded-md bg-white overflow-hidden">';
+                html += '<div class="grid grid-cols-2 md:grid-cols-6 items-center gap-x-3 gap-y-2 px-3 py-2">';
+                html += '<div class="md:col-span-2"><div class="text-[10px] uppercase font-semibold text-slate-400">Loja</div><div class="text-sm font-semibold text-slate-800">' + escapeHtml(grupo.loja) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-semibold text-slate-400">Débito</div><div class="text-sm tabular-nums">' + escapeHtml(formatarMoedaFiscal(grupo.debito)) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-semibold text-slate-400">Crédito</div><div class="text-sm tabular-nums">' + escapeHtml(formatarMoedaFiscal(grupo.credito)) + '</div></div>';
+                html += '<div><div class="text-[10px] uppercase font-semibold text-slate-400">Total CFOP</div><div class="text-sm font-semibold tabular-nums">' + escapeHtml(formatarMoedaFiscal(totalLoja)) + '</div></div>';
+                html += '<div class="flex items-center justify-between gap-2"><div><div class="text-[10px] uppercase font-semibold text-slate-400">Diferença</div><div class="text-sm font-semibold tabular-nums ' + (Math.abs(diferencaLoja) < 0.005 ? 'text-emerald-700' : 'text-amber-700') + '">' + escapeHtml(formatarMoedaFiscal(diferencaLoja)) + '</div></div><button type="button" data-revenda-toggle="' + lojaId + '" onclick="alternarRevendaFiscal(\'' + lojaId + '\')" class="inline-flex items-center gap-1 px-2 py-1.5 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"><i class="fa-solid fa-chevron-down"></i> CFOPs</button></div>';
                 html += '</div>';
 
                 html += '<div id="' + lojaId + '" class="hidden border-t border-slate-200">';
-                html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50">';
-                grupo.itens.forEach(sub => {
-                    html += '<div class="rounded-md border border-slate-200 bg-white px-3 py-2">';
-                    html += '<div class="text-[10px] font-bold text-slate-400 uppercase">CFOP</div>';
-                    html += '<div class="font-bold text-slate-700">' + escapeHtml(sub.cfop) + '</div>';
-                    html += '<div class="text-sm font-semibold mt-1">' + escapeHtml(formatarMoedaFiscal(sub.valor)) + '</div>';
-                    html += '</div>';
+                html += '<div class="px-3 py-2">';
+                html += '<div class="grid grid-cols-[100px_minmax(0,1fr)] gap-x-4 border-b border-slate-200 pb-1 text-[10px] uppercase font-semibold text-slate-400"><span>CFOP</span><span class="text-right">Valor fiscal</span></div>';
+                const cfopsOrdenados = [...grupo.itens].sort((a, b) => String(a.cfop).localeCompare(String(b.cfop), 'pt-BR', { numeric: true }));
+                cfopsOrdenados.forEach(sub => {
+                    html += '<div class="grid grid-cols-[100px_minmax(0,1fr)] gap-x-4 py-2 border-b border-slate-100 last:border-0 text-sm"><span class="font-semibold text-slate-700">' + escapeHtml(sub.cfop) + '</span><span class="text-right font-medium tabular-nums">' + escapeHtml(formatarMoedaFiscal(sub.valor)) + '</span></div>';
                 });
-                if (Number.isFinite(grupo.mapaResumo) && grupo.mapaResumo !== 0) {
-                    html += '<div class="rounded-md border border-slate-200 bg-white px-3 py-2"><div class="text-[10px] font-bold text-slate-400 uppercase">Mapa Resumo</div><div class="font-bold text-slate-700">MAPA RESUMO</div><div class="text-sm font-semibold mt-1">' + escapeHtml(formatarMoedaFiscal(grupo.mapaResumo)) + '</div></div>';
-                }
-                html += '</div></div>';
-                html += '</div>';
+                html += '</div></div></div>';
             });
 
             html += '</div></td></tr>';
-            html += '<tr class="fiscal-quadro-total"><td colspan="5"></td><td class="p-3 font-bold">TOTAL REVENDA</td><td class="p-3 text-right font-bold">' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</td></tr>';
+            html += '<tr class="border-t-2 border-slate-300 bg-slate-50"><td colspan="5"></td><td class="px-2 py-2 text-right text-xs font-semibold text-slate-600">TOTAL REVENDA</td><td class="px-2 py-2 text-right font-bold tabular-nums whitespace-nowrap">' + escapeHtml(formatarMoedaFiscal(totalGeral)) + '</td></tr>';
 
             tbody.innerHTML = html;
         }
