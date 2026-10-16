@@ -3659,17 +3659,26 @@
                     ]
                 };
 
-                const gruposPorLoja = lojasCadastro.filter(loja => String(loja.id ?? '').trim() !== '999').map(loja => ({
+                // A tela deve trabalhar apenas com a loja selecionada no filtro.
+                // Não criar grupos vazios para todas as lojas do cadastro.
+                const lojaConsulta = lojasCadastro.find(loja =>
+                    String(loja.id ?? '').trim() === lojaSelecionada
+                );
+                if (!lojaConsulta || lojaSelecionada === '999') {
+                    throw new Error('Não foi possível identificar a loja selecionada para a consulta fiscal.');
+                }
+
+                const gruposPorLoja = [{
                     ...baseRevenda,
                     quadro: 'revenda_mercadorias',
                     quadroTitulo: 'REVENDA DE MERCADORIAS',
                     itens: baseRevenda.itens.map(item => ({ ...item, valor: null, comparativo: null })),
-                    loja: loja.label,
-                    lojaId: loja.id,
+                    loja: lojaConsulta.label,
+                    lojaId: lojaConsulta.id,
                     mapaResumo: null,
                     totalCreditoContabil: null,
                     totalDebitoContabil: null
-                }));
+                }];
 
                 const gruposPorChaveLoja = new Map();
                 gruposPorLoja.forEach(grupo => {
@@ -3683,6 +3692,10 @@
                     // A loja 999 não participa da conciliação fiscal porque não possui movimento.
                     const lojaRespostaBruta = linha.loja_id ?? linha.lojaId ?? linha.id_loja ?? linha.idLoja ?? linha.id_unidade ?? '';
                     if (String(lojaRespostaBruta).trim() === '999') return;
+
+                    // Proteção adicional no front-end: nunca misturar linhas de outras lojas,
+                    // mesmo se o servidor devolver registros indevidos.
+                    if (String(lojaRespostaBruta).trim() && String(lojaRespostaBruta).trim() !== lojaSelecionada) return;
 
                     // O servidor deve retornar o ID real da loja. Priorizamos o ID
                     // porque é ele que liga o resultado à loja correta no De/Para.
@@ -3705,6 +3718,11 @@
                     // Não descarta a linha só porque o servidor não mandou o nome.
                     // O ID é suficiente para localizar a loja no cadastro.
                     if (!idLojaResposta && !lojaInformada) return;
+                    if (!idLojaResposta && lojaInformada) {
+                        const nomeSelecionado = normalizar(lojaConsulta.label);
+                        const nomeResposta = normalizar(lojaInformada);
+                        if (nomeResposta !== nomeSelecionado) return;
+                    }
 
                     let grupo = null;
 
