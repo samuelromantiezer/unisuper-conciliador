@@ -252,16 +252,24 @@ contas_filtro AS (
 
 total_fiscal_mapa AS (
     SELECT
-        mr.id_loja,
+        p.id_loja,
         l.descricao AS nome_loja,
-        SUM(mr.gtfinal - mr.gtinicial - mr.cancelamento - mr.desconto) AS total_saida_mapa
-    FROM maparesumo mr
-    INNER JOIN loja l ON l.id = mr.id_loja
-    CROSS JOIN parametros p
-    WHERE mr.data >= p.data_inicio
-      AND mr.data < p.data_final + INTERVAL '1 day'
-      AND mr.id_loja = p.id_loja
-    GROUP BY mr.id_loja, l.descricao
+        COALESCE(
+            SUM(
+                COALESCE(mr.gtfinal, 0)
+                - COALESCE(mr.gtinicial, 0)
+                - COALESCE(mr.cancelamento, 0)
+                - COALESCE(mr.desconto, 0)
+            ),
+            0
+        ) AS total_saida_mapa
+    FROM parametros p
+    INNER JOIN loja l ON l.id = p.id_loja
+    LEFT JOIN maparesumo mr
+        ON mr.id_loja = p.id_loja
+       AND mr.data >= p.data_inicio
+       AND mr.data < p.data_final + INTERVAL '1 day'
+    GROUP BY p.id_loja, l.descricao
 ),
 
 total_fiscal_item AS (
