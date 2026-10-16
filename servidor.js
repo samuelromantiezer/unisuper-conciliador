@@ -233,123 +233,99 @@ app.post('/executar-conciliacao', async (req, res) => {
 // ============================================================
 const queryConciliacaoFiscalRevenda = `
 WITH parametros AS (
-    SELECT
-        CAST($1 AS DATE) AS data_inicio,
-        CAST($2 AS DATE) AS data_final,
-        CAST($3 AS INTEGER) AS id_loja
+    SELECT CAST($1 AS DATE) AS data_inicio, CAST($2 AS DATE) AS data_final, CAST($3 AS INTEGER) AS id_loja
 ),
-
 contas_filtro AS (
     SELECT id AS conta
     FROM contacontabilfiscal
-    WHERE conta1 = 3
-      AND conta2 = 1
-      AND conta3 = '1'
-      AND conta4 = '1'
-      AND nivel = 5
-      AND id_situacaocadastro = 1
+    WHERE conta1 = 3 AND conta2 = 1 AND conta3 = '1' AND conta4 = '1'
+      AND nivel = 5 AND id_situacaocadastro = 1
 ),
-
 total_fiscal_mapa AS (
-    SELECT
-        p.id_loja,
-        l.descricao AS nome_loja,
-        COALESCE(
-            SUM(
-                COALESCE(mr.gtfinal, 0)
-                - COALESCE(mr.gtinicial, 0)
-                - COALESCE(mr.cancelamento, 0)
-                - COALESCE(mr.desconto, 0)
-            ),
-            0
-        ) AS total_saida_mapa
-    FROM parametros p
-    INNER JOIN loja l ON l.id = p.id_loja
-    LEFT JOIN maparesumo mr
-        ON mr.id_loja = p.id_loja
-       AND mr.data >= p.data_inicio
-       AND mr.data < p.data_final + INTERVAL '1 day'
-    GROUP BY p.id_loja, l.descricao
+    SELECT mr.id_loja, l.descricao AS nome_loja,
+           SUM(COALESCE(mr.gtfinal, 0) - COALESCE(mr.gtinicial, 0)
+               - COALESCE(mr.cancelamento, 0) - COALESCE(mr.desconto, 0)) AS total_saida_mapa
+    FROM maparesumo mr
+    INNER JOIN loja l ON l.id = mr.id_loja
+    CROSS JOIN parametros p
+    WHERE mr.data >= p.data_inicio AND mr.data < p.data_final + INTERVAL '1 day'
+      AND mr.id_loja = p.id_loja
+    GROUP BY mr.id_loja, l.descricao
 ),
-
 total_fiscal_item AS (
-    SELECT
-        nf.id_loja,
-        l.descricao AS nome_loja,
-        nfi.cfop,
-        SUM(nfi.valortotal) AS total_saida_item
+    SELECT nf.id_loja, l.descricao AS nome_loja, SUM(nfi.valortotal) AS total_saida_item
     FROM notasaidaitem nfi
     INNER JOIN notasaida nf ON nf.id = nfi.id_notasaida
     INNER JOIN loja l ON l.id = nf.id_loja
     CROSS JOIN parametros p
-    WHERE nf.datasaida >= p.data_inicio
-      AND nf.datasaida < p.data_final + INTERVAL '1 day'
-      AND nf.id_loja = p.id_loja
-      AND nf.id_situacaonfe = 1
-    GROUP BY nf.id_loja, l.descricao, nfi.cfop
+    WHERE nf.datasaida >= p.data_inicio AND nf.datasaida < p.data_final + INTERVAL '1 day'
+      AND nf.id_loja = p.id_loja AND nf.id_situacaonfe = 1
+      AND nfi.cfop IN ('5.101', '5.102', '5.405', '6.101', '6.102', '6401', '6403')
+    GROUP BY nf.id_loja, l.descricao
 ),
-
-total_contabil AS (
-    SELECT
-        c.id_loja,
-        l.descricao AS nome_loja,
-        SUM(cl.valordebito) AS total_debito,
-        SUM(cl.valorcredito) AS total_credito
+total_contabil_geral AS (
+    SELECT c.id_loja, l.descricao AS nome_loja,
+           SUM(cl.valordebito) AS total_debito, SUM(cl.valorcredito) AS total_credito
     FROM contabilidadelancamento cl
     INNER JOIN contabilidade c ON c.id = cl.id_contabilidade
     INNER JOIN loja l ON l.id = c.id_loja
     CROSS JOIN parametros p
     WHERE cl.id_contacontabilfiscal IN (SELECT conta FROM contas_filtro)
-      AND c.data >= p.data_inicio
-      AND c.data < p.data_final + INTERVAL '1 day'
+      AND c.data >= p.data_inicio AND c.data < p.data_final + INTERVAL '1 day'
       AND c.id_loja = p.id_loja
     GROUP BY c.id_loja, l.descricao
+),
+total_fiscal_consolidado AS (
+    SELECT p.id_loja, l.descricao AS nome_loja,
+           COALESCE(tfm.total_saida_mapa, 0) + COALESCE(tfi.total_saida_item, 0) AS total_consolidado_fiscal
+    FROM parametros p
+    INNER JOIN loja l ON l.id = p.id_loja
+    LEFT JOIN total_fiscal_mapa tfm ON tfm.id_loja = p.id_loja
+    LEFT JOIN total_fiscal_item tfi ON tfi.id_loja = p.id_loja
 )
-
 SELECT * FROM (
-    SELECT
-        'FISCAL_MAPA_RESUMO'::TEXT AS tipo_resumo,
-        tfm.id_loja AS id_loja,
-        tfm.nome_loja,
-        'TOTAL_MAPA_RESUMO'::TEXT AS codigo_referencia,
-        tfm.total_saida_mapa AS valor_total_fiscal,
-        NULL::NUMERIC AS total_debito_contabil,
-        NULL::NUMERIC AS total_credito_contabil,
-        NULL::NUMERIC AS diferenca_fiscal_contabil,
-        NULL::TEXT AS situacao_nfe
+    SELECT 'FISCAL_MAPA_RESUMO'::TEXT AS tipo_resumo, tfm.id_loja, tfm.nome_loja,
+           'TOTAL_MAPA_RESUMO'::TEXT AS codigo_referencia, tfm.total_saida_mapa AS valor_total_fiscal,
+           NULL::NUMERIC AS total_debito_contabil, NULL::NUMERIC AS total_credito_contabil,
+           NULL::NUMERIC AS diferenca_fiscal_contabil, NULL::TEXT AS situacao_nfe
     FROM total_fiscal_mapa tfm
 
     UNION ALL
 
-    SELECT
-        'FISCAL_CFOP_DETALHE'::TEXT AS tipo_resumo,
-        tfi.id_loja AS id_loja,
-        tfi.nome_loja,
-        tfi.cfop::TEXT AS codigo_referencia,
-        tfi.total_saida_item AS valor_total_fiscal,
-        NULL::NUMERIC AS total_debito_contabil,
-        NULL::NUMERIC AS total_credito_contabil,
-        NULL::NUMERIC AS diferenca_fiscal_contabil,
-        '1'::TEXT AS situacao_nfe
-    FROM total_fiscal_item tfi
+    SELECT 'FISCAL_CFOP_DETALHE'::TEXT AS tipo_resumo, nf.id_loja, l.descricao AS nome_loja,
+           nfi.cfop::TEXT AS codigo_referencia, SUM(nfi.valortotal) AS valor_total_fiscal,
+           NULL::NUMERIC AS total_debito_contabil, NULL::NUMERIC AS total_credito_contabil,
+           NULL::NUMERIC AS diferenca_fiscal_contabil, '1'::TEXT AS situacao_nfe
+    FROM notasaidaitem nfi
+    INNER JOIN notasaida nf ON nf.id = nfi.id_notasaida
+    INNER JOIN loja l ON l.id = nf.id_loja
+    CROSS JOIN parametros p
+    WHERE nf.datasaida >= p.data_inicio AND nf.datasaida < p.data_final + INTERVAL '1 day'
+      AND nf.id_loja = p.id_loja AND nf.id_situacaonfe = 1
+      AND nfi.cfop IN ('5.101', '5.102', '5.405', '6.101', '6.102', '6401', '6403')
+    GROUP BY nf.id_loja, l.descricao, nfi.cfop
 
     UNION ALL
 
-    SELECT
-        'CONTABIL'::TEXT AS tipo_resumo,
-        tc.id_loja AS id_loja,
-        tc.nome_loja,
-        'GERAL'::TEXT AS codigo_referencia,
-        NULL::NUMERIC AS valor_total_fiscal,
-        tc.total_debito AS total_debito_contabil,
-        tc.total_credito AS total_credito_contabil,
-        NULL::NUMERIC AS diferenca_fiscal_contabil,
-        NULL::TEXT AS situacao_nfe
-    FROM total_contabil tc
+    SELECT 'CONTABIL'::TEXT AS tipo_resumo, tc.id_loja, tc.nome_loja, 'GERAL'::TEXT AS codigo_referencia,
+           NULL::NUMERIC AS valor_total_fiscal, tc.total_debito AS total_debito_contabil,
+           tc.total_credito AS total_credito_contabil, NULL::NUMERIC AS diferenca_fiscal_contabil,
+           NULL::TEXT AS situacao_nfe
+    FROM total_contabil_geral tc
+
+    UNION ALL
+
+    SELECT 'TOTAL_FISCAL_CONSOLIDADO'::TEXT AS tipo_resumo, tf.id_loja, tf.nome_loja,
+           'CONSOLIDADO'::TEXT AS codigo_referencia, tf.total_consolidado_fiscal AS valor_total_fiscal,
+           COALESCE(tc.total_debito, 0) AS total_debito_contabil,
+           COALESCE(tc.total_credito, 0) AS total_credito_contabil,
+           tf.total_consolidado_fiscal - COALESCE(tc.total_credito, 0) AS diferenca_fiscal_contabil,
+           NULL::TEXT AS situacao_nfe
+    FROM total_fiscal_consolidado tf
+    LEFT JOIN total_contabil_geral tc ON tc.id_loja = tf.id_loja
 ) AS resultados
 ORDER BY nome_loja, tipo_resumo DESC, codigo_referencia;
 `;
-
 async function executarConciliacaoFiscalRevenda(dataInicial, dataFinal, idLoja) {
     let client;
 
@@ -553,37 +529,36 @@ app.post('/executar-conciliacao-fiscal-contabil', async (req, res) => {
 // MÓDULO: MAPA RESUMO
 // ============================================================
 const queryMapaResumo = `
-WITH resumo_mapas AS (
-    SELECT 
-        id_loja,
-        data,
-        SUM((gtfinal - gtinicial) - cancelamento - desconto) AS valor_venda
-    FROM maparesumo
-    WHERE data BETWEEN $1 AND $2
-    GROUP BY id_loja, data
+WITH parametros AS (
+    SELECT CAST($1 AS DATE) AS data_inicio, CAST($2 AS DATE) AS data_final
+),
+resumo_mapas AS (
+    SELECT mr.id_loja, mr.data,
+           SUM(COALESCE(mr.gtfinal, 0) - COALESCE(mr.gtinicial, 0)
+               - COALESCE(mr.cancelamento, 0) - COALESCE(mr.desconto, 0)) AS valor_venda
+    FROM maparesumo mr
+    CROSS JOIN parametros p
+    WHERE mr.data >= p.data_inicio AND mr.data < p.data_final + INTERVAL '1 day'
+    GROUP BY mr.id_loja, mr.data
 ),
 resumo_caixa AS (
-    SELECT 
-        id_loja,
-        data,
-        SUM(vendabruta - cancelamento - desconto) AS venda_liquida
-    FROM caixa
-    WHERE data BETWEEN $1 AND $2
-    GROUP BY id_loja, data
+    SELECT cx.id_loja, cx.data,
+           SUM(COALESCE(cx.vendabruta, 0) - COALESCE(cx.cancelamento, 0)
+               - COALESCE(cx.desconto, 0)) AS venda_liquida
+    FROM caixa cx
+    CROSS JOIN parametros p
+    WHERE cx.data >= p.data_inicio AND cx.data < p.data_final + INTERVAL '1 day'
+    GROUP BY cx.id_loja, cx.data
 )
-SELECT 
-    m.id_loja,
-    m.data,
-    m.valor_venda,
-    c.venda_liquida,
-    (m.valor_venda - c.venda_liquida) AS diferenca
+SELECT COALESCE(m.id_loja, c.id_loja) AS id_loja,
+       COALESCE(m.data, c.data) AS data,
+       COALESCE(m.valor_venda, 0) AS valor_venda,
+       COALESCE(c.venda_liquida, 0) AS venda_liquida,
+       COALESCE(m.valor_venda, 0) - COALESCE(c.venda_liquida, 0) AS diferenca
 FROM resumo_mapas m
-INNER JOIN resumo_caixa c
-    ON m.id_loja = c.id_loja
-   AND m.data = c.data
-ORDER BY m.data, m.id_loja;
+FULL OUTER JOIN resumo_caixa c ON m.id_loja = c.id_loja AND m.data = c.data
+ORDER BY COALESCE(m.data, c.data), COALESCE(m.id_loja, c.id_loja);
 `;
-
 async function executarMapaResumo(dataInicial, dataFinal) {
     let client;
 
