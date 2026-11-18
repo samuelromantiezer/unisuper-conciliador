@@ -6553,6 +6553,8 @@ function converterValorLancamentoFolha(valor) {
                 if (item) {
                     item.descricaoCadastro = descricao;
                     item.descricao = descricao;
+                    const lojaAtual = pendenciasConferenciaFolha.loja || localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
+                    item.status = localizarContaDeParaFolha(lojaAtual, data) ? 'ok' : 'alerta';
                 }
                 salvarPendenciasConferenciaFolha();
                 alert(existente ? 'Rubrica alterada com sucesso no Supabase.' : 'Rubrica cadastrada com sucesso no Supabase.');
