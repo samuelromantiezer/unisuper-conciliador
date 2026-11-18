@@ -6501,6 +6501,22 @@ function converterValorLancamentoFolha(valor) {
             popup.classList.remove('hidden');
         }
 
+        async function atualizarFolhaImportadaPelasPendencias() {
+            const loja = pendenciasConferenciaFolha.loja || localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
+            const competenciaISO = obterCompetenciaFolhaISO();
+            if (!loja) return alert('Não foi possível identificar a loja desta conferência.');
+            if (!competenciaISO) return alert('Não foi possível identificar a competência desta conferência.');
+
+            const importada = folhasImportadas.find(item =>
+                Number(item.loja_id) === Number(loja.id) &&
+                String(item.competencia || '').slice(0, 10) === String(competenciaISO).slice(0, 10)
+            );
+            if (!importada) {
+                return alert('Não encontrei uma folha importada salva para esta loja e competência. Consulte Folhas Importadas e confirme se o log original foi gravado.');
+            }
+            await atualizarFolhaImportada(importada.id);
+        }
+
         function fecharPopupConferenciaFolha() {
             document.getElementById('popup-conferencia-folha')?.classList.add('hidden');
         }
@@ -7188,7 +7204,10 @@ async function importarDeParaFolhaTXT(input){
                 </div>
                 <div id="popup-conferencia-folha-extra" class="hidden px-5 py-3 text-xs text-amber-800 bg-amber-50 border-b border-amber-200"></div>
                 <div id="popup-conferencia-folha-lista" class="p-5 space-y-3 overflow-y-auto" style="max-height:55vh;"></div>
-                <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+                    <button type="button" id="btn-atualizar-pendencias-folha" onclick="atualizarFolhaImportadaPelasPendencias()" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+                        <i class="fa-solid fa-rotate"></i> Atualizar
+                    </button>
                     <button type="button" onclick="fecharPopupConferenciaFolha()" class="rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800">Fechar</button>
                 </div>
             </div>
