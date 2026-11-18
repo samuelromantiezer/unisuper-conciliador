@@ -6549,13 +6549,10 @@ function converterValorLancamentoFolha(valor) {
                 }
 
                 renderCadastros();
-                const item = (pendenciasConferenciaFolha.lista || []).find(x => String(x.codigo ?? '').trim() === codigo);
-                if (item) {
-                    item.descricaoCadastro = descricao;
-                    item.descricao = descricao;
-                    const lojaAtual = pendenciasConferenciaFolha.loja || localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
-                    item.status = localizarContaDeParaFolha(lojaAtual, data) ? 'ok' : 'alerta';
-                }
+                // Ao cadastrar, esta rubrica deixa imediatamente a lista de pendências.
+                // O De/Para continua sendo feito separadamente por loja, na aba própria.
+                pendenciasConferenciaFolha.lista = (pendenciasConferenciaFolha.lista || [])
+                    .filter(x => String(x.codigo ?? '').trim() !== codigo);
                 salvarPendenciasConferenciaFolha();
                 alert(existente ? 'Rubrica alterada com sucesso no Supabase.' : 'Rubrica cadastrada com sucesso no Supabase.');
                 fecharDetalhesRubricaFolha();
