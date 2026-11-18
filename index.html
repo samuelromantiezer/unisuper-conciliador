@@ -6532,19 +6532,64 @@ function converterValorLancamentoFolha(valor) {
         }
 
         async function atualizarFolhaImportadaPelasPendencias() {
-            const loja = pendenciasConferenciaFolha.loja || localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
-            const competenciaISO = obterCompetenciaFolhaISO();
-            if (!loja) return alert('Não foi possível identificar a loja desta conferência.');
+            if (!supabaseClient) return alert('Supabase não está conectado. Faça login novamente e tente atualizar.');
+
+            const codigoLoja = String(pendenciasConferenciaFolha.loja?.codigo || document.getElementById('folha-loja')?.value || '').trim();
+            const loja = pendenciasConferenciaFolha.loja || localizarLojaFolha(codigoLoja);
+            if (!loja?.id) return alert('Não foi possível identificar a loja desta conferência.');
+
+            // A competência do popup é exibida como MM/AAAA; converte para DATE YYYY-MM-01.
+            const competenciaTexto = String(pendenciasConferenciaFolha.competencia || obterCompetenciaFolha() || '').trim();
+            let competenciaISO = '';
+            if (/^\d{2}\/\d{4}$/.test(competenciaTexto)) {
+                const [mes, ano] = competenciaTexto.split('/');
+                competenciaISO = ano + '-' + mes + '-01';
+            } else if (/^\d{4}-\d{2}$/.test(competenciaTexto)) {
+                competenciaISO = competenciaTexto + '-01';
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(competenciaTexto)) {
+                competenciaISO = competenciaTexto;
+            } else {
+                competenciaISO = obterCompetenciaFolhaISO();
+            }
             if (!competenciaISO) return alert('Não foi possível identificar a competência desta conferência.');
 
-            const importada = folhasImportadas.find(item =>
-                Number(item.loja_id) === Number(loja.id) &&
-                String(item.competencia || '').slice(0, 10) === String(competenciaISO).slice(0, 10)
-            );
-            if (!importada) {
-                return alert('Não encontrei uma folha importada salva para esta loja e competência. Consulte Folhas Importadas e confirme se o log original foi gravado.');
+            const botao = document.getElementById('btn-atualizar-pendencias-folha');
+            if (botao) {
+                botao.disabled = true;
+                botao.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando log';
             }
-            await atualizarFolhaImportada(importada.id);
+            try {
+                // Busca diretamente no Supabase. Não depende da tela Folhas Importadas
+                // ter sido aberta/consultada nesta sessão.
+                const {data, error} = await supabaseClient
+                    .from('folhas_importadas')
+                    .select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo')
+                    .eq('loja_id', Number(loja.id))
+                    .eq('competencia', competenciaISO)
+                    .maybeSingle();
+                if (error) throw error;
+                if (!data) {
+                    alert('Não existe log salvo no Supabase para ' + (loja.codigo || loja.nome) + ' na competência ' + competenciaTexto + '. Importe a planilha novamente com Loja e Competência selecionadas.');
+                    return;
+                }
+                if (!Array.isArray(data.dados_planilha) || !data.dados_planilha.length) {
+                    alert('O registro existe, mas não contém os dados originais da planilha. Importe o arquivo novamente para gravar o log completo.');
+                    return;
+                }
+
+                const indice = folhasImportadas.findIndex(item => Number(item.id) === Number(data.id));
+                if (indice >= 0) folhasImportadas[indice] = data;
+                else folhasImportadas.push(data);
+                await atualizarFolhaImportada(data.id);
+            } catch (e) {
+                console.error('Erro ao localizar log para atualizar pendências:', e);
+                alert('Falha ao localizar/atualizar o log no Supabase: ' + (e.message || e));
+            } finally {
+                if (botao) {
+                    botao.disabled = false;
+                    botao.innerHTML = '<i class="fa-solid fa-rotate"></i> Atualizar';
+                }
+            }
         }
 
         function fecharPopupConferenciaFolha() {
