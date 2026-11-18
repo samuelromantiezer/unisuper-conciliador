@@ -6510,7 +6510,12 @@ function converterValorLancamentoFolha(valor) {
                 pendenciasConferenciaFolha.lista = (pendenciasConferenciaFolha.lista || []).map(x =>
                     String(x.codigo ?? '').trim() === String(codigo).trim() ? {...x,status:'ok'} : x
                 );
-                salvarPendenciasConferenciaFolha();
+                salvarPendenciasConferenciaFolha(
+                    pendenciasConferenciaFolha.lista,
+                    loja,
+                    pendenciasConferenciaFolha.competencia,
+                    pendenciasConferenciaFolha.inconsistencias
+                );
                 abrirPopupConferenciaFolha(pendenciasConferenciaFolha.lista, loja, pendenciasConferenciaFolha.competencia, pendenciasConferenciaFolha.inconsistencias);
                 alert('De/Para da rubrica ' + codigo + ' vinculado à conta ' + conta.codigo + ' para a loja ' + loja.codigo + '.');
             } catch (e) {
