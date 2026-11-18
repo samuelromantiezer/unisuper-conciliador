@@ -4990,13 +4990,20 @@
         }
 
         async function salvarFolhaImportadaAtual(arquivoNome) {
-            if (!supabaseClient || !dadosFolhaImportados?.length) return;
+            if (!supabaseClient) throw new Error('Supabase não está conectado. A planilha não foi salva.');
+            if (!Array.isArray(dadosFolhaImportados) || !dadosFolhaImportados.length) {
+                throw new Error('A planilha está vazia. Não há dados para salvar.');
+            }
+
             const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
             const competencia = obterCompetenciaFolhaISO();
             const loja = localizarLojaFolha(lojaCodigo);
-            if (!loja || !competencia) return;
+            if (!loja) throw new Error('Selecione uma Loja antes de importar a folha. A planilha foi lida, mas ainda não foi gravada.');
+            if (!competencia) throw new Error('Selecione a Competência antes de importar a folha. A planilha foi lida, mas ainda não foi gravada.');
+
             const totais = extrairTotaisFolhaPlanilha();
             const pendencias = (pendenciasConferenciaFolha.lista || []).filter(x => x.status !== 'ok').length;
+            const agora = new Date().toISOString();
             const payload = {
                 loja_id: loja.id,
                 competencia,
@@ -5008,28 +5015,48 @@
                 total_descontos: totais.totalDescontos,
                 pendencias,
                 status: pendencias ? 'Com pendências' : 'Importada',
-                resumo: {importada_em: new Date().toISOString(), atualizada_em: new Date().toISOString()}
+                resumo: {importada_em: agora, atualizada_em: agora}
             };
-            const {data: existente,error: erroBusca}=await supabaseClient.from('folhas_importadas').select('id,resumo').eq('loja_id',loja.id).eq('competencia',competencia).maybeSingle();
+
+            const {data: existente,error: erroBusca} = await supabaseClient
+                .from('folhas_importadas')
+                .select('id,resumo')
+                .eq('loja_id',loja.id)
+                .eq('competencia',competencia)
+                .maybeSingle();
+            if (erroBusca) throw new Error('Falha ao verificar importação anterior: ' + (erroBusca.message || erroBusca));
+
+            let registro;
             if (existente) {
                 payload.resumo = {
                     ...(existente.resumo || {}),
-                    importada_em: existente.resumo?.importada_em || new Date().toISOString(),
-                    atualizada_em: new Date().toISOString()
+                    importada_em: existente.resumo?.importada_em || agora,
+                    atualizada_em: agora
                 };
-            }
-            if (erroBusca) throw erroBusca;
-            if (existente) {
-                const {data,error}=await supabaseClient.from('folhas_importadas').update({...payload,updated_at:new Date().toISOString()}).eq('id',existente.id).select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo').single();
-                if (error) throw error;
-                folhasImportadas=folhasImportadas.map(x=>Number(x.id)===Number(data.id)?data:x);
+                const {data,error} = await supabaseClient
+                    .from('folhas_importadas')
+                    .update({...payload,updated_at:agora})
+                    .eq('id',existente.id)
+                    .select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo')
+                    .single();
+                if (error) throw new Error('Falha ao atualizar o log da folha: ' + (error.message || error));
+                registro = data;
             } else {
-                const {data,error}=await supabaseClient.from('folhas_importadas').insert([payload]).select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo').single();
-                if (error) throw error;
-                folhasImportadas.push(data);
+                const {data,error} = await supabaseClient
+                    .from('folhas_importadas')
+                    .insert([{...payload,created_at:agora,updated_at:agora}])
+                    .select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo')
+                    .single();
+                if (error) throw new Error('Falha ao gravar o log da folha: ' + (error.message || error));
+                registro = data;
             }
+            if (!registro?.id) throw new Error('O Supabase não confirmou a gravação do log da folha.');
+
+            folhasImportadas = folhasImportadas.filter(x => Number(x.id) !== Number(registro.id));
+            folhasImportadas.push(registro);
             atualizarFiltrosFolhasImportadas();
             renderFolhasImportadas();
+            return registro;
         }
 
         async function carregarFolhasGeradas(mostrarMensagem = false) {
@@ -5639,8 +5666,11 @@ function converterValorLancamentoFolha(valor) {
                     if (!dadosFolhaImportados.length) throw new Error('A planilha está vazia.');
                     document.getElementById('btn-validar-totais-folha')?.classList.remove('hidden');
                     nomeArquivoFolhaImportadaAtual = file.name || '';
-                    try { await salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual); } catch (erroSalvar) { console.error('Erro ao salvar folha importada:', erroSalvar); }
-                    conferirRubricasFolhaImportada();
+                    // A gravação do log é obrigatória e seu erro precisa ser mostrado ao usuário.
+                    const registroSalvo = await salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual);
+                    await conferirRubricasFolhaImportada();
+                    await carregarFolhasImportadas(false);
+                    alert('Folha importada e log gravado com sucesso para ' + registroSalvo.arquivo_nome + '.');
                 } catch (e) {
                     alert('Erro ao ler a planilha da folha de pagamento: ' + (e.message || e));
                 }
