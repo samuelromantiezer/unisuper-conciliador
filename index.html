@@ -4526,8 +4526,8 @@
             if (!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
             const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
             if (!loja) return alert('A loja vinculada a esta importação não foi encontrada no cadastro.');
-            const competencia = String(item.competencia || '');
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(competencia)) return alert('A competência salva nesta importação está inválida.');
+            const competencia = String(item.competencia || '').slice(0, 10);
+            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(competencia)) return alert('A competência salva nesta importação está inválida.');
 
             const botao = document.querySelector('button[onclick="atualizarFolhaImportada(' + Number(id) + ')"]');
             if (botao) {
@@ -4535,7 +4535,7 @@
                 botao.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando';
             }
             try {
-                // Recupera o log original salvo no banco, sem abrir seletor de arquivo.
+                // Recarrega o log original e os parâmetros da folha selecionada.
                 dadosFolhaImportados = item.dados_planilha;
                 nomeArquivoFolhaImportadaAtual = item.arquivo_nome || '';
                 const campoLoja = document.getElementById('folha-loja');
@@ -4545,15 +4545,38 @@
                 const labelCompetencia = document.getElementById('folha-competencia-label');
                 if (labelCompetencia) labelCompetencia.textContent = formatarCompetenciaFolhaISO(competencia);
 
-                pendenciasConferenciaFolha.lista = [];
-                pendenciasConferenciaFolha.loja = loja;
-                pendenciasConferenciaFolha.competencia = formatarCompetenciaFolhaISO(competencia);
-                pendenciasConferenciaFolha.inconsistencias = [];
+                // A conferência atualiza a lista local de pendências; a persistência no banco
+                // é feita uma única vez abaixo, diretamente pelo ID da importação.
+                const conferencia = await conferirRubricasFolhaImportada(false);
+                const listaConferencia = Array.isArray(conferencia) ? conferencia : (pendenciasConferenciaFolha.lista || []);
+                const pendencias = listaConferencia.filter(x => x.status !== 'ok').length;
+                const agora = new Date().toISOString();
+                const resumoAnterior = item.resumo && typeof item.resumo === 'object' ? item.resumo : {};
+                const payload = {
+                    pendencias,
+                    status: pendencias ? 'Com pendências' : 'Processada',
+                    updated_at: agora,
+                    resumo: {
+                        ...resumoAnterior,
+                        importada_em: resumoAnterior.importada_em || item.created_at || agora,
+                        atualizada_em: agora
+                    }
+                };
 
-                await conferirRubricasFolhaImportada();
-                await salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual);
-                await carregarFolhasImportadas(false);
-                alert('Atualização concluída. A folha foi reprocessada usando o log salvo, sem precisar importar o arquivo novamente.');
+                const { data, error } = await supabaseClient
+                    .from('folhas_importadas')
+                    .update(payload)
+                    .eq('id', Number(item.id))
+                    .select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo')
+                    .single();
+                if (error) throw error;
+                if (!data) throw new Error('O banco não retornou o registro atualizado.');
+
+                folhasImportadas = folhasImportadas.map(x => Number(x.id) === Number(data.id) ? data : x);
+                if (!folhasImportadas.some(x => Number(x.id) === Number(data.id))) folhasImportadas.push(data);
+                atualizarFiltrosFolhasImportadas();
+                renderFolhasImportadas();
+                alert('Atualização concluída. ' + pendencias + ' pendência(s) encontrada(s). O log original foi preservado.');
             } catch (e) {
                 console.error('Erro ao atualizar folha importada pelo log salvo:', e);
                 alert('Não foi possível atualizar a folha: ' + (e.message || e));
@@ -5360,7 +5383,7 @@ function converterValorLancamentoFolha(valor) {
             return valorColunaAM.includes('*');
         }
 
-        async function conferirRubricasFolhaImportada() {
+        async function conferirRubricasFolhaImportada(salvarNoBanco = true) {
             if (!dadosFolhaImportados.length) return;
 
             const lojaCodigo = document.getElementById('folha-loja')?.value.trim() || '';
@@ -5427,30 +5450,31 @@ function converterValorLancamentoFolha(valor) {
 
             salvarPendenciasConferenciaFolha(conferenciaRubricas, loja, competencia, []);
 
-            salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual).catch(erroAtualizacao => {
-                console.error('Erro ao atualizar o processamento da folha importada:', erroAtualizacao);
-            });
-
-            try {
-                const importadaAtual = folhasImportadas.find(x => Number(x.loja_id) === Number(loja.id) && String(x.competencia || '') === obterCompetenciaFolhaISO());
-                if (importadaAtual && supabaseClient) {
-                    const pendencias = conferenciaRubricas.filter(item => item.status !== 'ok').length;
-                    const {data,error} = await supabaseClient.from('folhas_importadas').update({
-                        pendencias,
-                        status: pendencias ? 'Com pendências' : 'Processada',
-                        updated_at: new Date().toISOString()
-                    }).eq('id',importadaAtual.id).select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo').single();
-                    if (!error && data) {
-                        folhasImportadas = folhasImportadas.map(x => Number(x.id) === Number(data.id) ? data : x);
-                        renderFolhasImportadas();
+            if (salvarNoBanco) {
+                try {
+                    await salvarFolhaImportadaAtual(nomeArquivoFolhaImportadaAtual);
+                    const importadaAtual = folhasImportadas.find(x => Number(x.loja_id) === Number(loja.id) && String(x.competencia || '').slice(0, 10) === obterCompetenciaFolhaISO());
+                    if (importadaAtual && supabaseClient) {
+                        const pendencias = conferenciaRubricas.filter(item => item.status !== 'ok').length;
+                        const {data,error} = await supabaseClient.from('folhas_importadas').update({
+                            pendencias,
+                            status: pendencias ? 'Com pendências' : 'Processada',
+                            updated_at: new Date().toISOString()
+                        }).eq('id',importadaAtual.id).select('id,loja_id,competencia,arquivo_nome,total_linhas,total_proventos,total_descontos,pendencias,status,created_at,updated_at,dados_planilha,cabecalhos,resumo').single();
+                        if (error) throw error;
+                        if (data) {
+                            folhasImportadas = folhasImportadas.map(x => Number(x.id) === Number(data.id) ? data : x);
+                            renderFolhasImportadas();
+                        }
                     }
-                }
-            } catch (erroAtualizacao) { console.error('Erro ao atualizar status da folha importada:', erroAtualizacao); }
+                } catch (erroAtualizacao) { console.error('Erro ao atualizar status da folha importada:', erroAtualizacao); }
+            }
 
             const totalPendencias = conferenciaRubricas.filter(item => item.status !== 'ok').length;
             if (totalPendencias > 0) {
                 abrirPopupConferenciaFolha(conferenciaRubricas, loja, competencia, []);
             }
+            return conferenciaRubricas;
         }
 
         let validacaoTotaisFolha = null;
