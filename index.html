@@ -4527,7 +4527,7 @@
             const loja = lerListaCadastro('lojas').find(x => Number(x.id) === Number(item.loja_id));
             if (!loja) return alert('A loja vinculada a esta importação não foi encontrada no cadastro.');
             const competencia = String(item.competencia || '');
-            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(competencia)) return alert('A competência salva nesta importação está inválida.');
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(competencia)) return alert('A competência salva nesta importação está inválida.');
 
             const botao = document.querySelector('button[onclick="atualizarFolhaImportada(' + Number(id) + ')"]');
             if (botao) {
