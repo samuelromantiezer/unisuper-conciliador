@@ -4642,7 +4642,7 @@
             const tipos = {Provento:0, Desconto:0, Imposto:0, Totalizador:0, 'Não cadastrada':0};
             for (const linha of rows) {
                 if (linhaFolhaEhInformativaPorColunaAM(linha)) { informativas++; continue; }
-                if (linhaFolhaEhInformativa(linha)) { informativas++; continue; }
+                if (linhaFolhaEhInformativa(linha)) { informativas++; break; }
                 const codigo = String(linha?.[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
                 if (!/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
                 rubricas++;
@@ -5432,8 +5432,7 @@ function converterValorLancamentoFolha(valor) {
                 }
                 if (linhaFolhaEhInformativa(linha)) {
                     encontrouInformativa = true;
-                    informativasIgnoradas = 0;
-                    continue;
+                    break;
                 }
                 const rubricaBruta = linha[0];
                 const textoRubrica = String(rubricaBruta ?? '').trim();
@@ -5525,11 +5524,7 @@ function converterValorLancamentoFolha(valor) {
                 }
                 const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
                 const numeros = codigo.replace(/\D/g, '');
-                if (informativa && numeros && /^\d+(?:[.,]\d+)?$/.test(codigo) && ignoradas < 4) {
-                    ignoradas++;
-                    detalhes.push({linha:i+1,codigo,descricao:String(linha[2] ?? '').trim(),tipo:'Informativa',valor:normalizarNumeroFolha(linha[32]),status:'ignorada',motivo:'Uma das quatro rubricas após INFORMATIVA.'});
-                    continue;
-                }
+                if (informativa) break;
                 if (!codigo || !numeros || !/^\d+(?:[.,]\d+)?$/.test(codigo)) continue;
                 const rubrica = localizarRubricaFolha(codigo);
                 if (rubrica && String(rubrica.tipo || '').trim().toLowerCase() === 'informativa') {
@@ -6268,8 +6263,7 @@ function converterValorLancamentoFolha(valor) {
                 }
                 if (linhaFolhaEhInformativa(linha)) {
                     encontrouInformativaImpostos = true;
-                    informativasIgnoradasImpostos = 0;
-                    continue;
+                    break;
                 }
                 const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
                 const somenteNumeros = codigo.replace(/\D/g, '');
