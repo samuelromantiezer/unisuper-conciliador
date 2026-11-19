@@ -7077,8 +7077,7 @@ async function importarDeParaFolhaTXT(input){
                 // Se a tela de divergências estiver aberta para a mesma folha,
                 // refaz a conferência usando o De/Para atualizado.
                 const popupPendencias = document.getElementById('popup-conferencia-folha');
-                const popupAberto = popupPendencias && !popupPendencias.classList.contains('hidden');
-                if (popupAberto && Array.isArray(dadosFolhaImportados) && dadosFolhaImportados.length) {
+                if (Array.isArray(dadosFolhaImportados) && dadosFolhaImportados.length) {
                     const lojaAtual = pendenciasConferenciaFolha.loja;
                     const lojaSelecionada = lerListaCadastro('lojas').find(x =>
                         Number(x.id) === Number(lojaAtual?.id)
@@ -7090,7 +7089,7 @@ async function importarDeParaFolhaTXT(input){
                     if (Array.isArray(resultado)) {
                         if (resultado.some(x => x.status !== 'ok')) {
                             abrirPopupConferenciaFolha(resultado, lojaSelecionada, pendenciasConferenciaFolha.competencia, []);
-                        } else {
+                        } else if (popupPendencias) {
                             popupPendencias.classList.add('hidden');
                         }
                     }
