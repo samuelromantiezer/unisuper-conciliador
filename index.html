@@ -7360,6 +7360,26 @@ async function importarDeParaFolhaTXT(input){
             </div>
         </div>
 
+    <div id="popup-consulta-cadastros" class="hidden fixed inset-0 z-[10000] bg-slate-950/60 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="popup-consulta-titulo" onclick="if(event.target===this)fecharPopupConsultaCadastro()">
+        <div class="popup-card w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 id="popup-consulta-titulo" class="font-bold text-slate-800">Consultar cadastros</h3>
+                    <p id="popup-consulta-subtitulo" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <button type="button" onclick="fecharPopupConsultaCadastro()" class="w-9 h-9 shrink-0 rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 border-b border-slate-200">
+                <input id="popup-consulta-busca" type="search" class="w-full border border-slate-300 rounded-lg p-3 text-sm" placeholder="Pesquisar por código ou descrição" autocomplete="off">
+                <div id="popup-consulta-contador" class="text-xs text-slate-500 mt-2"></div>
+            </div>
+            <div id="popup-consulta-lista" class="popup-lista flex-1 overflow-y-auto divide-y divide-slate-100"></div>
+            <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button type="button" onclick="fecharPopupConsultaCadastro()" class="rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="popup-detalhes-rubrica-folha" class="hidden" role="dialog" aria-modal="true" aria-labelledby="popup-detalhes-rubrica-folha-titulo">
         <div class="popup-card">
             <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-200">
