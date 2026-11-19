@@ -7064,7 +7064,42 @@ async function importarDeParaFolhaTXT(input){
     alert((edicaoId?'Erro ao atualizar DePara no Supabase:\n':'Erro ao salvar DePara no Supabase:\n')+e.message);
   }
 }
-        async function excluirDeParaFolha(id){if(!confirm('Deseja excluir este vínculo?'))return;try{const{error}=await supabaseClient.from('folha_depara').delete().eq('id',id);if(error)throw error;cacheCadastros.depara=cacheCadastros.depara.filter(x=>x.id!==id);renderDeParaFolha();}catch(e){alert('Erro ao excluir DePara: '+e.message);}}
+        async function excluirDeParaFolha(id) {
+            if (!confirm('Deseja excluir este vínculo?')) return;
+            try {
+                const {error} = await supabaseClient.from('folha_depara').delete().eq('id', id);
+                if (error) throw error;
+
+                // Atualiza o cache local somente depois da confirmação do Supabase.
+                cacheCadastros.depara = (cacheCadastros.depara || []).filter(x => Number(x.id) !== Number(id));
+                renderDeParaFolha();
+
+                // Se a tela de divergências estiver aberta para a mesma folha,
+                // refaz a conferência usando o De/Para atualizado.
+                const popupPendencias = document.getElementById('popup-conferencia-folha');
+                const popupAberto = popupPendencias && !popupPendencias.classList.contains('hidden');
+                if (popupAberto && Array.isArray(dadosFolhaImportados) && dadosFolhaImportados.length) {
+                    const lojaAtual = pendenciasConferenciaFolha.loja;
+                    const lojaSelecionada = lerListaCadastro('lojas').find(x =>
+                        Number(x.id) === Number(lojaAtual?.id)
+                    );
+                    const campoLoja = document.getElementById('folha-loja');
+                    if (lojaSelecionada && campoLoja) campoLoja.value = String(lojaSelecionada.codigo);
+
+                    const resultado = await conferirRubricasFolhaImportada(false);
+                    if (Array.isArray(resultado)) {
+                        if (resultado.some(x => x.status !== 'ok')) {
+                            abrirPopupConferenciaFolha(resultado, lojaSelecionada, pendenciasConferenciaFolha.competencia, []);
+                        } else {
+                            popupPendencias.classList.add('hidden');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao excluir DePara:', e);
+                alert('Erro ao excluir DePara: ' + (e.message || e));
+            }
+        }
         function abrirCopiarDeParaFolha(){
             if(!supabaseClient) return alert('Supabase não está conectado. Faça login e tente novamente.');
             const lojas=ordenarCadastroNatural(lerListaCadastro('lojas'));
