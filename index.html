@@ -5519,8 +5519,8 @@ function converterValorLancamentoFolha(valor) {
                     continue;
                 }
                 if (linhaFolhaEhInformativa(linha)) {
-                    informativa = true; ignoradas = 0;
-                    continue;
+                    informativa = true;
+                    break;
                 }
                 const codigo = String(linha[0] ?? '').trim().replace(/^["']|["']$/g, '').trim();
                 const numeros = codigo.replace(/\D/g, '');
@@ -5832,8 +5832,7 @@ function converterValorLancamentoFolha(valor) {
                 }
                 if (linhaFolhaEhInformativa(linha)) {
                     encontrouInformativa = true;
-                    informativasIgnoradas = 0;
-                    continue;
+                    break;
                 }
                 const rubricaBruta = linha[0];
 
