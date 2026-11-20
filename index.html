@@ -6536,7 +6536,7 @@ function converterValorLancamentoFolha(valor) {
             } finally {
                 if (botao) {
                     botao.disabled = false;
-                    botao.innerHTML = '<i class="fa-solid fa-plus"></i> Incluir selecionadas';
+                    botao.innerHTML = '<i class="fa-solid fa-plus"></i> Cadastrar rubricas selecionadas';
                 }
             }
         }
@@ -6564,11 +6564,13 @@ function converterValorLancamentoFolha(valor) {
                 {tipo:'Desconto', titulo:'DESCONTOS' + sufixoGrupo, itens:ordenada.filter(x => String(x.tipo || '').trim().toLowerCase() === 'desconto')},
                 {tipo:'Outros', titulo:'OUTRAS RUBRICAS' + sufixoGrupo, itens:ordenada.filter(x => !['provento','desconto'].includes(String(x.tipo || '').trim().toLowerCase()))}
             ];
-            const mostrarSelecaoEmLote = filtro === 'nao-cadastradas';
+            // A barra de ações em lote deve aparecer também no filtro "Todas".
+            // Os checkboxes individuais já aparecem junto de cada rubrica não cadastrada.
+            const mostrarSelecaoEmLote = origem.some(item => item.status === 'erro');
             const barraSelecao = mostrarSelecaoEmLote
                 ? '<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 mb-3">' +
                     '<div class="flex items-center gap-2"><button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100" onclick="selecionarTodasRubricasPendentesFolha()">Selecionar todas</button><span id="contador-rubricas-selecionadas-folha" class="text-xs text-slate-600">' + rubricasSelecionadasParaInclusaoFolha.size + ' selecionada(s)</span></div>' +
-                    '<button id="btn-incluir-rubricas-selecionadas-folha" type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800" onclick="incluirRubricasSelecionadasFolha()"><i class="fa-solid fa-plus"></i> Incluir selecionadas</button>' +
+                    '<button id="btn-incluir-rubricas-selecionadas-folha" type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800" onclick="incluirRubricasSelecionadasFolha()"><i class="fa-solid fa-plus"></i > Cadastrar rubricas selecionadas</button>' +
                   '</div>'
                 : '';
             let indiceAcao = 0;
