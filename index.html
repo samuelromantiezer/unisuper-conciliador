@@ -5491,7 +5491,11 @@ function converterValorLancamentoFolha(valor) {
                     conferenciaPorCodigo.set(rubricaCodigo, conferencia);
                     conferenciaRubricas.push(conferencia);
                 }
-                if (tipoSecaoRubrica === 'Provento' || tipoSecaoRubrica === 'Desconto') conferencia.tipo = tipoSecaoRubrica;
+                if (rubrica && String(rubrica.tipo || '').trim()) {
+                    conferencia.tipo = String(rubrica.tipo).trim();
+                } else if (tipoSecaoRubrica === 'Provento' || tipoSecaoRubrica === 'Desconto') {
+                    conferencia.tipo = tipoSecaoRubrica;
+                }
                 conferencia.ocorrencias++;
             }
 
@@ -6487,20 +6491,20 @@ function converterValorLancamentoFolha(valor) {
 
                 // Usa os dados originais da planilha apenas como base de leitura,
                 // nunca a lista antiga de pendências como fonte de status.
-                if (!Array.isArray(dadosFolhaImportados) || !dadosFolhaImportados.length) {
-                    const {data:importacao,error} = await supabaseClient
-                        .from('folhas_importadas')
-                        .select('dados_planilha,arquivo_nome')
-                        .eq('loja_id',Number(loja.id))
-                        .eq('competencia',competenciaISO)
-                        .maybeSingle();
-                    if (error) throw error;
-                    if (!Array.isArray(importacao?.dados_planilha) || !importacao.dados_planilha.length) {
-                        return alert('Não encontrei os dados originais da folha para refazer a conferência.');
-                    }
-                    dadosFolhaImportados = importacao.dados_planilha;
-                    nomeArquivoFolhaImportadaAtual = importacao.arquivo_nome || '';
+                const {data:importacao,error} = await supabaseClient
+                    .from('folhas_importadas')
+                    .select('dados_planilha,arquivo_nome')
+                    .eq('loja_id',Number(loja.id))
+                    .eq('competencia',competenciaISO)
+                    .maybeSingle();
+                if (error) throw error;
+                if (!Array.isArray(importacao?.dados_planilha) || !importacao.dados_planilha.length) {
+                    return alert('Não encontrei os dados originais da folha para refazer a conferência.');
                 }
+                // Sempre usa a planilha original da combinação loja/competência atual,
+                // evitando reaproveitar dados de outra importação que esteja na memória.
+                dadosFolhaImportados = importacao.dados_planilha;
+                nomeArquivoFolhaImportadaAtual = importacao.arquivo_nome || '';
 
                 const listaAtualizada = await conferirRubricasFolhaImportada(false);
                 if (!Array.isArray(listaAtualizada)) throw new Error('Não foi possível recalcular as pendências.');
