@@ -5428,17 +5428,21 @@ function converterValorLancamentoFolha(valor) {
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
-                const textoLinhaSecao = linha.map(valor => String(valor ?? '')).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase();
-                const textoSecaoNormalizado = textoLinhaSecao
+                // No relatório do ERP, os títulos de seção ficam na coluna A.
+                // Compare a célula inteira para não confundir descrições de rubricas
+                // com os nomes das seções e para manter a classificação entre páginas.
+                const tituloSecao = String(linha[0] ?? '')
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, '')
                     .replace(/\s+/g, ' ')
-                    .trim();
-                if (textoSecaoNormalizado.includes('DESCONTOS')) {
+                    .trim()
+                    .replace(/:$/, '')
+                    .toUpperCase();
+                if (tituloSecao === 'DESCONTOS') {
                     tipoSecaoRubrica = 'Desconto';
                     continue;
                 }
-                if (textoSecaoNormalizado.includes('PROVENTOS')) {
+                if (tituloSecao === 'PROVENTOS') {
                     tipoSecaoRubrica = 'Provento';
                     continue;
                 }
