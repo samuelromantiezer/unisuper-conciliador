@@ -1132,8 +1132,8 @@
                         <table class="w-full min-w-[760px] text-sm border-collapse">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-300">
-                                    <th class="p-3 text-left">Loja</th>
-                                    <th class="p-3 text-left">Competência</th>
+                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('loja')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por loja">Loja ' + indicadorOrdenacaoFolhasImportadas('loja') + '</button></th>
+                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('competencia')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por competência">Competência ' + indicadorOrdenacaoFolhasImportadas('competencia') + '</button></th>
                                     <th class="p-3 text-center">Lançamentos</th>
                                     <th class="p-3 text-left">Salvo em</th>
                                     <th class="p-3 text-center">Ação</th>
@@ -1191,12 +1191,12 @@
                                 <tr class="border-b border-slate-200">
                                     <th class="p-3 text-left">Loja</th>
                                     <th class="p-3 text-left">Competência</th>
-                                    <th class="p-3 text-left">Arquivo</th>
-                                    <th class="p-3 text-center">Linhas</th>
-                                    <th class="p-3 text-right">Proventos</th>
-                                    <th class="p-3 text-right">Descontos</th>
-                                    <th class="p-3 text-center">Pendências</th>
-                                    <th class="p-3 text-center">Status</th>
+                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('arquivo')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por arquivo">Arquivo ' + indicadorOrdenacaoFolhasImportadas('arquivo') + '</button></th>
+                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('linhas')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por quantidade de linhas">Linhas ' + indicadorOrdenacaoFolhasImportadas('linhas') + '</button></th>
+                                    <th class="p-3 text-right"><button type="button" onclick="ordenarFolhasImportadasPor('proventos')" class="inline-flex items-center justify-end font-bold hover:text-blue-700" title="Ordenar por proventos">Proventos ' + indicadorOrdenacaoFolhasImportadas('proventos') + '</button></th>
+                                    <th class="p-3 text-right"><button type="button" onclick="ordenarFolhasImportadasPor('descontos')" class="inline-flex items-center justify-end font-bold hover:text-blue-700" title="Ordenar por descontos">Descontos ' + indicadorOrdenacaoFolhasImportadas('descontos') + '</button></th>
+                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('pendencias')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por pendências">Pendências ' + indicadorOrdenacaoFolhasImportadas('pendencias') + '</button></th>
+                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('status')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por status">Status ' + indicadorOrdenacaoFolhasImportadas('status') + '</button></th>
                                     <th class="p-3 text-center">Ações</th>
                                 </tr>
                             </thead>
@@ -4353,6 +4353,7 @@
         let resumoInssFolhaAtual = null;
         let folhasGeradas = [];
         let folhasImportadas = [];
+        let ordenacaoFolhasImportadas = { coluna: '', direcao: 'asc' };
         let folhasGeradasConsultadas = false;
         let folhasImportadasConsultadas = false;
         let folhaGeradaVisualizando = null;
@@ -4463,6 +4464,42 @@
             }
         }
 
+        function ordenarFolhasImportadasPor(coluna) {
+            if (ordenacaoFolhasImportadas.coluna === coluna) {
+                ordenacaoFolhasImportadas.direcao = ordenacaoFolhasImportadas.direcao === 'asc' ? 'desc' : 'asc';
+            } else {
+                ordenacaoFolhasImportadas = { coluna, direcao: 'asc' };
+            }
+            renderFolhasImportadas();
+        }
+
+        function indicadorOrdenacaoFolhasImportadas(coluna) {
+            if (ordenacaoFolhasImportadas.coluna !== coluna) {
+                return '<i class="fa-solid fa-sort ml-1 text-slate-300"></i>';
+            }
+            return ordenacaoFolhasImportadas.direcao === 'asc'
+                ? '<i class="fa-solid fa-sort-up ml-1 text-blue-700"></i>'
+                : '<i class="fa-solid fa-sort-down ml-1 text-blue-700"></i>';
+        }
+
+        function compararValoresOrdenacaoFolhasImportadas(a, b, coluna, lojas) {
+            const lojaA = lojas.find(x => Number(x.id) === Number(a.loja_id));
+            const lojaB = lojas.find(x => Number(x.id) === Number(b.loja_id));
+            const valores = {
+                loja: [lojaA ? lojaA.codigo + ' - ' + lojaA.nome : 'Loja não encontrada', lojaB ? lojaB.codigo + ' - ' + lojaB.nome : 'Loja não encontrada'],
+                competencia: [String(a.competencia || ''), String(b.competencia || '')],
+                arquivo: [String(a.arquivo_nome || ''), String(b.arquivo_nome || '')],
+                linhas: [Number(a.total_linhas || 0), Number(b.total_linhas || 0)],
+                proventos: [Number(a.total_proventos || 0), Number(b.total_proventos || 0)],
+                descontos: [Number(a.total_descontos || 0), Number(b.total_descontos || 0)],
+                pendencias: [Number(a.pendencias || 0), Number(b.pendencias || 0)],
+                status: [String(a.status || 'Importada'), String(b.status || 'Importada')]
+            };
+            const [valorA, valorB] = valores[coluna] || ['', ''];
+            if (typeof valorA === 'number' && typeof valorB === 'number') return valorA - valorB;
+            return String(valorA).localeCompare(String(valorB), 'pt-BR', { numeric: true, sensitivity: 'base' });
+        }
+
         function renderFolhasImportadas() {
             const tabela = document.getElementById('tabela-folhas-importadas');
             if (!tabela) return;
@@ -4473,7 +4510,7 @@
             const filtroLoja = document.getElementById('filtro-folhas-importadas-loja')?.value || '';
             const filtroCompetencia = document.getElementById('filtro-folhas-importadas-competencia')?.value || '';
             const lojas = lerListaCadastro('lojas');
-            const lista = folhasImportadas.filter(item => {
+            let lista = folhasImportadas.filter(item => {
                 const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
                 return (!filtroLoja || String(loja?.codigo || '') === filtroLoja)
                     && (!filtroCompetencia || String(item.competencia || '').startsWith(filtroCompetencia));
@@ -4483,11 +4520,17 @@
                 return;
             }
 
-            // Ordena pela data em que a folha foi importada, da mais recente para a mais antiga.
-            lista.sort((a, b) =>
-                new Date(b.created_at || b.updated_at || 0).getTime() - new Date(a.created_at || a.updated_at || 0).getTime()
-                || Number(b.id) - Number(a.id)
-            );
+            // Mantém a ordenação padrão por data de importação até o usuário escolher uma coluna.
+            if (ordenacaoFolhasImportadas.coluna) {
+                const coluna = ordenacaoFolhasImportadas.coluna;
+                const fator = ordenacaoFolhasImportadas.direcao === 'asc' ? 1 : -1;
+                lista.sort((a, b) => fator * compararValoresOrdenacaoFolhasImportadas(a, b, coluna, lojas) || Number(b.id) - Number(a.id));
+            } else {
+                lista.sort((a, b) =>
+                    new Date(b.created_at || b.updated_at || 0).getTime() - new Date(a.created_at || a.updated_at || 0).getTime()
+                    || Number(b.id) - Number(a.id)
+                );
+            }
 
             tabela.innerHTML = lista.map(item => {
                 const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
