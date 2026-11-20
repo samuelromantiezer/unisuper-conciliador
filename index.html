@@ -1132,8 +1132,8 @@
                         <table class="w-full min-w-[760px] text-sm border-collapse">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-300">
-                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('loja')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por loja">Loja ' + indicadorOrdenacaoFolhasImportadas('loja') + '</button></th>
-                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('competencia')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por competência">Competência ' + indicadorOrdenacaoFolhasImportadas('competencia') + '</button></th>
+                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('loja')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por loja">Loja <i id="icone-ordenacao-folhas-loja" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
+                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('competencia')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por competência">Competência <i id="icone-ordenacao-folhas-competencia" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
                                     <th class="p-3 text-center">Lançamentos</th>
                                     <th class="p-3 text-left">Salvo em</th>
                                     <th class="p-3 text-center">Ação</th>
@@ -1191,12 +1191,12 @@
                                 <tr class="border-b border-slate-200">
                                     <th class="p-3 text-left">Loja</th>
                                     <th class="p-3 text-left">Competência</th>
-                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('arquivo')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por arquivo">Arquivo ' + indicadorOrdenacaoFolhasImportadas('arquivo') + '</button></th>
-                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('linhas')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por quantidade de linhas">Linhas ' + indicadorOrdenacaoFolhasImportadas('linhas') + '</button></th>
-                                    <th class="p-3 text-right"><button type="button" onclick="ordenarFolhasImportadasPor('proventos')" class="inline-flex items-center justify-end font-bold hover:text-blue-700" title="Ordenar por proventos">Proventos ' + indicadorOrdenacaoFolhasImportadas('proventos') + '</button></th>
-                                    <th class="p-3 text-right"><button type="button" onclick="ordenarFolhasImportadasPor('descontos')" class="inline-flex items-center justify-end font-bold hover:text-blue-700" title="Ordenar por descontos">Descontos ' + indicadorOrdenacaoFolhasImportadas('descontos') + '</button></th>
-                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('pendencias')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por pendências">Pendências ' + indicadorOrdenacaoFolhasImportadas('pendencias') + '</button></th>
-                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('status')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por status">Status ' + indicadorOrdenacaoFolhasImportadas('status') + '</button></th>
+                                    <th class="p-3 text-left"><button type="button" onclick="ordenarFolhasImportadasPor('arquivo')" class="inline-flex items-center font-bold hover:text-blue-700" title="Ordenar por arquivo">Arquivo <i id="icone-ordenacao-folhas-arquivo" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
+                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('linhas')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por quantidade de linhas">Linhas <i id="icone-ordenacao-folhas-linhas" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
+                                    <th class="p-3 text-right"><button type="button" onclick="ordenarFolhasImportadasPor('proventos')" class="inline-flex items-center justify-end font-bold hover:text-blue-700" title="Ordenar por proventos">Proventos <i id="icone-ordenacao-folhas-proventos" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
+                                    <th class="p-3 text-right"><button type="button" onclick="ordenarFolhasImportadasPor('descontos')" class="inline-flex items-center justify-end font-bold hover:text-blue-700" title="Ordenar por descontos">Descontos <i id="icone-ordenacao-folhas-descontos" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
+                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('pendencias')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por pendências">Pendências <i id="icone-ordenacao-folhas-pendencias" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
+                                    <th class="p-3 text-center"><button type="button" onclick="ordenarFolhasImportadasPor('status')" class="inline-flex items-center justify-center font-bold hover:text-blue-700" title="Ordenar por status">Status <i id="icone-ordenacao-folhas-status" class="fa-solid fa-sort ml-1 text-slate-300"></i></button></th>
                                     <th class="p-3 text-center">Ações</th>
                                 </tr>
                             </thead>
@@ -4473,13 +4473,16 @@
             renderFolhasImportadas();
         }
 
-        function indicadorOrdenacaoFolhasImportadas(coluna) {
-            if (ordenacaoFolhasImportadas.coluna !== coluna) {
-                return '<i class="fa-solid fa-sort ml-1 text-slate-300"></i>';
-            }
-            return ordenacaoFolhasImportadas.direcao === 'asc'
-                ? '<i class="fa-solid fa-sort-up ml-1 text-blue-700"></i>'
-                : '<i class="fa-solid fa-sort-down ml-1 text-blue-700"></i>';
+        function atualizarIndicadoresOrdenacaoFolhasImportadas() {
+            ['loja','competencia','arquivo','linhas','proventos','descontos','pendencias','status'].forEach(coluna => {
+                const icone = document.getElementById('icone-ordenacao-folhas-' + coluna);
+                if (!icone) return;
+                icone.className = ordenacaoFolhasImportadas.coluna !== coluna
+                    ? 'fa-solid fa-sort ml-1 text-slate-300'
+                    : ordenacaoFolhasImportadas.direcao === 'asc'
+                        ? 'fa-solid fa-sort-up ml-1 text-blue-700'
+                        : 'fa-solid fa-sort-down ml-1 text-blue-700';
+            });
         }
 
         function compararValoresOrdenacaoFolhasImportadas(a, b, coluna, lojas) {
@@ -4532,6 +4535,7 @@
                 );
             }
 
+            atualizarIndicadoresOrdenacaoFolhasImportadas();
             tabela.innerHTML = lista.map(item => {
                 const loja = lojas.find(x => Number(x.id) === Number(item.loja_id));
                 const pendencias = Number(item.pendencias || 0);
