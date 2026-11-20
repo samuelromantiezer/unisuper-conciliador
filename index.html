@@ -7130,22 +7130,37 @@ async function importarDeParaFolhaTXT(input){
                 if(erroOrigem) throw erroOrigem;
                 const itens=Array.isArray(deParaOrigem)?deParaOrigem:[];
                 if(!itens.length) return alert('A loja de origem não possui vínculos de DePara para copiar.');
-                const confirmar=confirm('Copiar '+itens.length+' vínculo(s) de '+origem.codigo+' - '+origem.nome+' para '+destino.codigo+' - '+destino.nome+'?\n\nSe a loja de destino já tiver a mesma rubrica configurada, a conta será atualizada pela configuração da loja de origem.');
+
+                const {data:deParaDestino,error:erroDestino}=await supabaseClient
+                    .from('folha_depara')
+                    .select('rubrica_id')
+                    .eq('loja_id',destinoId);
+                if(erroDestino) throw erroDestino;
+
+                const existentes=new Set((Array.isArray(deParaDestino)?deParaDestino:[]).map(x=>Number(x.rubrica_id)));
+                const faltantes=itens.filter(x=>!existentes.has(Number(x.rubrica_id)));
+                const preservados=itens.length-faltantes.length;
+                if(!faltantes.length){
+                    fecharCopiarDeParaFolha();
+                    return alert('A loja '+destino.codigo+' já possui todas as rubricas da origem vinculadas. Nenhum cadastro foi alterado.');
+                }
+                const confirmar=confirm('Criar somente '+faltantes.length+' vínculo(s) que faltam de '+origem.codigo+' - '+origem.nome+' para '+destino.codigo+' - '+destino.nome+'?\\n\\n'+preservados+' vínculo(s) já existentes serão preservados, sem alteração.');
                 if(!confirmar) return;
-                const registros=itens.map(x=>({loja_id:destinoId,rubrica_id:Number(x.rubrica_id),conta_contabil_id:Number(x.conta_contabil_id)}));
+
+                const registros=faltantes.map(x=>({loja_id:destinoId,rubrica_id:Number(x.rubrica_id),conta_contabil_id:Number(x.conta_contabil_id)}));
                 const {data:salvos,error:erroSalvar}=await supabaseClient
                     .from('folha_depara')
-                    .upsert(registros,{onConflict:'loja_id,rubrica_id'})
+                    .insert(registros)
                     .select('id,loja_id,rubrica_id,conta_contabil_id');
                 if(erroSalvar) throw erroSalvar;
-                cacheCadastros.depara=cacheCadastros.depara.filter(x=>Number(x.loja_id)!==destinoId);
+
                 if(Array.isArray(salvos)) cacheCadastros.depara.push(...salvos);
                 renderDeParaFolha();
                 fecharCopiarDeParaFolha();
-                alert('DePara copiado com sucesso. '+itens.length+' vínculo(s) foram configurados na loja '+destino.codigo+'.');
+                alert('Cópia concluída. '+(salvos?.length||0)+' vínculo(s) novo(s) criado(s) e '+preservados+' vínculo(s) existente(s) preservados na loja '+destino.codigo+'.');
             }catch(e){
                 console.error('Erro ao copiar DePara:',e);
-                alert('Erro ao copiar o DePara:\n'+e.message);
+                alert('Erro ao copiar o DePara:\\n'+e.message);
             }
         }
         function renderDeParaFolha(){
@@ -7274,7 +7289,7 @@ async function importarDeParaFolhaTXT(input){
                     <select id="copiar-depara-destino" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white"></select>
                 </div>
                 <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                    As rubricas da loja de origem serão copiadas para a loja de destino. Se uma rubrica já existir na loja de destino, a conta contábil dela será substituída pela configuração da origem.
+                    Serão criadas somente as vinculações DePara que ainda não existem na loja de destino. Rubricas já cadastradas e vínculos já configurados nessa loja serão preservados, sem substituição.
                 </div>
             </div>
             <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
