@@ -6488,7 +6488,7 @@ function converterValorLancamentoFolha(valor) {
                     ? 'Cadastre a rubrica no cadastro geral. Depois, o vínculo contábil poderá ser feito aqui mesmo.'
                     : 'Selecione a conta contábil para esta rubrica e loja, sem sair da tela de divergências.';
                 const acao = naoCadastrada
-                    ? '<button type="button" class="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800" onclick="event.stopPropagation();abrirDetalhesRubricaFolha(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica)"><i class="fa-solid fa-plus"></i>Cadastrar Rubrica</button>'
+                    ? '<button type="button" class="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800" onclick="event.stopPropagation();abrirDetalhesRubricaFolha(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica)"><i class="fa-solid fa-plus"></i>Incluir</button>'
                     : '<div class="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center" onclick="event.stopPropagation()">' +
                         '<div class="campo-consulta-lupa"><input id="depara-pendencia-conta-' + indice + '" type="text" inputmode="text" autocomplete="off" onkeydown="if(event.key===\'Enter\'){event.preventDefault();salvarDeParaDaPendencia(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica,this.id)}" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da conta contábil" aria-label="Conta contábil da rubrica ' + escapeHtml(item.codigo) + '"><button type="button" class="btn-lupa-cadastro" onclick="abrirPopupConsultaCadastro(\'plano\',\'depara-pendencia-conta-' + indice + '\')" title="Consultar contas contábeis"><i class="fa-solid fa-magnifying-glass"></i></button></div>' +
                         '<button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-700 px-3 py-2.5 text-xs font-bold text-white hover:bg-amber-800" onclick="salvarDeParaDaPendencia(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica,\'depara-pendencia-conta-' + indice + '\')"><i class="fa-solid fa-link"></i>Vincular</button>' +
@@ -6698,7 +6698,11 @@ function converterValorLancamentoFolha(valor) {
             titulo.textContent = rubrica ? 'Editar Rubrica ' + alvo : 'Cadastrar Rubrica ' + alvo;
             const descricaoPlanilha = item.descricaoPlanilha || item.descricao || '';
             const descricaoCadastro = rubrica ? String(rubrica.descricao || '') : '';
-            const tipoCadastro = rubrica ? String(rubrica.tipo || '') : '';
+            // Para rubricas novas, aproveita a classificação identificada pela seção da planilha.
+            // Se for uma edição, preserva o tipo já cadastrado.
+            const tipoCadastro = rubrica
+                ? String(rubrica.tipo || '')
+                : (['Provento','Desconto'].includes(String(item.tipo || '').trim()) ? String(item.tipo).trim() : '');
             const statusCadastro = rubrica ? 'Rubrica já cadastrada' : 'Rubrica não cadastrada';
             const statusClasse = rubrica ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200';
 
