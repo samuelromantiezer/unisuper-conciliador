@@ -7348,8 +7348,7 @@ async function importarDeParaFolhaTXT(input){
                 const faltantes=itens.filter(x=>!existentes.has(Number(x.rubrica_id)));
                 const preservados=itens.length-faltantes.length;
                 if(!faltantes.length){
-                    fecharCopiarDeParaFolha();
-                    return alert('A loja '+destino.codigo+' já possui todas as rubricas da origem vinculadas. Nenhum cadastro foi alterado.');
+                    return alert('A loja '+destino.codigo+' já possui todas as rubricas da origem vinculadas. Nenhum cadastro foi alterado. O popup continuará aberto para você selecionar outras lojas.');
                 }
                 const confirmar=confirm('Criar somente '+faltantes.length+' vínculo(s) que faltam de '+origem.codigo+' - '+origem.nome+' para '+destino.codigo+' - '+destino.nome+'?\\n\\n'+preservados+' vínculo(s) já existentes serão preservados, sem alteração.');
                 if(!confirmar) return;
@@ -7363,8 +7362,7 @@ async function importarDeParaFolhaTXT(input){
 
                 if(Array.isArray(salvos)) cacheCadastros.depara.push(...salvos);
                 renderDeParaFolha();
-                fecharCopiarDeParaFolha();
-                alert('Cópia concluída. '+(salvos?.length||0)+' vínculo(s) novo(s) criado(s) e '+preservados+' vínculo(s) existente(s) preservados na loja '+destino.codigo+'.');
+                alert('Cópia concluída. '+(salvos?.length||0)+' vínculo(s) novo(s) criado(s) e '+preservados+' vínculo(s) existente(s) preservados na loja '+destino.codigo+'. O popup continuará aberto para você copiar para outra loja.');
             }catch(e){
                 console.error('Erro ao copiar DePara:',e);
                 alert('Erro ao copiar o DePara:\\n'+e.message);
