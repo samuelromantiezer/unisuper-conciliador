@@ -6472,10 +6472,11 @@ function converterValorLancamentoFolha(valor) {
             const ordem = {erro: 0, alerta: 1, ok: 2};
             const ordenada = [...filtrada].sort((a,b) => ordem[a.status] - ordem[b.status] || String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric:true}));
             const loja = pendenciasConferenciaFolha.loja || {};
+            const sufixoGrupo = filtro === 'nao-cadastradas' ? ' A INCLUIR' : '';
             const grupos = [
-                {tipo:'Provento', titulo:'PROVENTOS', itens:ordenada.filter(x => String(x.tipo || '').toLowerCase() === 'provento')},
-                {tipo:'Desconto', titulo:'DESCONTOS', itens:ordenada.filter(x => String(x.tipo || '').toLowerCase() === 'desconto')},
-                {tipo:'Outros', titulo:'OUTRAS RUBRICAS', itens:ordenada.filter(x => !['provento','desconto'].includes(String(x.tipo || '').toLowerCase()))}
+                {tipo:'Provento', titulo:'PROVENTOS' + sufixoGrupo, itens:ordenada.filter(x => String(x.tipo || '').trim().toLowerCase() === 'provento')},
+                {tipo:'Desconto', titulo:'DESCONTOS' + sufixoGrupo, itens:ordenada.filter(x => String(x.tipo || '').trim().toLowerCase() === 'desconto')},
+                {tipo:'Outros', titulo:'OUTRAS RUBRICAS' + sufixoGrupo, itens:ordenada.filter(x => !['provento','desconto'].includes(String(x.tipo || '').trim().toLowerCase()))}
             ];
             let indiceAcao = 0;
             const renderItem = (item, indice) => {
