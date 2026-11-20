@@ -6538,6 +6538,12 @@ function converterValorLancamentoFolha(valor) {
                 );
                 abrirPopupConferenciaFolha(pendenciasConferenciaFolha.lista, loja, pendenciasConferenciaFolha.competencia, pendenciasConferenciaFolha.inconsistencias);
                 alert('De/Para da rubrica ' + codigo + ' vinculado à conta ' + conta.codigo + ' para a loja ' + loja.codigo + '.');
+                // Após confirmar a mensagem, posiciona o cursor na próxima conta pendente.
+                const proximoCampo = document.querySelector('#popup-conferencia-folha-lista input[id^="depara-pendencia-conta-"]');
+                if (proximoCampo) {
+                    proximoCampo.focus();
+                    proximoCampo.select();
+                }
             } catch (e) {
                 console.error('Erro ao salvar De/Para pela divergência:', e);
                 alert('Não foi possível salvar o De/Para: ' + (e.message || e));
