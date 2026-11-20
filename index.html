@@ -6655,7 +6655,6 @@ function converterValorLancamentoFolha(valor) {
             const subtitulo = document.getElementById('popup-conferencia-folha-subtitulo');
             const resumo = document.getElementById('popup-conferencia-folha-resumo');
             const filtros = document.getElementById('popup-conferencia-folha-filtros');
-            const extra = document.getElementById('popup-conferencia-folha-extra');
             if (!popup || !resumo) return;
 
             const dados = Array.isArray(lista) ? lista : [];
@@ -6680,15 +6679,6 @@ function converterValorLancamentoFolha(valor) {
             renderListaPendenciasConferenciaFolha();
             atualizarFiltrosPendenciasFolha();
 
-            if (extra) {
-                if (inconsistencias.length) {
-                    extra.classList.remove('hidden');
-                    extra.innerHTML = '<b>Outras inconsistências:</b> ' + escapeHtml(inconsistencias.slice(0, 10).join(' | ')) + (inconsistencias.length > 10 ? ' | ...' : '');
-                } else {
-                    extra.classList.add('hidden');
-                    extra.innerHTML = '';
-                }
-            }
 
             atualizarBotaoPendenciasFolha();
             popup.classList.remove('hidden');
@@ -7501,7 +7491,6 @@ async function importarDeParaFolhaTXT(input){
                     <button id="filtro-pendencias-nao-cadastradas" type="button" onclick="filtrarPendenciasFolha('nao-cadastradas')" class="rounded-lg border px-3 py-2 text-xs font-semibold">Não cadastradas</button>
                     <button id="filtro-pendencias-sem-depara" type="button" onclick="filtrarPendenciasFolha('sem-depara')" class="rounded-lg border px-3 py-2 text-xs font-semibold">Sem De/Para</button>
                 </div>
-                <div id="popup-conferencia-folha-extra" class="hidden px-5 py-3 text-xs text-amber-800 bg-amber-50 border-b border-amber-200"></div>
                 <div id="popup-conferencia-folha-lista" class="p-5 space-y-3 overflow-y-auto" style="max-height:55vh;"></div>
                 <div class="px-5 py-3 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
                     <button type="button" id="btn-atualizar-pendencias-folha" onclick="atualizarFolhaImportadaPelasPendencias()" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
