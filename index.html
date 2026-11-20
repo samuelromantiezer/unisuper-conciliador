@@ -5477,7 +5477,11 @@ function converterValorLancamentoFolha(valor) {
                         descricao: descricaoPlanilha || (rubrica ? String(rubrica.descricao || '') : ''),
                         descricaoPlanilha: descricaoPlanilha,
                         descricaoCadastro: rubrica ? String(rubrica.descricao || '') : '',
-                        tipo: tipoSecaoRubrica || (rubrica ? String(rubrica.tipo || '') : ''),
+                        // O cadastro atual é a fonte principal; a seção da planilha
+                        // serve apenas como classificação provisória para rubricas ainda não cadastradas.
+                        tipo: rubrica && String(rubrica.tipo || '').trim()
+                            ? String(rubrica.tipo).trim()
+                            : tipoSecaoRubrica,
                         conta: conta ? String(conta.codigo || '') : '',
                         descricaoConta: conta ? String(conta.descricao || '') : '',
                         status: !rubrica ? 'erro' : (!conta ? 'alerta' : 'ok'),
@@ -6469,16 +6473,42 @@ function converterValorLancamentoFolha(valor) {
             btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Verificar Pendências' + (total ? ' (' + total + ')' : '');
         }
 
-        function abrirPendenciasFolha() {
-            if (!pendenciasConferenciaFolha.lista.length) {
-                if (!carregarPendenciasSalvasConferenciaFolha()) {
-                    return alert('Nenhuma pendência registrada para a loja e competência atuais.');
-                }
-            }
-            const loja = pendenciasConferenciaFolha.loja || localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
-            const competencia = pendenciasConferenciaFolha.competencia || obterCompetenciaFolha() || 'não informada';
+        async function abrirPendenciasFolha() {
+            if (!supabaseClient) return alert('Supabase não está conectado. Faça login novamente.');
+            const loja = localizarLojaFolha(document.getElementById('folha-loja')?.value || '');
+            const competencia = obterCompetenciaFolha() || '';
+            const competenciaISO = obterCompetenciaFolhaISO();
             if (!loja) return alert('Selecione a loja para consultar as pendências.');
-            abrirPopupConferenciaFolha(pendenciasConferenciaFolha.lista, loja, competencia, pendenciasConferenciaFolha.inconsistencias);
+            if (!competenciaISO) return alert('Selecione a competência para consultar as pendências.');
+
+            try {
+                // Sempre recarrega rubricas, plano de contas e De/Para atuais.
+                await consultarCadastrosSupabase();
+
+                // Usa os dados originais da planilha apenas como base de leitura,
+                // nunca a lista antiga de pendências como fonte de status.
+                if (!Array.isArray(dadosFolhaImportados) || !dadosFolhaImportados.length) {
+                    const {data:importacao,error} = await supabaseClient
+                        .from('folhas_importadas')
+                        .select('dados_planilha,arquivo_nome')
+                        .eq('loja_id',Number(loja.id))
+                        .eq('competencia',competenciaISO)
+                        .maybeSingle();
+                    if (error) throw error;
+                    if (!Array.isArray(importacao?.dados_planilha) || !importacao.dados_planilha.length) {
+                        return alert('Não encontrei os dados originais da folha para refazer a conferência.');
+                    }
+                    dadosFolhaImportados = importacao.dados_planilha;
+                    nomeArquivoFolhaImportadaAtual = importacao.arquivo_nome || '';
+                }
+
+                const listaAtualizada = await conferirRubricasFolhaImportada(false);
+                if (!Array.isArray(listaAtualizada)) throw new Error('Não foi possível recalcular as pendências.');
+                abrirPopupConferenciaFolha(listaAtualizada,loja,competencia,[]);
+            } catch (e) {
+                console.error('Erro ao atualizar pendências com os cadastros atuais:',e);
+                alert('Não foi possível atualizar as pendências com os cadastros atuais: ' + (e.message || e));
+            }
         }
 
         function atualizarFiltrosPendenciasFolha() {
