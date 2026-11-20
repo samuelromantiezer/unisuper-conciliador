@@ -5429,11 +5429,16 @@ function converterValorLancamentoFolha(valor) {
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
                 const textoLinhaSecao = linha.map(valor => String(valor ?? '')).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase();
-                if (textoLinhaSecao.includes('DESCONTOS')) {
+                const textoSecaoNormalizado = textoLinhaSecao
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (textoSecaoNormalizado.includes('DESCONTOS')) {
                     tipoSecaoRubrica = 'Desconto';
                     continue;
                 }
-                if (textoLinhaSecao.includes('PROVENTOS')) {
+                if (textoSecaoNormalizado.includes('PROVENTOS')) {
                     tipoSecaoRubrica = 'Provento';
                     continue;
                 }
@@ -6700,9 +6705,10 @@ function converterValorLancamentoFolha(valor) {
             const descricaoCadastro = rubrica ? String(rubrica.descricao || '') : '';
             // Para rubricas novas, aproveita a classificação identificada pela seção da planilha.
             // Se for uma edição, preserva o tipo já cadastrado.
+            const tipoOrigem = String(item.tipo || '').trim().toLowerCase();
             const tipoCadastro = rubrica
-                ? String(rubrica.tipo || '')
-                : (['Provento','Desconto'].includes(String(item.tipo || '').trim()) ? String(item.tipo).trim() : '');
+                ? String(rubrica.tipo || '').trim()
+                : (tipoOrigem === 'provento' ? 'Provento' : tipoOrigem === 'desconto' ? 'Desconto' : '');
             const statusCadastro = rubrica ? 'Rubrica já cadastrada' : 'Rubrica não cadastrada';
             const statusClasse = rubrica ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-red-700 bg-red-50 border-red-200';
 
@@ -6732,6 +6738,11 @@ function converterValorLancamentoFolha(valor) {
                         '<div class="mt-1"><b>Observação:</b> o cadastro da rubrica é único e não depende da loja.</div>' +
                     '</div>' +
                 '</div>';
+
+            // Define o valor diretamente no select após inserir o HTML,
+            // garantindo que a opção correta fique selecionada ao abrir o popup.
+            const campoTipoRubrica = document.getElementById('popup-rubrica-tipo');
+            if (campoTipoRubrica) campoTipoRubrica.value = tipoCadastro;
 
             if (botaoSalvar) {
                 botaoSalvar.innerHTML = rubrica
