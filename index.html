@@ -5131,8 +5131,11 @@
         function limparFiltrosFolhasGeradas() {
             const loja = document.getElementById('filtro-folhas-geradas-loja');
             const comp = document.getElementById('filtro-folhas-geradas-competencia');
+            const label = document.getElementById('filtro-folhas-geradas-competencia-label');
             if (loja) loja.value = '';
             if (comp) comp.value = '';
+            if (label) label.textContent = 'Todas';
+            document.getElementById('filtro-folhas-geradas-competencia-popup')?.classList.add('hidden');
             renderFolhasGeradas();
         }
 
