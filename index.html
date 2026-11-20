@@ -5616,22 +5616,34 @@ function converterValorLancamentoFolha(valor) {
         }
 
         function renderizarDetalhamentoValidacaoFolha(detalhes) {
-            const rows = detalhes.map((x, indice) => {
-                const classe = x.status === 'divergente' ? 'bg-red-50' : x.status === 'ignorada' ? 'bg-slate-50' : 'bg-emerald-50';
-                const texto = x.status === 'divergente' ? 'DIVERGENTE' : x.status === 'ignorada' ? 'IGNORADA' : 'OK';
-                const tipoAtual = String(x.tipo || '').trim();
-                const permiteAlterar = ['Provento','Desconto'].includes(tipoAtual) && x.codigo;
-                const controleTipo = permiteAlterar
-                    ? '<div class="flex items-center gap-1 mt-1"><select id="validacao-tipo-rubrica-' + indice + '" class="border border-slate-300 rounded px-1 py-1 text-xs"><option value="Provento" ' + (tipoAtual === 'Provento' ? 'selected' : '') + '>Provento</option><option value="Desconto" ' + (tipoAtual === 'Desconto' ? 'selected' : '') + '>Desconto</option></select><button type="button" onclick="atualizarTipoRubricaValidacaoFolha(\'' + escapeHtmlFolha(x.codigo) + '\',' + indice + ')" class="rounded bg-blue-700 text-white px-2 py-1 text-xs font-semibold">Atualizar</button></div>'
-                    : '';
-                return '<tr class="' + classe + ' border-b"><td class="p-2 text-xs">' + x.linha + '</td><td class="p-2 text-xs font-semibold">' + escapeHtmlFolha(x.codigo || '-') + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.descricao || '-') + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(tipoAtual || '-') + controleTipo + '</td><td class="p-2 text-xs text-right">' + formatarValorLancamentoFolha(x.valor || 0) + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.conta || '-') + '</td><td class="p-2 text-xs font-semibold">' + texto + '<div class="font-normal">' + escapeHtmlFolha(x.motivo || '') + '</div></td></tr>';
-            }).join('');
-            return '<div class="mt-5 mb-2 flex items-center justify-between"><b>Todos os lançamentos da folha</b><span class="text-xs text-slate-500">' + detalhes.length + ' registros</span></div><p class="text-xs text-slate-500 mb-2">Altere o tipo da rubrica e clique em Atualizar. Os totais serão recalculados sem importar a folha novamente.</p><div class="border rounded-xl overflow-auto max-h-[52vh]"><table class="w-full min-w-[1050px] text-sm"><thead class="sticky top-0 bg-slate-100"><tr class="text-left text-xs uppercase"><th class="p-2">Linha</th><th class="p-2">Rubrica</th><th class="p-2">Descrição</th><th class="p-2">Tipo / Alterar</th><th class="p-2 text-right">Valor AG</th><th class="p-2">Conta DePara</th><th class="p-2">Conferência</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+            const grupos = [
+                {tipo:'provento', titulo:'PROVENTOS', classe:'bg-emerald-50 border-emerald-200', cabecalho:'bg-emerald-100 text-emerald-900'},
+                {tipo:'desconto', titulo:'DESCONTOS', classe:'bg-amber-50 border-amber-200', cabecalho:'bg-amber-100 text-amber-900'},
+                {tipo:'outros', titulo:'OUTRAS RUBRICAS', classe:'bg-slate-50 border-slate-200', cabecalho:'bg-slate-100 text-slate-700'}
+            ];
+            const renderGrupo = grupo => {
+                const itens = detalhes.filter(x => {
+                    const tipo = String(x.tipo || '').trim().toLowerCase();
+                    return grupo.tipo === 'outros' ? !['provento','desconto'].includes(tipo) : tipo === grupo.tipo;
+                });
+                if (!itens.length) return '';
+                const rows = itens.map((x, indice) => {
+                    const tipoAtual = String(x.tipo || '').trim();
+                    const permiteAlterar = ['Provento','Desconto'].includes(tipoAtual) && x.codigo;
+                    const controleTipo = permiteAlterar
+                        ? '<div class="flex items-center gap-1 mt-1"><select id="validacao-tipo-rubrica-' + grupo.tipo + '-' + indice + '" class="border border-slate-300 rounded px-1 py-1 text-xs"><option value="Provento" ' + (tipoAtual === 'Provento' ? 'selected' : '') + '>Provento</option><option value="Desconto" ' + (tipoAtual === 'Desconto' ? 'selected' : '') + '>Desconto</option></select><button type="button" onclick="atualizarTipoRubricaValidacaoFolha(\'' + escapeHtmlFolha(x.codigo) + '\',\'' + grupo.tipo + '\',' + indice + ')" class="rounded bg-blue-700 text-white px-2 py-1 text-xs font-semibold">Atualizar</button></div>'
+                        : '';
+                    const texto = x.status === 'divergente' ? 'DIVERGENTE' : x.status === 'ignorada' ? 'IGNORADA' : 'OK';
+                    return '<tr class="' + grupo.classe + ' border-b"><td class="p-2 text-xs">' + x.linha + '</td><td class="p-2 text-xs font-semibold">' + escapeHtmlFolha(x.codigo || '-') + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.descricao || '-') + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(tipoAtual || '-') + controleTipo + '</td><td class="p-2 text-xs text-right">' + formatarValorLancamentoFolha(x.valor || 0) + '</td><td class="p-2 text-xs">' + escapeHtmlFolha(x.conta || '-') + '</td><td class="p-2 text-xs font-semibold">' + texto + '<div class="font-normal">' + escapeHtmlFolha(x.motivo || '') + '</div></td></tr>';
+                }).join('');
+                return '<section class="mb-4 rounded-xl border overflow-hidden ' + grupo.classe + '"><div class="px-3 py-2 font-extrabold text-xs tracking-wide ' + grupo.cabecalho + '">' + grupo.titulo + ' <span class="font-semibold">(' + itens.length + ')</span></div><div class="overflow-auto max-h-[38vh]"><table class="w-full min-w-[1050px] text-sm"><thead class="sticky top-0 bg-white/95"><tr class="text-left text-xs uppercase"><th class="p-2">Linha</th><th class="p-2">Rubrica</th><th class="p-2">Descrição</th><th class="p-2">Tipo / Alterar</th><th class="p-2 text-right">Valor AG</th><th class="p-2">Conta DePara</th><th class="p-2">Conferência</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>';
+            };
+            return '<div class="mt-5 mb-2 flex items-center justify-between"><b>Todos os lançamentos da folha</b><span class="text-xs text-slate-500">' + detalhes.length + ' registros</span></div><p class="text-xs text-slate-500 mb-2">Os lançamentos estão separados por tipo. Altere o tipo da rubrica e clique em Atualizar para recalcular os totais sem importar novamente.</p>' + grupos.map(renderGrupo).join('');
         }
 
-        async function atualizarTipoRubricaValidacaoFolha(codigo, indice) {
+        async function atualizarTipoRubricaValidacaoFolha(codigo, grupo, indice) {
             if (!supabaseClient) return alert('Supabase não está conectado. Faça login novamente.');
-            const select = document.getElementById('validacao-tipo-rubrica-' + indice);
+            const select = document.getElementById('validacao-tipo-rubrica-' + grupo + '-' + indice);
             const tipo = String(select?.value || '').trim();
             if (!['Provento','Desconto'].includes(tipo)) return alert('Selecione Provento ou Desconto.');
             const rubrica = localizarRubricaFolha(codigo);
