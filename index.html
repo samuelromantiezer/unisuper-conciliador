@@ -5424,9 +5424,19 @@ function converterValorLancamentoFolha(valor) {
             const conferenciaPorCodigo = new Map();
             let encontrouInformativa = false;
             let informativasIgnoradas = 0;
+            let tipoSecaoRubrica = '';
 
             for (let i = 0; i < dadosFolhaImportados.length; i++) {
                 const linha = dadosFolhaImportados[i] || [];
+                const textoLinhaSecao = linha.map(valor => String(valor ?? '')).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase();
+                if (textoLinhaSecao.includes('DESCONTOS')) {
+                    tipoSecaoRubrica = 'Desconto';
+                    continue;
+                }
+                if (textoLinhaSecao.includes('PROVENTOS')) {
+                    tipoSecaoRubrica = 'Provento';
+                    continue;
+                }
                 if (linhaFolhaEhInformativaPorColunaAM(linha)) {
                     continue;
                 }
@@ -5458,7 +5468,7 @@ function converterValorLancamentoFolha(valor) {
                         descricao: descricaoPlanilha || (rubrica ? String(rubrica.descricao || '') : ''),
                         descricaoPlanilha: descricaoPlanilha,
                         descricaoCadastro: rubrica ? String(rubrica.descricao || '') : '',
-                        tipo: rubrica ? String(rubrica.tipo || '') : '',
+                        tipo: tipoSecaoRubrica || (rubrica ? String(rubrica.tipo || '') : ''),
                         conta: conta ? String(conta.codigo || '') : '',
                         descricaoConta: conta ? String(conta.descricao || '') : '',
                         status: !rubrica ? 'erro' : (!conta ? 'alerta' : 'ok'),
@@ -5468,6 +5478,7 @@ function converterValorLancamentoFolha(valor) {
                     conferenciaPorCodigo.set(rubricaCodigo, conferencia);
                     conferenciaRubricas.push(conferencia);
                 }
+                if (tipoSecaoRubrica === 'Provento' || tipoSecaoRubrica === 'Desconto') conferencia.tipo = tipoSecaoRubrica;
                 conferencia.ocorrencias++;
             }
 
@@ -6461,7 +6472,13 @@ function converterValorLancamentoFolha(valor) {
             const ordem = {erro: 0, alerta: 1, ok: 2};
             const ordenada = [...filtrada].sort((a,b) => ordem[a.status] - ordem[b.status] || String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric:true}));
             const loja = pendenciasConferenciaFolha.loja || {};
-            listaEl.innerHTML = ordenada.map((item, indice) => {
+            const grupos = [
+                {tipo:'Provento', titulo:'PROVENTOS', itens:ordenada.filter(x => String(x.tipo || '').toLowerCase() === 'provento')},
+                {tipo:'Desconto', titulo:'DESCONTOS', itens:ordenada.filter(x => String(x.tipo || '').toLowerCase() === 'desconto')},
+                {tipo:'Outros', titulo:'OUTRAS RUBRICAS', itens:ordenada.filter(x => !['provento','desconto'].includes(String(x.tipo || '').toLowerCase()))}
+            ];
+            let indiceAcao = 0;
+            const renderItem = (item, indice) => {
                 const naoCadastrada = item.status === 'erro';
                 const classe = naoCadastrada ? 'erro' : 'alerta';
                 const icone = naoCadastrada ? 'fa-circle-xmark' : 'fa-link';
@@ -6472,7 +6489,7 @@ function converterValorLancamentoFolha(valor) {
                 const acao = naoCadastrada
                     ? '<button type="button" class="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800" onclick="event.stopPropagation();abrirDetalhesRubricaFolha(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica)"><i class="fa-solid fa-plus"></i>Cadastrar Rubrica</button>'
                     : '<div class="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center" onclick="event.stopPropagation()">' +
-                        '<div class="campo-consulta-lupa"><input id="depara-pendencia-conta-' + indice + '" type="text" inputmode="text" autocomplete="off" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da conta contábil" aria-label="Conta contábil da rubrica ' + escapeHtml(item.codigo) + '"><button type="button" class="btn-lupa-cadastro" onclick="abrirPopupConsultaCadastro(\'plano\',\'depara-pendencia-conta-' + indice + '\')" title="Consultar contas contábeis"><i class="fa-solid fa-magnifying-glass"></i></button></div>' +
+                        '<div class="campo-consulta-lupa"><input id="depara-pendencia-conta-' + indice + '" type="text" inputmode="text" autocomplete="off" onkeydown="if(event.key===\'Enter\'){event.preventDefault();salvarDeParaDaPendencia(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica,this.id)}" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white" placeholder="Código da conta contábil" aria-label="Conta contábil da rubrica ' + escapeHtml(item.codigo) + '"><button type="button" class="btn-lupa-cadastro" onclick="abrirPopupConsultaCadastro(\'plano\',\'depara-pendencia-conta-' + indice + '\')" title="Consultar contas contábeis"><i class="fa-solid fa-magnifying-glass"></i></button></div>' +
                         '<button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-700 px-3 py-2.5 text-xs font-bold text-white hover:bg-amber-800" onclick="salvarDeParaDaPendencia(this.closest(\'[data-codigo-rubrica]\').dataset.codigoRubrica,\'depara-pendencia-conta-' + indice + '\')"><i class="fa-solid fa-link"></i>Vincular</button>' +
                     '</div>';
                 return '<div data-codigo-rubrica="' + escapeHtml(item.codigo) + '" class="status-rubrica-folha ' + classe + ' w-full text-left flex items-start gap-3">' +
@@ -6481,7 +6498,11 @@ function converterValorLancamentoFolha(valor) {
                         '<div class="flex flex-wrap items-center justify-between gap-2"><div class="font-bold">Rubrica ' + escapeHtml(item.codigo) + (item.descricao ? ' - ' + escapeHtml(item.descricao) : '') + '</div><span class="text-[11px] font-semibold opacity-80">' + item.ocorrencias + ' ocorrência(s)</span></div>' +
                         '<div class="text-xs mt-1">' + status + '</div><div class="text-xs mt-1 opacity-90">' + detalhe + '</div>' + acao +
                     '</div></div>';
-            }).join('');
+            };
+            listaEl.innerHTML = grupos.filter(grupo => grupo.itens.length).map(grupo =>
+                '<section class="space-y-2"><h4 class="text-xs font-extrabold tracking-wide text-slate-700 border-b border-slate-200 pb-2">' + grupo.titulo + ' <span class="font-semibold text-slate-500">(' + grupo.itens.length + ')</span></h4>' +
+                grupo.itens.map(item => renderItem(item, indiceAcao++)).join('') + '</section>'
+            ).join('');
         }
 
         async function salvarDeParaDaPendencia(codigo, inputId) {
